@@ -83,7 +83,17 @@
         "roll_lamination_gloss",
         "roll_lamination_matte",
         "roll_lamination_soft_touch"
-      ]
+      ],
+      "auto_selection_rules": [
+        "Soft Touch / silk touch lamination => digital",
+        "For non-A3 leaflet/polygraphy runs up to and including 500 copies => digital by default",
+        "A3 up to 500 copies remains manual choice because offset may also be used",
+        "Explicit 'цифра' overrides inference"
+      ],
+      "color_notation": {
+        "4+0": "односторонняя полноцветная печать",
+        "4+4": "двусторонняя полноцветная печать"
+      }
     },
     "offset_print": {
       "technology_selection": "manual_when_not_explicit",
@@ -92,7 +102,13 @@
       "custom_paper_cost_source": "Офсет учет 2022 / Константы/ОФД / Закупка бумаги",
       "custom_imposition_min_sheet": "A3",
       "custom_imposition_min_sheets": 250,
-      "standard_or_custom": "standard price table for listed assemblies; separate calculator for own imposition or nonstandard paper"
+      "standard_or_custom": "standard price table for listed assemblies; separate calculator for own imposition or nonstandard paper",
+      "auto_selection_rules": [
+        "Explicit 'офсет' => offset",
+        "A3 may be offset even for runs up to 500 copies",
+        "Non-A3 runs above 500 copies are not automatically forced to offset; manager may still choose digital if speed matters",
+        "Soft Touch implies digital, not offset"
+      ]
     }
   }
 }
