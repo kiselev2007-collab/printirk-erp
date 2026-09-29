@@ -69,8 +69,10 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 <button class="btn primary" id="recognizeBtn">Распознать</button>
 </div>
 <div class="example"><b>Можно писать по-разному:</b><br>
+Листовка А4 4+0 130 гр., офсет, тираж 1000<br>
 Баннер 300 гр., 2х3 м, люверсы через 300 мм., карманы ветровые<br>
 баннер 300, 2000х3000 мм, люв. через 500 мм<br>
+плёнка белая 1х2 м, с резкой в край<br>
 плёнка Ораджет 720 dpi, 1,2х2 м, ламинация глянец, резка в край
 </div>
 <div class="detected" id="detected"></div>
@@ -137,6 +139,17 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок'};
+let synonymRows=[];
+fetch('data/synonyms.json').then(r=>r.ok?r.json():[]).then(x=>synonymRows=x).catch(()=>{});
+function synonymMatch(t, kind){
+  return synonymRows.some(row=>{
+    const hay=[row.name,...(row.synonyms||[])].join(' ').toLowerCase().replaceAll('ё','е');
+    const type=String(row.type||'').toLowerCase().replaceAll('ё','е');
+    const ok=kind==='film' ? (type.includes('плен')||String(row.name).toLowerCase().includes('плен')) :
+             kind==='banner' ? (type.includes('баннер')||String(row.name).toLowerCase().includes('баннер')) : false;
+    return ok && (row.synonyms||[]).some(s=>t.includes(String(s).toLowerCase().replaceAll('ё','е')));
+  });
+}
 document.querySelectorAll('.nav button[data-view]').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.nav button[data-view]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(btn.dataset.view).classList.add('active');document.getElementById('topTitle').textContent=titles[btn.dataset.view]});
 
 const demoCatalog=[
@@ -154,23 +167,65 @@ function norm(s){return String(s||'').toLowerCase().replaceAll('ё','е').replac
 function meters(v,u){v=n(v);u=(u||'').toLowerCase();if(u.startsWith('мм'))return v/1000;if(u.startsWith('см'))return v/100;return v}
 function parseSize(t){const m=t.match(/(\d+(?:[.,]\d+)?)\s*(мм|см|м)?\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*(мм|см|м)?/i);if(!m)return null;let u1=m[2],u2=m[4];if(!u1&&u2)u1=u2;if(!u2&&u1)u2=u1;return {w:meters(m[1],u1),h:meters(m[3],u2)}}
 function parseLine(line){
- const t=norm(line),size=parseSize(t);if(!size)return {source:line,type:'unknown',error:'Не найден размер'};
- let type='unknown';if(/баннер|сетк/.test(t))type='banner';else if(/пленк|плёнк|ораджет|orajet|оракал|oracal|самокле|наклей/.test(t))type='film';
- const density=Number((t.match(/\b(300|340|400|440|510)\b/)||[])[1]||0);
+ const t=norm(line);
+ const qtyMatch=t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт/);
+ const qty=Number((qtyMatch||[]).slice(1).find(Boolean)||0);
+ const densMatch=t.match(/\b(65|80|90|105|115|120|128|130|157|170|180|200|250|300|340|400|440|510)\s*(?:гр|г)\b/);
+ const density=Number((densMatch||[])[1]||0);
  const dpi=Number((t.match(/\b(240|360|720|1440)\s*(?:dpi|дпи)/)||[])[1]||240);
- const qty=Number((t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт/)||[]).slice(1).find(Boolean)||1);
+
+ if((/листовк|буклет/.test(t)) && /офсет/.test(t)){
+   const fm=t.match(/\b[аa]([3-7])\b/i);
+   const cm=t.match(/4\s*\+\s*(0|4)/);
+   return {source:line,type:'offset',format:fm?'A'+fm[1]:'',color:cm?'4+'+cm[1]:'4+0',density:density||130,qty};
+ }
+
+ const size=parseSize(t);if(!size)return {source:line,type:'unknown',error:'Не найден размер'};
+ let type='unknown';
+ if(/баннер|сетк/.test(t)||synonymMatch(t,'banner'))type='banner';
+ else if(/пленк|плёнк|ораджет|orajet|оракал|oracal|самокле|наклей|винил/.test(t)||synonymMatch(t,'film'))type='film';
+
  const gm=t.match(/(?:люверс\w*|люв\.?)[^\d]{0,20}(\d{2,4})\s*мм|через\s*(\d{2,4})\s*мм/);
  const grommet=gm?Number(gm[1]||gm[2]):0;
- return {source:line,type,density,dpi,qty,w:size.w,h:size.h,grommet,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк[^,;]*край/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов/.test(t)};
+ return {source:line,type,density,dpi,qty:qty||1,w:size.w,h:size.h,grommet,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк[^,;]*край/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов/.test(t),white:/\bбел/.test(t)};
 }
 function bannerLayout(w,h){const roll=3;if(Math.min(w,h)<=roll)return {overflow:0,seams:0,seamLength:0,orientation:'без склейки'};function one(width,height){const parts=Math.ceil(width/roll),last=width-(parts-1)*roll,overflow=Math.max(0,(roll-last)*height);return {overflow,seams:parts-1,seamLength:height}}const a=one(w,h),b=one(h,w),best=b.overflow<a.overflow?b:a;best.orientation=b.overflow<a.overflow?'повёрнутая':'стандартная';return best}
+const offsetTirages=[500,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000];
+const offsetPrices={
+ '4+0':{
+  A3:[6437,8778,13313,18170,22706,26188,30723,33078,36868,40818,43012],
+  A4:[3950,5413,7608,10402,13050,14923,17556,18946,21067,23306,24578],
+  A5:[2341,3219,4828,6584,8193,9363,10973,11880,13226,14747,15362],
+  A6:[1463,1902,2926,3950,4974,5706,6584,7169,7959,8822,9217]
+ },
+ '4+4':{
+  A3:[8047,10973,16825,22691,27095,30723,34146,38097,42486,46875,49011],
+  A4:[5267,7169,10973,14791,17732,20043,22296,24783,27738,30547,31893],
+  A5:[3219,4389,6584,8954,10534,11997,13343,14849,16620,18170,19019],
+  A6:[1902,2487,3804,5135,6145,7022,7812,8705,9714,10534,11119]
+ }};
+const paperCostA3={65:1.41,80:1.28,90:2.19,105:1.95,115:2.09,120:2.18,130:2.32,157:2.87,170:3.42,180:6,200:3.76,250:6.36,300:7.87};
+function offsetSheetsA3(format,qty,color){const div={A3:1,A4:2,A5:4,A6:8,A7:16}[format]||1;return qty/div+(color==='4+4'?100:50)}
+function offsetCustomCost(x){const sheets=offsetSheetsA3(x.format,x.qty,x.color), paper=paperCostA3[x.density]||2, forms=x.color==='4+4'?8:4, print=sheets*(x.color==='4+4'?0.6:0.3);return {cost:sheets*paper+forms*220+print,sheets}}
 let detected=[],autoItems=[];
 function recognize(){const raw=document.getElementById('orderText').value;detected=raw.split(/\n|;|\s+\+\s+/).map(x=>x.trim()).filter(Boolean).map(parseLine);renderDetected()}
 function renderDetected(){
  const box=document.getElementById('detected');if(!detected.length){box.innerHTML='';return}
  box.innerHTML=detected.map((x,i)=>{
   if(x.error||x.type==='unknown')return '<div class="detected-card"><b>'+x.source+'</b><div class="chips"><span class="chip warn">Не удалось определить материал или размер</span></div></div>';
-  const name=x.type==='banner'?'Баннер '+(x.density||'')+' гр.':'Плёнка '+(x.dpi||'')+' dpi';
+
+  if(x.type==='offset'){
+    const standard=x.density===130;
+    let chips='<span class="chip">'+(x.format||'формат не указан')+'</span><span class="chip">'+x.color+'</span><span class="chip">'+x.density+' гр.</span>';
+    chips+=x.qty?'<span class="chip">'+x.qty+' шт.</span>':'<span class="chip warn">Укажите тираж</span>';
+    chips+='<span class="chip '+(standard?'auto':'warn')+'">'+(standard?'готовый прайс 130 гр.':'индивидуальная офсетная расчётка')+'</span>';
+    const tirageOpts=['<option value="0">Укажите тираж</option>'].concat(offsetTirages.map(q=>'<option value="'+q+'" '+(x.qty===q?'selected':'')+'>'+q.toLocaleString('ru-RU')+'</option>')).join('');
+    const paperOpts=[90,105,115,120,130,157,170,180,200,250,300].map(p=>'<option value="'+p+'" '+(x.density===p?'selected':'')+'>'+p+' гр.</option>').join('');
+    const fmtOpts=['A3','A4','A5','A6'].map(f=>'<option '+(x.format===f?'selected':'')+'>'+f+'</option>').join('');
+    return '<div class="detected-card"><div class="detected-head"><div><b>Листовка — офсет</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Формат</label><select onchange="detected['+i+'].format=this.value">'+fmtOpts+'</select></div><div class="field"><label>Красочность</label><select onchange="detected['+i+'].color=this.value"><option '+(x.color==='4+0'?'selected':'')+'>4+0</option><option '+(x.color==='4+4'?'selected':'')+'>4+4</option></select></div><div class="field"><label>Бумага</label><select onchange="detected['+i+'].density=+this.value;renderDetected()">'+paperOpts+'</select></div><div class="field"><label>Тираж</label><select onchange="detected['+i+'].qty=+this.value">'+tirageOpts+'</select></div></div></div>';
+  }
+
+  const name=x.type==='banner'?'Баннер '+(x.density||'')+' гр.':'Плёнка '+(x.white?'белая · ':'')+(x.dpi||'')+' dpi';
   const layout=x.type==='banner'?bannerLayout(x.w,x.h):null;
   let chips='<span class="chip">'+x.w.toFixed(3)+' × '+x.h.toFixed(3)+' м</span><span class="chip">'+x.qty+' шт.</span>';
   if(x.density)chips+='<span class="chip">'+x.density+' гр.</span>';if(x.dpi)chips+='<span class="chip">'+x.dpi+' dpi</span>';
@@ -187,8 +242,24 @@ function renderDetected(){
 }
 function addDetected(i){
  const x=detected[i];if(!x||x.error||x.type==='unknown')return;
- const area=x.w*x.h*x.qty,per=2*(x.w+x.h),details=[];let cost=0,price=0;
+ const details=[];let cost=0,price=0,name='';
+
+ if(x.type==='offset'){
+   if(!x.format||!x.qty){alert('Для офсета нужно указать формат и тираж.');return}
+   name='Листовка '+x.format+' '+x.color+' '+x.density+' гр. · офсет';
+   const custom=offsetCustomCost(x);cost=custom.cost;details.push('бумага '+x.density+' гр.','тираж '+x.qty+' шт.','расчётных листов A3: '+Math.ceil(custom.sheets));
+   const idx=offsetTirages.indexOf(x.qty);
+   if(x.density===130 && idx>=0 && offsetPrices[x.color] && offsetPrices[x.color][x.format]){
+      price=offsetPrices[x.color][x.format][idx];details.push('готовая цена из прайса 130 гр.');
+   } else {
+      price=cost*1.8;details.push('индивидуальная офсетная расчётка');
+   }
+   autoItems.push({name,cost,price,details});renderAuto();return;
+ }
+
+ const area=x.w*x.h*x.qty,per=2*(x.w+x.h);
  if(x.type==='banner'){
+  name='Баннер '+(x.density||'')+' гр.';
   const baseCost=x.density>=500?230:x.density>=400?205:180,basePrice=x.density>=500?980:x.density>=400?820:690;cost=area*baseCost;price=area*basePrice;details.push('печать '+area.toFixed(2)+' м²');
   const lay=bannerLayout(x.w,x.h);if(lay.overflow>0){cost+=lay.overflow*baseCost*x.qty;price+=lay.overflow*basePrice*x.qty;details.push('перерасход '+lay.overflow.toFixed(2)+' м²')}
   if(lay.seams>0){const len=lay.seams*lay.seamLength*x.qty;cost+=len*30;price+=len*76;details.push('склейка '+lay.seams+' шв.')}
@@ -197,11 +268,12 @@ function addDetected(i){
   if(x.reinforce){cost+=per*30*x.qty;price+=per*88*x.qty;details.push('усиление края')}
   if(x.edgeCut){cost+=per*8*x.qty;price+=per*22*x.qty;details.push('резка в край')}
  } else {
+  name='Плёнка '+(x.white?'белая · ':'')+x.dpi+' dpi';
   cost=area*170;price=area*(x.dpi>=720?900:720);details.push('печать '+area.toFixed(2)+' м² / '+x.dpi+' dpi');
   const lam=x.lamination||(x.laminate?(x.lamMatte?'matte':'gloss'):'none');if(lam!=='none'){cost+=area*120;price+=area*274;details.push('ламинация '+(lam==='matte'?'матовая':'глянец'))}
   if(x.contour){cost+=area*170;price+=area*439;details.push('контурная резка')}else if(x.edgeCut){cost+=per*8*x.qty;price+=per*22*x.qty;details.push('резка в край')}
  }
- autoItems.push({name:x.type==='banner'?'Баннер '+(x.density||'')+' гр.':'Плёнка '+x.dpi+' dpi',cost,price,details});renderAuto();
+ autoItems.push({name,cost,price,details});renderAuto();
 }
 function renderAuto(){const disc=Math.max(0,n(document.getElementById('autoDiscount').value));document.getElementById('autoRows').innerHTML=autoItems.length?autoItems.map((x,i)=>'<tr><td><b>'+x.name+'</b></td><td>'+x.details.join('<br>')+'</td><td class="right">'+money(x.cost)+'</td><td class="right">'+money(x.price)+'</td><td class="right"><b>'+money(x.price*(1-disc/100))+'</b></td><td><button class="btn danger" onclick="removeAuto('+i+')">×</button></td></tr>').join(''):'<tr><td colspan="6" class="note">Пока нет позиций. Введите заказ обычным текстом выше.</td></tr>';const p=autoItems.reduce((s,x)=>s+x.price,0),c=autoItems.reduce((s,x)=>s+x.cost,0),final=p*(1-disc/100);document.getElementById('autoPrice').textContent=money(p);document.getElementById('autoDiscRub').textContent=money(p-final);document.getElementById('autoCost').textContent=money(c);document.getElementById('autoMargin').textContent=money(final-c);document.getElementById('autoFinal').textContent=money(final)}
 function removeAuto(i){autoItems.splice(i,1);renderAuto()}
