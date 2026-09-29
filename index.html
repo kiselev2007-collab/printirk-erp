@@ -430,7 +430,7 @@ function parseLine(line){
  const t=norm(line);
  const qtyMatch=t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт|^(\d+)\s+(?=(?:а|a)\s*[3-7](?:\s|$))/i);
  const qty=Number((qtyMatch||[]).slice(1).find(Boolean)||0);
- const densMatch=t.match(/\b(65|80|90|105|115|120|128|130|157|170|180|200|250|300|340|400|440|510)\s*(?:гр|г)\b/);
+ const densMatch=t.match(/\b(65|80|90|105|115|120|128|130|157|170|180|200|250|300|340|400|440|510)\s*(?:гр|г)(?=$|[^0-9a-zа-яё])/i);
  const density=Number((densMatch||[])[1]||0);
  const dpi=Number((t.match(/\b(240|360|720|1440)\s*(?:dpi|дпи)/)||[])[1]||240);
 
