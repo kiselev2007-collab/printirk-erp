@@ -165,12 +165,14 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
         <option>Другое</option>
       </select>
     </div>
-    <div class="field" style="margin-top:10px"><label>Комментарий менеджера</label><textarea id="errorComment" placeholder="Например: написал «самоклейка белая», а система выбрала прозрачную"></textarea></div>
+    <div class="field" style="margin-top:10px"><label>Как должно быть</label><textarea id="errorExpected" placeholder="Например: 1 биг по центру; цена 420 ₽; должно быть 8 шт. на SRA3"></textarea></div>
+    <div class="field" style="margin-top:10px"><label>Комментарий менеджера</label><textarea id="errorComment" placeholder="Дополнительное пояснение, если нужно"></textarea></div>
     <div class="actions"><button class="btn" id="cancelError">Отмена</button><button class="btn primary" id="saveError">Сохранить ошибку</button></div>
   </div>
 </div>
 
 <script>
+const CALC_VERSION='digital-2026-09-29.4';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -365,12 +367,26 @@ function digitalProductKind(t){
  if(/бланк/.test(t))return 'Бланк';
  return 'Печатная продукция';
 }
+function hasRuToken(t,rx){return new RegExp('(?:^|[^0-9a-zа-яё])(?:'+rx+')(?=$|[^0-9a-zа-яё])','i').test(t)}
+function parseBigCount(t){
+ let m=t.match(/(\d+)\s*(?:биг(?:а|ов)?|биговк(?:а|и)?)/i);if(m)return +m[1];
+ m=t.match(/(?:биг(?:овка)?|биговк(?:а|и))\s*(\d+)/i);if(m)return +m[1];
+ if(/двойн\w*\s+биг|два\s+бига|две\s+биговк/i.test(t))return 2;
+ if(/тройн\w*\s+биг|три\s+бига|три\s+биговк/i.test(t))return 3;
+ if(/бигов|бигован|бигать|биг по центру|линия биговки/i.test(t)||hasRuToken(t,'биг\\.?'))return 1;
+ return 0;
+}
+function parseFoldCount(t){
+ let m=t.match(/(\d+)\s*(?:фальц(?:а|ов)?|фальцовк(?:а|и)?)/i);if(m)return +m[1];
+ if(/фальцов|фальцев|сгиб/i.test(t)||hasRuToken(t,'фальц'))return 1;
+ return 0;
+}
 function postFromText(t,qty){
  const numAfter=(rx,def=1)=>{const m=t.match(rx);return m?Number(m[1]||def):0};
  return {
   cutPasses:/резк/.test(t)?1:0,
-  bigs:numAfter(/(\d+)\s*(?:биг|бигов)/)||(/бигов|\bбиг\b/.test(t)?1:0),
-  folds:numAfter(/(\d+)\s*(?:фальц|сгиб)/)||(/фальцов|\bфальц\b/.test(t)?1:0),
+  bigs:parseBigCount(t),
+  folds:parseFoldCount(t),
   round:/скруг|круглен/.test(t),
   numbering:/нумерац|нумер/.test(t),
   staples:numAfter(/(\d+)\s*скоб/)||(/скоб/.test(t)?1:0),
@@ -663,11 +679,11 @@ function renderAuto(){const disc=Math.max(0,n(document.getElementById('autoDisco
 function removeAuto(i){autoItems.splice(i,1);renderAuto()}
 let errorTarget=null;
 function readErrors(){try{return JSON.parse(localStorage.getItem('printirk-calc-errors')||'[]')}catch(e){return []}}
-function renderErrors(){const list=readErrors(),box=document.getElementById('errorList'),empty=document.getElementById('errorEmpty');empty.style.display=list.length?'none':'block';box.innerHTML=list.slice().reverse().map(e=>'<div class="error-row"><div><b>'+new Date(e.date).toLocaleString('ru-RU')+'</b><small style="display:block">'+(e.manager||'Менеджер')+'</small></div><div>'+e.type+'</div><div><b>'+e.source+'</b><small style="display:block">'+e.comment+'</small></div><div>'+e.item+'<small style="display:block">'+e.total+'</small></div></div>').join('')}
-function openError(i){errorTarget=i;document.getElementById('errorComment').value='';document.getElementById('errorModal').classList.add('show')}
+function renderErrors(){const list=readErrors(),box=document.getElementById('errorList'),empty=document.getElementById('errorEmpty');empty.style.display=list.length?'none':'block';box.innerHTML=list.slice().reverse().map(e=>'<div class="error-row"><div><b>'+new Date(e.date).toLocaleString('ru-RU')+'</b><small style="display:block">'+(e.manager||'Менеджер')+' · '+(e.version||'')+'</small></div><div>'+e.type+'</div><div><b>'+e.source+'</b><small style="display:block"><b>Должно быть:</b> '+(e.expected||'—')+'</small><small style="display:block">'+(e.comment||'')+'</small></div><div>'+e.item+'<small style="display:block">'+e.total+'</small></div></div>').join('')}
+function openError(i){errorTarget=i;document.getElementById('errorExpected').value='';document.getElementById('errorComment').value='';document.getElementById('errorModal').classList.add('show')}
 document.getElementById('cancelError').onclick=()=>document.getElementById('errorModal').classList.remove('show');
-document.getElementById('saveError').onclick=()=>{const x=autoItems[errorTarget];if(!x)return;const errs=readErrors();errs.push({date:new Date().toISOString(),manager:'Илья',type:document.getElementById('errorType').value,comment:document.getElementById('errorComment').value.trim(),source:x.source||'',parsed:x.parsed||'',item:x.name,total:money(x.price),cost:money(x.cost)});localStorage.setItem('printirk-calc-errors',JSON.stringify(errs));document.getElementById('errorModal').classList.remove('show');renderErrors()}
-document.getElementById('exportErrors').onclick=()=>{const rows=readErrors(),headers=['date','manager','type','source','item','total','cost','comment','parsed'];const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';const csv='\ufeff'+headers.join(';')+'\n'+rows.map(r=>headers.map(h=>esc(r[h])).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='printirk_calc_errors.csv';a.click();URL.revokeObjectURL(a.href)}
+document.getElementById('saveError').onclick=()=>{const x=autoItems[errorTarget];if(!x)return;const errs=readErrors();errs.push({date:new Date().toISOString(),version:CALC_VERSION,status:'new',manager:'Илья',type:document.getElementById('errorType').value,expected:document.getElementById('errorExpected').value.trim(),comment:document.getElementById('errorComment').value.trim(),source:x.source||'',parsed:x.parsed||'',details:(x.details||[]).join(' | '),item:x.name,total:money(x.price),cost:money(x.cost)});localStorage.setItem('printirk-calc-errors',JSON.stringify(errs));document.getElementById('errorModal').classList.remove('show');renderErrors()}
+document.getElementById('exportErrors').onclick=()=>{const rows=readErrors(),headers=['date','version','status','manager','type','source','item','total','cost','expected','comment','details','parsed'];const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';const csv='\ufeff'+headers.join(';')+'\n'+rows.map(r=>headers.map(h=>esc(r[h])).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='printirk_calc_errors.csv';a.click();URL.revokeObjectURL(a.href)}
 renderErrors();
 document.getElementById('recognizeBtn').onclick=recognize;document.getElementById('autoDiscount').oninput=renderAuto;renderAuto();
 
