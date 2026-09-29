@@ -363,7 +363,7 @@ function digitalProductKind(t){
  if(/меню/.test(t))return 'Меню';
  if(/сертификат/.test(t))return 'Сертификат';
  if(/бланк/.test(t))return 'Бланк';
- return 'Листовка';
+ return 'Печатная продукция';
 }
 function postFromText(t,qty){
  const numAfter=(rx,def=1)=>{const m=t.match(rx);return m?Number(m[1]||def):0};
@@ -428,7 +428,7 @@ function digitalPostCalc(x,opt){
 }
 function parseLine(line){
  const t=norm(line);
- const qtyMatch=t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт/);
+ const qtyMatch=t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт|^(\d+)\s+(?=(?:а|a)\s*[3-7](?:\s|$))/i);
  const qty=Number((qtyMatch||[]).slice(1).find(Boolean)||0);
  const densMatch=t.match(/\b(65|80|90|105|115|120|128|130|157|170|180|200|250|300|340|400|440|510)\s*(?:гр|г)\b/);
  const density=Number((densMatch||[])[1]||0);
@@ -436,7 +436,9 @@ function parseLine(line){
 
  const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
  const cm=t.match(/4\s*\+\s*(0|4)/);
- const poly=/листовк|буклет|флаер|винн\w* карт|меню|визит|открытк|приглаш|сертификат|бланк/.test(t);
+ const namedPoly=/листовк|буклет|флаер|винн\w* карт|меню|визит|открытк|приглаш|сертификат|бланк/.test(t);
+ const genericPoly=!!(cm&&density&&qty&&(fm||parseSize(t)));
+ const poly=namedPoly||genericPoly;
  const lamSoft=/софт|soft\s*touch|силк/.test(t);
  if(poly && /офсет/.test(t) && !lamSoft){
    return {source:line,type:'offset',format:fm?'A'+fm[1]:'',color:cm?'4+'+cm[1]:'4+0',density:density||130,qty};
