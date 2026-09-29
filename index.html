@@ -295,19 +295,20 @@ function tierPrice(tiers,count){
 }
 function isRollLam(v){return ['roll_gloss','roll_matte','roll_glitter','roll_soft'].includes(v)}
 function digitalOptions(x){
- const sec=digitalSection(),defs=[{name:'SRA4',fmt:'A4',w:320,h:225},{name:'SRA3',fmt:'A3',w:320,h:450}];
+ const sec=digitalSection(),defs=[{name:'SRA4',fmt:'A4',w:320,h:225},{name:'SRA3',fmt:'A3',w:320,h:450}],paperKey=x.paperKey||String(x.density);
  return defs.map(s=>{
    if(isRollLam(x.lamination)&&s.name!=='SRA3')return null;
    const up=upOnSheet(s.w,s.h,x.wmm,x.hmm);if(!up)return null;
    const sheets=Math.ceil(x.qty/up);
    const unit=tierPrice(sec.base_90gsm?.[s.fmt]?.[x.color],sheets);if(unit==null)return null;
-   const paper=sec.paper_addons_irku?.[s.name]?.[String(x.density)];
-   if(!paper && x.density!==90)return {...s,up,sheets,invalid:'Бумага '+x.density+' гр. пока не заведена на вкладке цифровой печати'};
+   const paper=sec.paper_addons_irku?.[s.name]?.[paperKey];
+   if(!paper && paperKey!=='90')return {...s,up,sheets,invalid:'Материал «'+paperKey+'» пока не заведен для '+s.name};
    const paperSale=(paper?.sale||0)*sheets;
-   const sale=unit*sheets+paperSale;
+   let sale=unit*sheets+paperSale;
+   if(paper?.minimum_order_rub) sale=unit*sheets+Math.max(paper.minimum_order_rub,paperSale);
    const paperCost=((paper?.cost!=null)?paper.cost:(paper?.sale||0)/1.1)*sheets;
    const cost=unit*sheets/1.1+paperCost;
-   return {...s,up,sheets,unit,sale,cost,paper};
+   return {...s,up,sheets,unit,sale,cost,paper,paperKey};
  }).filter(Boolean);
 }
 function bestDigitalOption(x){
@@ -324,6 +325,17 @@ function packetFormat(w,h){
  if(fits(210,297))return 'A4';
  if(fits(297,420))return 'A3';
  return null;
+}
+function digitalPaperKeyFromText(t,density){
+ if(/самокле|самоклей|наклей/.test(t)&&/прозрач/.test(t))return 'Самоклеющаяся прозрачная';
+ if(/самокле|самоклей/.test(t))return 'Самоклеющаяся';
+ if(/полилит/.test(t)&&/300/.test(t))return 'Полилит 300 мкр';
+ if(/полилит/.test(t))return 'Полилит 150 мкр';
+ if(/shyne|шайн|дизайнерск\w* карт/.test(t))return 'Дизайнерский картон SHYNE WHITE';
+ if(/кальк/.test(t)&&/200/.test(t))return 'Калька A4 200';
+ if(/кальк/.test(t)&&/150/.test(t))return 'Калька A4 150';
+ if(/кальк/.test(t))return 'Калька A4';
+ return String(density||90);
 }
 function digitalProductKind(t){
  if(/винн\w* карт/.test(t))return 'Винная карта';
@@ -421,7 +433,8 @@ function parseLine(line){
    if(lamSoft) tech='digital';
    else if(!tech && qty && qty<=500 && format!=='A3' && !isA3) tech='digital';
    const reason=lamSoft?'Soft Touch доступен только в цифре':(!/цифр/.test(t)&&tech==='digital'?'тираж до 500 экз.':'явно указана цифра');
-   return {source:line,type:'poly',productKind:digitalProductKind(t),format,color:cm?'4+'+cm[1]:'4+0',density:density||130,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,technologyReason:reason,lamination:parseDigitalLamination(t),post:postFromText(t,qty||1)};
+   const paperKey=digitalPaperKeyFromText(t,density||130);
+   return {source:line,type:'poly',productKind:digitalProductKind(t),format,color:cm?'4+'+cm[1]:'4+0',density:density||130,paperKey,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,technologyReason:reason,lamination:parseDigitalLamination(t),post:postFromText(t,qty||1)};
  }
  if(!size)return {source:line,type:'unknown',error:'Не найден размер'};
  if(/постер|плакат/.test(t)){
@@ -505,12 +518,19 @@ function renderDetected(){
         chips+='<span class="chip warn">'+(inv?.invalid||'Не удаётся рассчитать на SRA4/SRA3 по текущему прайсу')+'</span>';
       }
     }
-    const papers=[90,130,170,300];if(!papers.includes(x.density))papers.unshift(x.density);
-    const paperOpts=papers.map(p=>'<option value="'+p+'" '+(x.density===p?'selected':'')+'>'+p+' гр.'+(![90,130,170,300].includes(p)?' · требует цены':'')+'</option>').join('');
+    const paperChoices=[
+      ['90','Бумага 90 гр.'],['130','Бумага 130 гр.'],['170','Бумага 170 гр.'],['300','Бумага 300 гр.'],
+      ['Полилит 150 мкр','Polylit 150 мкр'],['Полилит 300 мкр','Polylit 300 мкр'],
+      ['Самоклеющаяся','Самоклеющаяся'],['Самоклеющаяся прозрачная','Самоклеющаяся прозрачная'],
+      ['Дизайнерский картон SHYNE WHITE','Дизайнерский картон SHYNE WHITE'],['Калька A4','Калька A4'],
+      ['Калька A4 150','Калька A4 150 гр.'],['Калька A4 200','Калька A4 200 гр.']
+    ];
+    if(!paperChoices.some(z=>z[0]===x.paperKey))paperChoices.unshift([x.paperKey,x.paperKey+' · требует цены']);
+    const paperOpts=paperChoices.map(z=>'<option value="'+z[0]+'" '+(x.paperKey===z[0]?'selected':'')+'>'+z[1]+'</option>').join('');
     const colorOpts='<option '+(x.color==='4+0'?'selected':'')+'>4+0</option><option '+(x.color==='4+4'?'selected':'')+'>4+4</option>';
     let controls='<div class="post"><div class="field"><label>Технология</label><select onchange="detected['+i+'].technology=this.value;renderDetected()"><option value="" '+(!tech?'selected':'')+'>Выбрать вручную</option><option value="digital" '+(tech==='digital'?'selected':'')+'>Цифровая печать</option><option value="offset-ready" '+(tech==='offset-ready'?'selected':'')+'>Офсет — сборный прайс</option><option value="offset-custom" '+(tech==='offset-custom'?'selected':'')+'>Офсет — свой спуск</option></select></div>'+
     '<div class="field"><label>Красочность</label><select onchange="detected['+i+'].color=this.value;renderDetected()">'+colorOpts+'</select></div>'+
-    '<div class="field"><label>Бумага</label><select onchange="detected['+i+'].density=+this.value;renderDetected()">'+paperOpts+'</select></div></div>';
+    '<div class="field"><label>Бумага / материал</label><select onchange="detected['+i+'].paperKey=this.value;if(/^\\d+$/.test(this.value))detected['+i+'].density=+this.value;renderDetected()">'+paperOpts+'</select></div></div>';
     if(tech==='digital')controls+=digitalPostUI(i,x);
     return '<div class="detected-card"><div class="detected-head"><div><b>'+(x.productKind||'Полиграфия')+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div>'+controls+'</div>';
   }
@@ -561,7 +581,7 @@ function addDetected(i){
      }
      name=(x.productKind||'Полиграфия')+' '+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+' '+x.color+' '+x.density+' гр. · цифра';
      price=opt.sale;cost=opt.cost;
-     details.push('цифровая печать '+x.color+(x.color==='4+4'?' · 2 стороны':' · 1 сторона'),opt.name+': '+opt.up+' шт./лист','печатных листов: '+opt.sheets,'бумага '+x.density+' гр.','печать + бумага: '+money(opt.sale));
+     details.push('цифровая печать '+x.color+(x.color==='4+4'?' · 2 стороны':' · 1 сторона'),opt.name+': '+opt.up+' шт./лист','печатных листов: '+opt.sheets,'материал: '+(x.paperKey||x.density+' гр.'),'печать + материал: '+money(opt.sale));
      const pp=digitalPostCalc(x,opt);price+=pp.sale;cost+=pp.cost;details.push(...pp.parts);
      price=Math.max(digitalSection().minimum_order_rub||100,price);
    } else if(x.technology==='offset-custom'){
