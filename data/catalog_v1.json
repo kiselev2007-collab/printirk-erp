@@ -397,6 +397,25 @@
           },
           "Самоклеющаяся прозрачная": {
             "sale": 115
+          },
+          "Дизайнерский картон SHYNE WHITE": {
+            "sale": 100,
+            "minimum_order_rub": 600,
+            "cost_status": "not_explicit"
+          },
+          "Калька A4": {
+            "sale": 33,
+            "cost_status": "not_explicit"
+          },
+          "Калька A4 150": {
+            "sale": 52,
+            "availability": "уточнять",
+            "cost_status": "not_explicit"
+          },
+          "Калька A4 200": {
+            "sale": 75,
+            "availability": "уточнять",
+            "cost_status": "not_explicit"
           }
         },
         "SRA3": {
