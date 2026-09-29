@@ -3,409 +3,249 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PRINTIRK — Прайс / прототип</title>
+<title>PRINTIRK — Прайс / прототип v2</title>
 <style>
-:root{
-  --bg:#f3f6fa;--card:#fff;--text:#172033;--muted:#7b8799;--line:#e3e8ef;
-  --pink:#ef4f91;--pink2:#fff0f6;--blue:#2c75ff;--green:#1f9d67;--orange:#e98b2a;--red:#d94b55;
-  --shadow:0 8px 28px rgba(39,54,86,.07)
-}
-*{box-sizing:border-box}
-body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text)}
-button,input,select,textarea{font:inherit}
-button{cursor:pointer}
-.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+:root{--bg:#f3f6fa;--card:#fff;--text:#172033;--muted:#7b8799;--line:#e3e8ef;--pink:#ef4f91;--pink2:#fff0f6;--blue:#2c75ff;--green:#1f9d67;--orange:#e98b2a;--red:#d94b55;--shadow:0 8px 28px rgba(39,54,86,.07)}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}button{cursor:pointer}.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
 aside{background:#fff;border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
-.brand{display:flex;align-items:center;gap:11px;padding:4px 7px 18px;border-bottom:1px solid var(--line)}
-.brand img{width:42px;height:42px;object-fit:contain;border-radius:11px;border:1px solid var(--line);background:#fff}
-.brand b{display:block}.brand small{color:var(--muted)}
-.nav{display:flex;flex-direction:column;gap:5px;margin-top:16px}
-.nav button{border:0;background:transparent;text-align:left;padding:12px;border-radius:11px;color:#59677a}
-.nav button.active{background:var(--pink2);color:#c92c70;font-weight:800}
-.nav button:hover{background:#f7f8fb}
-.nav .sep{height:1px;background:var(--line);margin:10px 4px}
-.role{margin-top:auto;border:1px solid var(--line);background:#f8fafc;border-radius:12px;padding:11px}
-.role small{color:var(--muted)}
-main{min-width:0}
-.top{height:70px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;z-index:5}
-.top strong{font-size:15px}.top .user{margin-left:auto;text-align:right}.top small{color:var(--muted);display:block}
-.content{padding:24px;max-width:1500px;margin:auto}
-.view{display:none}.view.active{display:block}
-.head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}
-.head h1{margin:0;font-size:28px}.head p{margin:6px 0 0;color:var(--muted)}
-.badge{display:inline-flex;gap:6px;align-items:center;padding:7px 10px;background:#fff;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px}
-.searchbar{display:flex;gap:10px;background:#fff;border:1px solid var(--line);padding:10px;border-radius:15px;box-shadow:var(--shadow);margin-bottom:20px}
-.searchbar input{flex:1;border:0;outline:none;padding:8px 10px;font-size:16px}
-.btn{border:1px solid var(--line);background:#fff;padding:10px 14px;border-radius:10px;font-weight:650;color:#4c5a6e}
-.btn.primary{background:var(--pink);border-color:var(--pink);color:#fff}
-.btn.ghost{background:#fafbfc}.btn.danger{color:var(--red)}
-.grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:14px}
-.card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:16px;box-shadow:var(--shadow)}
-.category h3{margin:0 0 10px;font-size:16px}
-.category ul{list-style:none;padding:0;margin:0;display:grid;gap:7px}
-.category li{padding:8px 9px;border-radius:9px;color:#526177;font-size:13px}
-.category li:hover{background:#f7f9fc;color:#172033}
-.category li.subhead{font-weight:800;color:#24334a;background:#f6f8fb;margin-top:6px}
-.category li.digital::after{content:"ЦИФРА";float:right;font-size:9px;background:#eaf1ff;color:#2564d8;padding:3px 6px;border-radius:999px}
-.category li.offset::after{content:"ОФСЕТ";float:right;font-size:9px;background:#fff2e2;color:#b56e14;padding:3px 6px;border-radius:999px}
-.results{display:none;margin-bottom:18px}.results.active{display:block}
-.result-row{display:grid;grid-template-columns:1fr 140px 140px 120px;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
-.result-row:last-child{border:0}.result-row small{color:var(--muted)}
-.money{font-weight:800;text-align:right}
-.two{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);gap:16px}
-.panel{background:#fff;border:1px solid var(--line);border-radius:15px;padding:17px;box-shadow:var(--shadow)}
-.panel h2{margin:0 0 14px;font-size:17px}
-.formgrid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px}
-.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
-.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;outline:none}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:#ff99c1;box-shadow:0 0 0 3px #fff0f6}
-.checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.check{border:1px solid var(--line);padding:8px 10px;border-radius:9px;font-size:12px;background:#fafbfd}
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px 8px;border-bottom:1px solid #eef1f5;text-align:left;font-size:12px;vertical-align:top}
-th{color:#8390a2;text-transform:uppercase;font-size:10px}
-td.right,th.right{text-align:right}
-.summaryline{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed #e6eaf0}
-.summaryline:last-child{border:0}.summaryline span{color:var(--muted)}.summaryline strong{font-size:15px}
-.total{margin-top:10px;padding:13px;background:var(--pink2);border-radius:11px;display:flex;justify-content:space-between;align-items:center}
-.total strong{font-size:23px;color:#c72f70}
-.note{font-size:12px;color:var(--muted);line-height:1.5}
-.warning{background:#fff8e9;border:1px solid #f2dfb6;padding:11px;border-radius:10px;color:#7b622c;font-size:12px}
-.steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-.step{font-size:11px;padding:7px 9px;border-radius:999px;background:#f4f6f9;color:#657287}
-.step.active{background:var(--pink2);color:#c92c70;font-weight:800}
-.price-lock{background:#f6f8fb!important;color:#6a7687}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-textarea{min-height:150px;resize:vertical}
-.saved{margin-top:16px;display:none;background:#effaf5;border:1px solid #c8e8d7;padding:11px;border-radius:10px;color:#24734e;font-size:12px}
-.saved.show{display:block}
-@media(max-width:1050px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.formgrid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:760px){.app{grid-template-columns:1fr}aside{display:none}.content{padding:14px}.top{padding:0 14px}.grid{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr 1fr}.result-row{grid-template-columns:1fr 90px}.result-row .hide-mobile{display:none}}
-@media print{
-  aside,.top,.head,.steps,.no-print,#priceView,#autoView{display:none!important}
-  body,.app,main,.content,.view{background:#fff!important;display:block!important}
-  #signView{display:block!important}
-  .panel{box-shadow:none;border:1px solid #bbb}
-  .two{grid-template-columns:1fr}
-}
+.brand{display:flex;align-items:center;gap:11px;padding:4px 7px 18px;border-bottom:1px solid var(--line)}.brand img{width:42px;height:42px;object-fit:contain;border-radius:11px;border:1px solid var(--line)}.brand b{display:block}.brand small,.top small,.note{color:var(--muted)}
+.nav{display:flex;flex-direction:column;gap:5px;margin-top:16px}.nav button{border:0;background:transparent;text-align:left;padding:12px;border-radius:11px;color:#59677a}.nav button.active{background:var(--pink2);color:#c92c70;font-weight:800}.nav button:hover{background:#f7f8fb}.nav .sep{height:1px;background:var(--line);margin:10px 4px}.role{margin-top:auto;border:1px solid var(--line);background:#f8fafc;border-radius:12px;padding:11px}.role small{color:var(--muted)}
+main{min-width:0}.top{height:70px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;z-index:5}.top .user{margin-left:auto;text-align:right}.top small{display:block}.content{padding:24px;max-width:1500px;margin:auto}.view{display:none}.view.active{display:block}
+.head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}.head h1{margin:0;font-size:28px}.head p{margin:6px 0 0;color:var(--muted)}.badge{display:inline-flex;padding:7px 10px;background:#fff;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px}
+.searchbar{display:flex;gap:10px;background:#fff;border:1px solid var(--line);padding:10px;border-radius:15px;box-shadow:var(--shadow);margin-bottom:20px}.searchbar input{flex:1;border:0;outline:none;padding:8px 10px;font-size:16px}
+.btn{border:1px solid var(--line);background:#fff;padding:10px 14px;border-radius:10px;font-weight:650;color:#4c5a6e}.btn.primary{background:var(--pink);border-color:var(--pink);color:#fff}.btn.danger{color:var(--red)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:14px}.card,.panel{background:#fff;border:1px solid var(--line);border-radius:15px;padding:16px;box-shadow:var(--shadow)}.category h3,.panel h2{margin:0 0 12px}.category h3{font-size:16px}.panel h2{font-size:17px}.category ul{list-style:none;padding:0;margin:0;display:grid;gap:7px}.category li{padding:8px 9px;border-radius:9px;color:#526177;font-size:13px}.category li:hover{background:#f7f9fc}.category li.subhead{font-weight:800;color:#24334a;background:#f6f8fb;margin-top:6px}.category li.digital::after{content:"ЦИФРА";float:right;font-size:9px;background:#eaf1ff;color:#2564d8;padding:3px 6px;border-radius:999px}.category li.offset::after{content:"ОФСЕТ";float:right;font-size:9px;background:#fff2e2;color:#b56e14;padding:3px 6px;border-radius:999px}
+.results{display:none;margin-bottom:18px}.results.active{display:block}.result-row{display:grid;grid-template-columns:1fr 140px 140px 120px;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.result-row small{color:var(--muted)}.money{font-weight:800;text-align:right}
+.two{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);gap:16px}.formgrid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;outline:none}.field textarea{min-height:118px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{border-color:#ff99c1;box-shadow:0 0 0 3px #fff0f6}
+.recognizer{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:stretch}.recognizer textarea{min-height:110px;border:1px solid var(--line);border-radius:12px;padding:12px;resize:vertical;outline:none}.example{padding:10px 12px;background:#f8fafc;border:1px dashed #dbe2ea;border-radius:10px;color:#6b788b;font-size:12px;line-height:1.55;margin-top:10px}
+.detected{margin-top:14px;display:grid;gap:10px}.detected-card{border:1px solid var(--line);border-radius:13px;padding:13px;background:#fcfdff}.detected-head{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px}.detected-head small{color:var(--muted)}.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.chip{padding:5px 8px;border-radius:999px;background:#f1f4f8;color:#536176;font-size:11px}.chip.auto{background:#eef7ff;color:#246ab4}.chip.warn{background:#fff5e8;color:#a96b18}
+.post{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr));gap:8px;margin-top:8px}.post .field label{text-transform:none;font-size:11px}.check{border:1px solid var(--line);padding:9px 10px;border-radius:9px;font-size:12px;background:#fafbfd;display:flex;gap:7px;align-items:center}
+table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1px solid #eef1f5;text-align:left;font-size:12px;vertical-align:top}th{color:#8390a2;text-transform:uppercase;font-size:10px}td.right,th.right{text-align:right}
+.summaryline{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed #e6eaf0}.summaryline span{color:var(--muted)}.summaryline strong{font-size:15px}.total{margin-top:10px;padding:13px;background:var(--pink2);border-radius:11px;display:flex;justify-content:space-between;align-items:center}.total strong{font-size:23px;color:#c72f70}.note{font-size:12px;line-height:1.5}.warning{background:#fff8e9;border:1px solid #f2dfb6;padding:11px;border-radius:10px;color:#7b622c;font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}.step{font-size:11px;padding:7px 9px;border-radius:999px;background:#f4f6f9;color:#657287}.step.active{background:var(--pink2);color:#c92c70;font-weight:800}.saved{margin-top:16px;display:none;background:#effaf5;border:1px solid #c8e8d7;padding:11px;border-radius:10px;color:#24734e;font-size:12px}.saved.show{display:block}.sectionline{grid-column:1/-1;font-weight:800;font-size:12px;padding:7px 9px;background:#f6f8fb;border-radius:9px;color:#35445a}
+@media(max-width:1050px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.formgrid,.post{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.app{grid-template-columns:1fr}aside{display:none}.content{padding:14px}.top{padding:0 14px}.grid{grid-template-columns:1fr}.formgrid,.post{grid-template-columns:1fr}.recognizer{grid-template-columns:1fr}.result-row{grid-template-columns:1fr 90px}.hide-mobile{display:none}}@media print{aside,.top,.head,.steps,.no-print,#priceView,#autoView{display:none!important}body,.app,main,.content,.view{background:#fff!important;display:block!important}#signView{display:block!important}.panel{box-shadow:none;border:1px solid #bbb}.two{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="app">
 <aside>
-  <div class="brand">
-    <img src="assets/printirk-logo.jpg" alt="PRINTIRK">
-    <div><b>PRINTIRK</b><small>ERP / CRM</small></div>
-  </div>
-  <div class="nav">
-    <button class="active" data-view="priceView">▦ Прайс</button>
-    <button data-view="autoView">⚡ Автоматический расчёт</button>
-    <button data-view="signView">▣ Расчёт вывесок</button>
-    <div class="sep"></div>
-    <button disabled style="opacity:.45">Заказы — следующий этап</button>
-  </div>
-  <div class="role"><small>Роль</small><div><b>Менеджер</b></div><small>Прайс редактировать нельзя</small></div>
+<div class="brand"><img src="assets/printirk-logo.jpg" alt="PRINTIRK"><div><b>PRINTIRK</b><small>ERP / CRM</small></div></div>
+<div class="nav">
+<button class="active" data-view="priceView">▦ Прайс</button>
+<button data-view="autoView">⚡ Автоматический расчёт</button>
+<button data-view="signView">▣ Расчёт вывесок</button>
+<div class="sep"></div><button disabled style="opacity:.45">Заказы — следующий этап</button>
+</div>
+<div class="role"><small>Роль</small><div><b>Менеджер</b></div><small>Прайс редактировать нельзя</small></div>
 </aside>
-
 <main>
-  <div class="top">
-    <strong id="topTitle">Прайс</strong>
-    <span class="badge">Прототип · цены демонстрационные</span>
-    <div class="user"><b>Илья</b><small>Менеджер</small></div>
-  </div>
-  <div class="content">
+<div class="top"><strong id="topTitle">Прайс</strong><span class="badge">Прототип v2 · цены демонстрационные</span><div class="user"><b>Илья</b><small>Менеджер</small></div></div>
+<div class="content">
 
-    <section class="view active" id="priceView">
-      <div class="head">
-        <div><h1>Прайс</h1><p>Все категории продукции, продажные цены и себестоимость в одном месте.</p></div>
-      </div>
-      <div class="searchbar">
-        <input id="catalogSearch" placeholder="Найти: листовки, баннер 510, ПВХ 5 мм, кружки...">
-        <button class="btn primary" id="searchBtn">Найти</button>
-      </div>
+<section class="view active" id="priceView">
+<div class="head"><div><h1>Прайс</h1><p>Все категории продукции, продажные цены и себестоимость.</p></div></div>
+<div class="searchbar"><input id="catalogSearch" placeholder="Найти: листовки, баннер 510, ПВХ 5 мм, кружки..."><button class="btn primary" id="searchBtn">Найти</button></div>
+<div class="panel results" id="searchResults"><h2>Результаты поиска</h2><div id="resultRows"></div></div>
+<div class="grid">
+<div class="card category"><h3>1. Наружная реклама</h3><ul><li>Баннеры / наклейки / постеры</li><li>Световые короба</li><li>Объёмные буквы</li><li>Аптечные кресты</li><li>Таблички</li><li>Планы эвакуации</li><li>Наклейки на авто</li><li>Штендеры</li><li>Нестандартные конструкции</li><li>Необъёмные буквы на держателях</li><li>Фрезеровка</li><li>Холсты и рамы</li><li>Конструкции / монтажи</li><li>Неоновые вывески</li><li>УФ-печать</li><li>УФ-ДТФ</li></ul></div>
+<div class="card category"><h3>2. Интерьерная реклама</h3><ul><li>Press-wall</li><li>Стенды</li><li>Плоттерная нарезка</li><li>Меловые ценники</li></ul></div>
+<div class="card category"><h3>3. Полиграфия</h3><ul><li class="subhead">Цифровая печать</li><li class="digital">Листовки</li><li class="digital">Визитки</li><li class="digital">Буклеты</li><li class="digital">Бланочная продукция</li><li class="digital">Блокноты</li><li class="subhead">Офсетная печать</li><li class="offset">Листовки / буклеты</li><li class="offset">Тиражирование</li><li class="offset">Плейсметы</li><li class="offset">Папки</li><li>Переплётные работы</li><li>Тиснение фольгой</li><li>Дизайн</li><li>Услуги копицентра</li></ul></div>
+<div class="card category"><h3>4. Изделия из оргстекла / ПЭТ</h3><ul><li>Шелфтокеры / ценникодержатели</li><li>Воблеры</li><li>Визитницы / тейбл-тенты</li><li>Дорхенгеры</li></ul></div>
+<div class="card category"><h3>5. Печати и штампы</h3><ul><li>Печати</li><li>Штампы</li><li>Оснастки</li></ul></div>
+<div class="card category"><h3>6. Сувенирная продукция</h3><ul><li>Футболки</li><li>Кружки</li><li>Ручки</li><li>Значки</li><li>Кубки / плакетки</li><li>Магниты</li><li>Флаги</li><li>Ежедневники</li><li>Ланъярды</li><li>Бейджи</li><li>Гардеробные номерки</li><li>Дисконтные карты</li><li>Календари</li></ul></div>
+<div class="card category"><h3>7. Упаковка и этикетки</h3><ul><li>Цифровая упаковка</li><li>Бумажные этикетки</li><li>Термотрансферные этикетки</li><li>Самоклеящиеся этикетки</li><li>Пакеты</li></ul></div>
+<div class="card category"><h3>Материалы и справочники</h3><ul><li>Листовые материалы</li><li>Рулонные материалы</li><li>Расходные материалы</li><li>Себестоимость печати</li><li>Поставщики / подрядчики</li></ul></div>
+</div>
+</section>
 
-      <div class="panel results" id="searchResults">
-        <h2>Результаты поиска</h2>
-        <div id="resultRows"></div>
-      </div>
+<section class="view" id="autoView">
+<div class="head"><div><h1>Автоматический расчёт</h1><p>Пишите заказ обычным текстом. Система распознаёт материал, размер и постобработку.</p></div><span class="badge">Рулон баннера · 3 м</span></div>
+<div class="two">
+<div>
+<div class="panel">
+<h2>Что нужно посчитать?</h2>
+<div class="recognizer">
+<textarea id="orderText" placeholder="Например: Баннер 300 гр., 2х3 м, люверсы через 300 мм., карманы ветровые"></textarea>
+<button class="btn primary" id="recognizeBtn">Распознать</button>
+</div>
+<div class="example"><b>Можно писать по-разному:</b><br>
+Баннер 300 гр., 2х3 м, люверсы через 300 мм., карманы ветровые<br>
+баннер 300, 2000х3000 мм, люв. через 500 мм<br>
+плёнка Ораджет 720 dpi, 1,2х2 м, ламинация глянец, резка в край
+</div>
+<div class="detected" id="detected"></div>
+</div>
+<div class="panel" style="margin-top:16px">
+<h2>Позиции расчёта</h2>
+<table><thead><tr><th>Позиция</th><th>Что учтено</th><th class="right">Себестоимость</th><th class="right">Прайс</th><th class="right">После скидки</th><th></th></tr></thead><tbody id="autoRows"></tbody></table>
+</div>
+</div>
+<div class="panel">
+<h2>Итого</h2>
+<div class="summaryline"><span>Цена по прайсу</span><strong id="autoPrice">0 ₽</strong></div>
+<div class="field" style="margin:12px 0"><label>Скидка менеджера, %</label><input id="autoDiscount" type="number" min="0" max="100" step=".1" value="0"></div>
+<div class="summaryline"><span>Скидка</span><strong id="autoDiscRub">0 ₽</strong></div>
+<div class="summaryline"><span>Себестоимость</span><strong id="autoCost">0 ₽</strong></div>
+<div class="summaryline"><span>Маржа после скидки</span><strong id="autoMargin">0 ₽</strong></div>
+<div class="total"><span>К оплате</span><strong id="autoFinal">0 ₽</strong></div>
+<p class="note">После распознавания менеджер проверяет параметры. Для каждого материала показываются только допустимые операции.</p>
+</div>
+</div>
+</section>
 
-      <div class="grid" id="catalogGrid">
-        <div class="card category">
-          <h3>1. Наружная реклама</h3>
-          <ul>
-            <li>Баннеры / наклейки / постеры</li><li>Световые короба</li><li>Объёмные буквы</li><li>Аптечные кресты</li>
-            <li>Таблички</li><li>Планы эвакуации</li><li>Наклейки на авто</li><li>Штендеры</li>
-            <li>Нестандартные конструкции</li><li>Необъёмные буквы на держателях</li><li>Фрезеровка</li><li>Холсты и рамы</li><li>Конструкции / монтажи</li><li>Неоновые вывески</li><li>УФ-печать</li><li>УФ-ДТФ</li>
-          </ul>
-        </div>
-        <div class="card category">
-          <h3>2. Интерьерная реклама</h3>
-          <ul><li>Press-wall</li><li>Стенды</li><li>Плоттерная нарезка</li><li>Меловые ценники</li></ul>
-        </div>
-        <div class="card category">
-          <h3>3. Полиграфия</h3>
-          <ul>
-            <li class="subhead">Цифровая печать</li>
-            <li class="digital">Листовки</li><li class="digital">Визитки</li><li class="digital">Буклеты</li><li class="digital">Бланочная продукция</li><li class="digital">Блокноты</li>
-            <li class="subhead">Офсетная печать</li>
-            <li class="offset">Листовки / буклеты</li><li class="offset">Тиражирование</li><li class="offset">Плейсметы</li><li class="offset">Папки</li>
-            <li>Переплётные работы</li><li>Тиснение фольгой</li><li>Дизайн</li><li>Услуги копицентра</li>
-          </ul>
-        </div>
-        <div class="card category">
-          <h3>4. Изделия из оргстекла / ПЭТ</h3>
-          <ul><li>Шелфтокеры / ценникодержатели</li><li>Воблеры</li><li>Визитницы / тейбл-тенты</li><li>Дорхенгеры</li></ul>
-        </div>
-        <div class="card category">
-          <h3>5. Печати и штампы</h3>
-          <ul><li>Печати</li><li>Штампы</li><li>Оснастки</li></ul>
-        </div>
-        <div class="card category">
-          <h3>6. Сувенирная продукция</h3>
-          <ul><li>Футболки</li><li>Кружки</li><li>Ручки</li><li>Значки</li><li>Кубки / плакетки</li><li>Магниты</li><li>Флаги</li><li>Ежедневники</li><li>Ланъярды</li><li>Бейджи</li><li>Гардеробные номерки</li><li>Дисконтные карты</li><li>Календари</li></ul>
-        </div>
-        <div class="card category">
-          <h3>7. Упаковка и этикетки</h3>
-          <ul><li>Цифровая упаковка</li><li>Бумажные этикетки</li><li>Термотрансферные этикетки</li><li>Самоклеящиеся этикетки</li><li>Пакеты</li></ul>
-        </div>
-        <div class="card category">
-          <h3>Материалы и внутренние справочники</h3>
-          <ul><li>Листовые материалы</li><li>Рулонные материалы</li><li>Расходные материалы</li><li>Себестоимость печати</li><li>Поставщики / подрядчики</li></ul>
-        </div>
-      </div>
-    </section>
-
-    <section class="view" id="autoView">
-      <div class="head">
-        <div><h1>Автоматический расчёт</h1><p>Добавляйте в один расчёт разные позиции. Цифра и офсет выбираются вручную.</p></div>
-        <span class="badge">Округление итогов ↑ до 1 ₽</span>
-      </div>
-      <div class="two">
-        <div>
-          <div class="panel">
-            <h2>Добавить позицию</h2>
-            <div class="formgrid">
-              <div class="field"><label>Продукция</label><select id="autoProduct"><option>Баннер 510 литой</option><option>Листовки — цифровая печать</option><option>Листовки — офсет</option><option>Самоклеящаяся плёнка</option><option>ПВХ 5 мм + УФ</option></select></div>
-              <div class="field"><label>Ширина, м</label><input id="autoW" type="number" step=".01" value="2"></div>
-              <div class="field"><label>Высота, м</label><input id="autoH" type="number" step=".01" value="3"></div>
-              <div class="field"><label>Количество</label><input id="autoQty" type="number" min="1" value="1"></div>
-            </div>
-            <div class="checks">
-              <label class="check"><input type="checkbox" id="optG"> Люверсы</label>
-              <label class="check"><input type="checkbox" id="optCut"> Резка в край</label>
-              <label class="check"><input type="checkbox" id="optReinf"> Усиление края</label>
-              <label class="check"><input type="checkbox" id="optLam"> Ламинация</label>
-            </div>
-            <div class="actions"><button class="btn primary" id="addAuto">+ Добавить в расчёт</button></div>
-            <p class="note">На этапе интеграции сюда подключим алгоритм из вашей программы: подбор материала, раскладку по рулону, перерасход, швы, люверсы, ламинацию и другие операции.</p>
-          </div>
-
-          <div class="panel" style="margin-top:16px">
-            <h2>Позиции расчёта</h2>
-            <table>
-              <thead><tr><th>Позиция</th><th>Параметры</th><th class="right">Себестоимость</th><th class="right">Прайс</th><th class="right">После скидки</th><th></th></tr></thead>
-              <tbody id="autoRows"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h2>Итого</h2>
-          <div class="summaryline"><span>Цена по прайсу</span><strong id="autoPrice">0 ₽</strong></div>
-          <div class="field" style="margin:12px 0"><label>Скидка менеджера, %</label><input id="autoDiscount" type="number" min="0" max="100" step=".1" value="0"></div>
-          <div class="summaryline"><span>Скидка</span><strong id="autoDiscRub">0 ₽</strong></div>
-          <div class="summaryline"><span>Себестоимость</span><strong id="autoCost">0 ₽</strong></div>
-          <div class="summaryline"><span>Маржа после скидки</span><strong id="autoMargin">0 ₽</strong></div>
-          <div class="total"><span>К оплате</span><strong id="autoFinal">0 ₽</strong></div>
-          <p class="note">Скидка будет сохраняться отдельно от прайсовой цены и попадать в дальнейшую аналитику.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="view" id="signView">
-      <div class="head">
-        <div><h1>Расчёт вывесок</h1><p>Смета, коэффициент менеджера, монтаж и описание / ТЗ.</p></div>
-        <span class="badge">Стандартный коэффициент 2,5</span>
-      </div>
-      <div class="steps no-print"><span class="step active">1 Тип</span><span class="step">2 Размеры</span><span class="step">3 Материалы</span><span class="step">4 Свет</span><span class="step">5 Работы</span><span class="step">6 Смета</span></div>
-      <div class="two">
-        <div>
-          <div class="panel">
-            <h2>Параметры вывески</h2>
-            <div class="formgrid">
-              <div class="field"><label>Тип вывески</label><select id="signType"><option>Буквы на подложке</option><option>Буквы на раме</option><option>Буквы — контражур</option><option>Световой объёмный короб</option><option>Короб «Напрорез»</option></select></div>
-              <div class="field"><label>Ширина, м</label><input id="signW" type="number" step=".01" value="3.2"></div>
-              <div class="field"><label>Высота, м</label><input id="signH" type="number" step=".01" value="0.8"></div>
-              <div class="field"><label>Глубина, м</label><input id="signD" type="number" step=".01" value="0.1"></div>
-              <div class="field"><label>Периметр элементов, м</label><input id="signP" type="number" step=".01" value="18"></div>
-              <div class="field"><label>Площадь элементов, м²</label><input id="signA" type="number" step=".01" value="2.4"></div>
-              <div class="field"><label>Диоды, шт.</label><input id="signLed" type="number" value="140"></div>
-              <div class="field"><label>Блоки питания, шт.</label><input id="signPsu" type="number" value="2"></div>
-            </div>
-          </div>
-
-          <div class="panel" style="margin-top:16px">
-            <h2>Материалы и работы</h2>
-            <table>
-              <thead><tr><th>Статья</th><th>Материал / работа</th><th class="right">Кол-во</th><th class="right">Себестоимость</th></tr></thead>
-              <tbody id="signMaterials"></tbody>
-            </table>
-            <div class="warning no-print">Это демонстрационная раскладка. В рабочей версии позиции и цены будут браться из общей базы прайса и таблицы материалов расчёта вывесок.</div>
-          </div>
-
-          <div class="panel" style="margin-top:16px">
-            <h2>Описание / ТЗ</h2>
-            <div class="field"><textarea id="signDesc"></textarea></div>
-            <p class="note no-print">Описание формируется автоматически из параметров, но менеджер может свободно его отредактировать перед сохранением.</p>
-          </div>
-        </div>
-
-        <div>
-          <div class="panel">
-            <h2>Смета</h2>
-            <div class="summaryline"><span>Себестоимость</span><strong id="signCost">0 ₽</strong></div>
-            <div class="field" style="margin-top:12px"><label>Коэффициент</label><input id="signCoeff" type="number" step=".1" value="2.5"></div>
-            <div class="summaryline"><span>Изготовление</span><strong id="signProduction">0 ₽</strong></div>
-            <div class="field" style="margin-top:12px"><label>Монтаж</label>
-              <select id="mountMode"><option value="20">20% от вывески</option><option value="10">10% от вывески</option><option value="manual">Вручную</option><option value="0">Без монтажа</option></select>
-            </div>
-            <div class="field" id="mountManualWrap" style="margin-top:10px;display:none"><label>Монтаж вручную, ₽</label><input id="mountManual" type="number" value="30000"></div>
-            <div class="summaryline"><span>Монтаж</span><strong id="signMount">0 ₽</strong></div>
-            <div class="total"><span>Итого клиенту</span><strong id="signFinal">0 ₽</strong></div>
-            <div class="actions no-print">
-              <button class="btn primary" id="saveEstimate">Сохранить смету</button>
-              <button class="btn" id="printEstimate">Скачать PDF</button>
-            </div>
-            <div class="saved" id="savedMsg">Смета сохранена в прототипе. В рабочей CRM она будет привязана к менеджеру, клиенту и заказу.</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </div>
+<section class="view" id="signView">
+<div class="head"><div><h1>Расчёт вывесок</h1><p>Исходные параметры зависят от типа конструкции.</p></div><span class="badge">Коэффициент по умолчанию 2,5</span></div>
+<div class="steps no-print"><span class="step active">1 Тип</span><span class="step">2 Геометрия</span><span class="step">3 Материалы</span><span class="step">4 Свет</span><span class="step">5 Работы</span><span class="step">6 Смета</span></div>
+<div class="two">
+<div>
+<div class="panel">
+<h2>Параметры конструкции</h2>
+<div class="formgrid">
+<div class="field"><label>Тип вывески</label><select id="signType"><option>Буквы на раме</option><option>Буквы на подложке</option><option>Буквы — контражур</option><option>Световой объёмный короб</option><option>Короб «Напрорез»</option></select></div>
+<div class="sectionline">Поля ниже меняются автоматически в зависимости от типа</div>
+</div>
+<div class="formgrid" id="signFields" style="margin-top:10px"></div>
+</div>
+<div class="panel" style="margin-top:16px">
+<h2>Материалы и работы</h2>
+<table><thead><tr><th>Статья</th><th>Материал / работа</th><th class="right">Кол-во</th><th class="right">Себестоимость</th></tr></thead><tbody id="signMaterials"></tbody></table>
+<div class="warning no-print">В прототипе цены демонстрационные. В рабочей версии расход будет считаться по формулам вашей таблицы «Расчёт вывесок», а цены — из единой базы.</div>
+</div>
+<div class="panel" style="margin-top:16px"><h2>Описание / ТЗ</h2><div class="field"><textarea id="signDesc"></textarea></div><p class="note no-print">Описание создаётся из расчёта и остаётся редактируемым менеджером.</p></div>
+</div>
+<div>
+<div class="panel">
+<h2>Смета</h2>
+<div class="summaryline"><span>Себестоимость</span><strong id="signCost">0 ₽</strong></div>
+<div class="field" style="margin-top:12px"><label>Коэффициент</label><input id="signCoeff" type="number" step=".1" value="2.5"></div>
+<div class="summaryline"><span>Изготовление</span><strong id="signProduction">0 ₽</strong></div>
+<div class="field" style="margin-top:12px"><label>Монтаж</label><select id="mountMode"><option value="20">20% от вывески</option><option value="manual">Вручную</option><option value="0">Без монтажа</option></select></div>
+<div class="field" id="mountManualWrap" style="display:none;margin-top:10px"><label>Монтаж вручную, ₽</label><input id="mountManual" type="number" value="30000"></div>
+<div class="summaryline"><span>Монтаж</span><strong id="signMount">0 ₽</strong></div>
+<div class="total"><span>Итого клиенту</span><strong id="signFinal">0 ₽</strong></div>
+<div class="actions no-print"><button class="btn primary" id="saveEstimate">Сохранить смету</button><button class="btn" id="printEstimate">Скачать PDF</button></div>
+<div class="saved" id="savedMsg">Смета сохранена в прототипе.</div>
+</div>
+</div>
+</div>
+</section>
+</div>
 </main>
 </div>
 
 <script>
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
-
+const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок'};
-document.querySelectorAll('.nav button[data-view]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('.nav button[data-view]').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    document.getElementById(btn.dataset.view).classList.add('active');
-    document.getElementById('topTitle').textContent=titles[btn.dataset.view];
-  });
-});
+document.querySelectorAll('.nav button[data-view]').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.nav button[data-view]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(btn.dataset.view).classList.add('active');document.getElementById('topTitle').textContent=titles[btn.dataset.view]});
 
 const demoCatalog=[
- {name:'Баннер 510 литой, 360 dpi',cat:'Наружная реклама · Баннеры',cost:230,price:980,unit:'м²'},
- {name:'ПВХ 5 мм + УФ печать',cat:'Наружная реклама · УФ-печать',cost:890,price:1900,unit:'м²'},
- {name:'Листовки А5 — цифровая печать',cat:'Полиграфия · Цифровая печать',cost:3.8,price:7.5,unit:'шт.'},
- {name:'Листовки А5 — офсетная печать',cat:'Полиграфия · Офсетная печать',cost:1.1,price:2.2,unit:'шт.'},
- {name:'Визитки — цифровая печать',cat:'Полиграфия · Цифровая печать',cost:2.9,price:6,unit:'шт.'},
- {name:'Кружка с нанесением',cat:'Сувенирная продукция',cost:260,price:590,unit:'шт.'},
- {name:'Фрезеровка ПВХ',cat:'Наружная реклама · Фрезеровка',cost:80,price:260,unit:'м.п.'},
- {name:'Самоклеящаяся плёнка',cat:'Наружная реклама · Наклейки',cost:170,price:720,unit:'м²'}
+{name:'Баннер 300 гр., 240 dpi',cat:'Наружная реклама · Баннеры',cost:180,price:690,unit:'м²'},
+{name:'Баннер 510 литой, 360 dpi',cat:'Наружная реклама · Баннеры',cost:230,price:980,unit:'м²'},
+{name:'Плёнка Orajet, 720 dpi',cat:'Наружная реклама · Наклейки',cost:170,price:720,unit:'м²'},
+{name:'ПВХ 5 мм + УФ печать',cat:'Наружная реклама · УФ-печать',cost:890,price:1900,unit:'м²'},
+{name:'Листовки А5 — цифровая печать',cat:'Полиграфия · Цифровая печать',cost:3.8,price:7.5,unit:'шт.'},
+{name:'Листовки А5 — офсетная печать',cat:'Полиграфия · Офсетная печать',cost:1.1,price:2.2,unit:'шт.'}
 ];
+function searchCatalog(){const q=document.getElementById('catalogSearch').value.trim().toLowerCase(),box=document.getElementById('searchResults'),rows=document.getElementById('resultRows');if(!q){box.classList.remove('active');return}const found=demoCatalog.filter(x=>(x.name+' '+x.cat).toLowerCase().includes(q));rows.innerHTML=found.length?found.map(x=>'<div class="result-row"><div><b>'+x.name+'</b><small style="display:block">'+x.cat+'</small></div><div class="hide-mobile"><small>Себестоимость</small><div class="money">'+money(x.cost)+' / '+x.unit+'</div></div><div><small>Прайс</small><div class="money">'+money(x.price)+' / '+x.unit+'</div></div><button class="btn hide-mobile" onclick="goAuto()">Рассчитать</button></div>').join(''):'<p class="note">В демонстрационном наборе совпадений нет.</p>';box.classList.add('active')}
+document.getElementById('searchBtn').onclick=searchCatalog;document.getElementById('catalogSearch').onkeydown=e=>{if(e.key==='Enter')searchCatalog()};function goAuto(){document.querySelector('[data-view="autoView"]').click()}
 
-function searchCatalog(){
- const q=document.getElementById('catalogSearch').value.trim().toLowerCase();
- const box=document.getElementById('searchResults'), rows=document.getElementById('resultRows');
- if(!q){box.classList.remove('active');return}
- const found=demoCatalog.filter(x=>(x.name+' '+x.cat).toLowerCase().includes(q));
- rows.innerHTML=found.length?found.map(x=>`
-   <div class="result-row">
-     <div><b>${x.name}</b><small style="display:block">${x.cat}</small></div>
-     <div class="hide-mobile"><small>Себестоимость</small><div class="money">${money(x.cost)} / ${x.unit}</div></div>
-     <div><small>Прайс</small><div class="money">${money(x.price)} / ${x.unit}</div></div>
-     <button class="btn hide-mobile" onclick="goAuto()">Рассчитать</button>
-   </div>`).join(''):'<p class="note">В демонстрационном наборе совпадений нет. В рабочей версии поиск будет идти по всему прайсу.</p>';
- box.classList.add('active');
+function norm(s){return String(s||'').toLowerCase().replaceAll('ё','е').replace(/\s+/g,' ').trim()}
+function meters(v,u){v=n(v);u=(u||'').toLowerCase();if(u.startsWith('мм'))return v/1000;if(u.startsWith('см'))return v/100;return v}
+function parseSize(t){const m=t.match(/(\d+(?:[.,]\d+)?)\s*(мм|см|м)?\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*(мм|см|м)?/i);if(!m)return null;let u1=m[2],u2=m[4];if(!u1&&u2)u1=u2;if(!u2&&u1)u2=u1;return {w:meters(m[1],u1),h:meters(m[3],u2)}}
+function parseLine(line){
+ const t=norm(line),size=parseSize(t);if(!size)return {source:line,type:'unknown',error:'Не найден размер'};
+ let type='unknown';if(/баннер|сетк/.test(t))type='banner';else if(/пленк|плёнк|ораджет|orajet|оракал|oracal|самокле|наклей/.test(t))type='film';
+ const density=Number((t.match(/\b(300|340|400|440|510)\b/)||[])[1]||0);
+ const dpi=Number((t.match(/\b(240|360|720|1440)\s*(?:dpi|дпи)/)||[])[1]||240);
+ const qty=Number((t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт/)||[]).slice(1).find(Boolean)||1);
+ const gm=t.match(/(?:люверс\w*|люв\.?)[^\d]{0,20}(\d{2,4})\s*мм|через\s*(\d{2,4})\s*мм/);
+ const grommet=gm?Number(gm[1]||gm[2]):0;
+ return {source:line,type,density,dpi,qty,w:size.w,h:size.h,grommet,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк[^,;]*край/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов/.test(t)};
 }
-document.getElementById('searchBtn').onclick=searchCatalog;
-document.getElementById('catalogSearch').addEventListener('keydown',e=>{if(e.key==='Enter')searchCatalog()});
-function goAuto(){document.querySelector('[data-view="autoView"]').click()}
-
-let autoItems=[];
-const rates={
- 'Баннер 510 литой':{cost:230,price:980,mode:'area'},
- 'Листовки — цифровая печать':{cost:4,price:8,mode:'qty'},
- 'Листовки — офсет':{cost:1.2,price:2.4,mode:'qty'},
- 'Самоклеящаяся плёнка':{cost:160,price:720,mode:'area'},
- 'ПВХ 5 мм + УФ':{cost:900,price:1900,mode:'area'}
-};
-document.getElementById('addAuto').onclick=()=>{
- const product=document.getElementById('autoProduct').value;
- const w=+document.getElementById('autoW').value||0,h=+document.getElementById('autoH').value||0,qty=+document.getElementById('autoQty').value||1;
- const r=rates[product], base=r.mode==='area'?w*h*qty:qty;
- let cost=base*r.cost, price=base*r.price;
- const extras=[];
- if(document.getElementById('optG').checked){price+=Math.ceil(2*(w+h)/.3)*19*qty;cost+=Math.ceil(2*(w+h)/.3)*7*qty;extras.push('люверсы')}
- if(document.getElementById('optCut').checked){price+=2*(w+h)*22*qty;cost+=2*(w+h)*8*qty;extras.push('резка')}
- if(document.getElementById('optReinf').checked){price+=2*(w+h)*88*qty;cost+=2*(w+h)*30*qty;extras.push('усиление')}
- if(document.getElementById('optLam').checked){price+=w*h*274*qty;cost+=w*h*120*qty;extras.push('ламинация')}
- autoItems.push({product,w,h,qty,cost,price,extras});
- renderAuto();
-};
-function renderAuto(){
- const disc=Math.max(0,+document.getElementById('autoDiscount').value||0);
- const rows=document.getElementById('autoRows');
- rows.innerHTML=autoItems.length?autoItems.map((x,i)=>{
-  const after=x.price*(1-disc/100);
-  return `<tr><td><b>${x.product}</b></td><td>${x.w}×${x.h} м · ${x.qty} шт.${x.extras.length?'<br><small>'+x.extras.join(', ')+'</small>':''}</td><td class="right">${money(x.cost)}</td><td class="right">${money(x.price)}</td><td class="right"><b>${money(after)}</b></td><td><button class="btn danger" onclick="removeAuto(${i})">×</button></td></tr>`
- }).join(''):'<tr><td colspan="6" class="note">Пока нет позиций. Добавьте первую позицию сверху.</td></tr>';
- const p=autoItems.reduce((s,x)=>s+x.price,0), c=autoItems.reduce((s,x)=>s+x.cost,0), final=p*(1-disc/100), d=p-final;
- document.getElementById('autoPrice').textContent=money(p);
- document.getElementById('autoDiscRub').textContent=money(d);
- document.getElementById('autoCost').textContent=money(c);
- document.getElementById('autoMargin').textContent=money(final-c);
- document.getElementById('autoFinal').textContent=money(final);
+function bannerLayout(w,h){const roll=3;if(Math.min(w,h)<=roll)return {overflow:0,seams:0,seamLength:0,orientation:'без склейки'};function one(width,height){const parts=Math.ceil(width/roll),last=width-(parts-1)*roll,overflow=Math.max(0,(roll-last)*height);return {overflow,seams:parts-1,seamLength:height}}const a=one(w,h),b=one(h,w),best=b.overflow<a.overflow?b:a;best.orientation=b.overflow<a.overflow?'повёрнутая':'стандартная';return best}
+let detected=[],autoItems=[];
+function recognize(){const raw=document.getElementById('orderText').value;detected=raw.split(/\n|;|\s+\+\s+/).map(x=>x.trim()).filter(Boolean).map(parseLine);renderDetected()}
+function renderDetected(){
+ const box=document.getElementById('detected');if(!detected.length){box.innerHTML='';return}
+ box.innerHTML=detected.map((x,i)=>{
+  if(x.error||x.type==='unknown')return '<div class="detected-card"><b>'+x.source+'</b><div class="chips"><span class="chip warn">Не удалось определить материал или размер</span></div></div>';
+  const name=x.type==='banner'?'Баннер '+(x.density||'')+' гр.':'Плёнка '+(x.dpi||'')+' dpi';
+  const layout=x.type==='banner'?bannerLayout(x.w,x.h):null;
+  let chips='<span class="chip">'+x.w.toFixed(3)+' × '+x.h.toFixed(3)+' м</span><span class="chip">'+x.qty+' шт.</span>';
+  if(x.density)chips+='<span class="chip">'+x.density+' гр.</span>';if(x.dpi)chips+='<span class="chip">'+x.dpi+' dpi</span>';
+  if(layout&&layout.seams)chips+='<span class="chip auto">Склейка автоматически: '+layout.seams+' шв.</span>';
+  let post='';
+  if(x.type==='banner'){
+   post='<div class="post"><div class="field"><label>Люверсы</label><select onchange="detected['+i+'].grommet=+this.value"><option value="0">Нет</option><option value="200" '+(x.grommet===200?'selected':'')+'>через 200 мм</option><option value="300" '+(x.grommet===300?'selected':'')+'>через 300 мм</option><option value="400" '+(x.grommet===400?'selected':'')+'>через 400 мм</option><option value="500" '+(x.grommet===500?'selected':'')+'>через 500 мм</option></select></div><label class="check"><input type="checkbox" '+(x.wind?'checked':'')+' onchange="detected['+i+'].wind=this.checked"> Ветровые карманы</label><label class="check"><input type="checkbox" '+(x.reinforce?'checked':'')+' onchange="detected['+i+'].reinforce=this.checked"> Усиление края</label><label class="check"><input type="checkbox" '+(x.edgeCut?'checked':'')+' onchange="detected['+i+'].edgeCut=this.checked"> Резка в край</label></div>';
+  } else {
+   const lam=x.laminate?(x.lamGloss?'gloss':x.lamMatte?'matte':'gloss'):'none';
+   post='<div class="post"><div class="field"><label>Ламинация</label><select onchange="detected['+i+'].lamination=this.value"><option value="none">Нет</option><option value="gloss" '+(lam==='gloss'?'selected':'')+'>Глянец</option><option value="matte" '+(lam==='matte'?'selected':'')+'>Матовая</option></select></div><label class="check"><input type="checkbox" '+(x.edgeCut?'checked':'')+' onchange="detected['+i+'].edgeCut=this.checked"> Резка в край</label><label class="check"><input type="checkbox" '+(x.contour?'checked':'')+' onchange="detected['+i+'].contour=this.checked"> Контурная резка</label></div>';
+  }
+  return '<div class="detected-card"><div class="detected-head"><div><b>'+name+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div>'+post+'</div>';
+ }).join('');
 }
-function removeAuto(i){autoItems.splice(i,1);renderAuto()}
-document.getElementById('autoDiscount').addEventListener('input',renderAuto);
-renderAuto();
-
-function signCalc(){
- const type=document.getElementById('signType').value,w=+document.getElementById('signW').value||0,h=+document.getElementById('signH').value||0,
- d=+document.getElementById('signD').value||0,p=+document.getElementById('signP').value||0,a=+document.getElementById('signA').value||0,
- leds=+document.getElementById('signLed').value||0,psu=+document.getElementById('signPsu').value||0;
- const rows=[
-  ['Рама','Тюбинг + покраска',Math.max(p*.35,2).toFixed(1)+' м.п.',Math.max(p*.35,2)*420],
-  ['Лицо','Акрил / ПВХ',a.toFixed(2)+' м²',a*1450],
-  ['Борт','ПВХ', (p*d).toFixed(2)+' м²',p*d*900],
-  ['Плёнка','Оракал / транслюцент',a.toFixed(2)+' м²',a*650],
-  ['Светодиоды','LED-модули',leds+' шт.',leds*42],
-  ['Блоки питания','Уличные БП',psu+' шт.',psu*1800],
-  ['Фрезеровка','Лицо / задник',p.toFixed(1)+' м.п.',p*110],
-  ['Фурнитура / клей','Комплект','1',1800]
- ];
- const cost=rows.reduce((s,r)=>s+r[3],0);
- document.getElementById('signMaterials').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="right">${r[2]}</td><td class="right">${money(r[3])}</td></tr>`).join('');
- const coeff=+document.getElementById('signCoeff').value||0, production=cost*coeff;
- const mode=document.getElementById('mountMode').value;
- let mount=0;
- if(mode==='manual') mount=+document.getElementById('mountManual').value||0; else mount=production*(+mode/100);
- document.getElementById('mountManualWrap').style.display=mode==='manual'?'block':'none';
- document.getElementById('signCost').textContent=money(cost);
- document.getElementById('signProduction').textContent=money(production);
- document.getElementById('signMount').textContent=money(mount);
- document.getElementById('signFinal').textContent=money(production+mount);
- const desc=document.getElementById('signDesc');
- if(!desc.dataset.edited){
-   desc.value=`${type}. Габарит: ${w} × ${h} м, глубина ${d} м. Площадь световых элементов — ${a} м², периметр — ${p} м.п. Конструкция с внутренней рамой, лицом из акрила/ПВХ, оклейкой плёнкой и светодиодной подсветкой. Светодиодные модули — ${leds} шт., блоки питания — ${psu} шт. Материалы и цвет уточнить по утверждённому макету. Монтаж рассчитывается отдельно согласно сложности объекта.`;
+function addDetected(i){
+ const x=detected[i];if(!x||x.error||x.type==='unknown')return;
+ const area=x.w*x.h*x.qty,per=2*(x.w+x.h),details=[];let cost=0,price=0;
+ if(x.type==='banner'){
+  const baseCost=x.density>=500?230:x.density>=400?205:180,basePrice=x.density>=500?980:x.density>=400?820:690;cost=area*baseCost;price=area*basePrice;details.push('печать '+area.toFixed(2)+' м²');
+  const lay=bannerLayout(x.w,x.h);if(lay.overflow>0){cost+=lay.overflow*baseCost*x.qty;price+=lay.overflow*basePrice*x.qty;details.push('перерасход '+lay.overflow.toFixed(2)+' м²')}
+  if(lay.seams>0){const len=lay.seams*lay.seamLength*x.qty;cost+=len*30;price+=len*76;details.push('склейка '+lay.seams+' шв.')}
+  if(x.grommet){const count=Math.ceil(per/(x.grommet/1000))*x.qty;cost+=count*7;price+=count*19;details.push('люверсы '+count+' шт. / '+x.grommet+' мм')}
+  if(x.wind){const pockets=Math.ceil(per/1.5)*x.qty;cost+=pockets*10;price+=pockets*24;details.push('ветровые карманы '+pockets+' шт.')}
+  if(x.reinforce){cost+=per*30*x.qty;price+=per*88*x.qty;details.push('усиление края')}
+  if(x.edgeCut){cost+=per*8*x.qty;price+=per*22*x.qty;details.push('резка в край')}
+ } else {
+  cost=area*170;price=area*(x.dpi>=720?900:720);details.push('печать '+area.toFixed(2)+' м² / '+x.dpi+' dpi');
+  const lam=x.lamination||(x.laminate?(x.lamMatte?'matte':'gloss'):'none');if(lam!=='none'){cost+=area*120;price+=area*274;details.push('ламинация '+(lam==='matte'?'матовая':'глянец'))}
+  if(x.contour){cost+=area*170;price+=area*439;details.push('контурная резка')}else if(x.edgeCut){cost+=per*8*x.qty;price+=per*22*x.qty;details.push('резка в край')}
  }
+ autoItems.push({name:x.type==='banner'?'Баннер '+(x.density||'')+' гр.':'Плёнка '+x.dpi+' dpi',cost,price,details});renderAuto();
 }
-['signType','signW','signH','signD','signP','signA','signLed','signPsu','signCoeff','mountMode','mountManual'].forEach(id=>document.getElementById(id).addEventListener('input',signCalc));
-document.getElementById('signDesc').addEventListener('input',e=>e.target.dataset.edited='1');
-document.getElementById('saveEstimate').onclick=()=>{
- localStorage.setItem('printirk-demo-estimate',JSON.stringify({description:document.getElementById('signDesc').value,coeff:document.getElementById('signCoeff').value,total:document.getElementById('signFinal').textContent,date:new Date().toISOString()}));
- document.getElementById('savedMsg').classList.add('show');
-};
-document.getElementById('printEstimate').onclick=()=>window.print();
-signCalc();
+function renderAuto(){const disc=Math.max(0,n(document.getElementById('autoDiscount').value));document.getElementById('autoRows').innerHTML=autoItems.length?autoItems.map((x,i)=>'<tr><td><b>'+x.name+'</b></td><td>'+x.details.join('<br>')+'</td><td class="right">'+money(x.cost)+'</td><td class="right">'+money(x.price)+'</td><td class="right"><b>'+money(x.price*(1-disc/100))+'</b></td><td><button class="btn danger" onclick="removeAuto('+i+')">×</button></td></tr>').join(''):'<tr><td colspan="6" class="note">Пока нет позиций. Введите заказ обычным текстом выше.</td></tr>';const p=autoItems.reduce((s,x)=>s+x.price,0),c=autoItems.reduce((s,x)=>s+x.cost,0),final=p*(1-disc/100);document.getElementById('autoPrice').textContent=money(p);document.getElementById('autoDiscRub').textContent=money(p-final);document.getElementById('autoCost').textContent=money(c);document.getElementById('autoMargin').textContent=money(final-c);document.getElementById('autoFinal').textContent=money(final)}
+function removeAuto(i){autoItems.splice(i,1);renderAuto()}
+document.getElementById('recognizeBtn').onclick=recognize;document.getElementById('autoDiscount').oninput=renderAuto;renderAuto();
+
+const signConfigs={
+'Буквы на раме':[
+['frameP','Периметр рамы, м.п.',5],['letterP','Периметр букв, м.п.',17],['letterA','Площадь букв, м²',0.9],['letterD','Глубина букв, м',0.1],['led','Диоды, шт.',115],['psu','Блоки питания, шт.',1],['photo','Фотореле','Да']
+],
+'Буквы на подложке':[
+['frameP','Периметр рамы, м.п.',5],['letterP','Периметр букв, м.п.',17],['letterA','Площадь букв, м²',0.9],['letterD','Глубина букв, м',0.1],['backP','Периметр подложки, м.п.',5.3],['backA','Площадь подложки, м²',1],['backD','Глубина подложки, м',0.1],['led','Диоды, шт.',115],['psu','Блоки питания, шт.',1],['photo','Фотореле','Да']
+],
+'Буквы — контражур':[
+['frameP','Периметр рамы, м.п.',17],['letterP','Периметр букв, м.п.',33],['letterA','Площадь букв, м²',13.5],['letterD','Глубина букв, м',0.1],['backP','Периметр подложки, м.п.',24],['backA','Площадь подложки, м²',10.6],['backD','Глубина подложки, м',0],['led','Диоды, шт.',205],['psu','Блоки питания, шт.',2],['photo','Фотореле','Нет']
+],
+'Световой объёмный короб':[
+['frameP','Периметр рамы/кронштейна, м.п.',0],['boxW','Ширина короба, м',2],['boxH','Высота короба, м',0.6],['boxD','Глубина короба, м',0.1],['led','Диоды, шт.',16],['psu','Блоки питания, шт.',1],['photo','Фотореле','Нет']
+],
+'Короб «Напрорез»':[
+['frameP','Периметр рамы, м.п.',7],['letterP','Периметр световых элементов, м.п.',8],['letterA','Площадь световых элементов, м²',0.32],['backP','Периметр подложки, м.п.',8],['backA','Площадь подложки, м²',1.75],['backD','Глубина подложки, м',0.08],['led','Диоды, шт.',0],['psu','Блоки питания, шт.',0],['photo','Фотореле','Нет']
+]};
+let signVals={};
+function renderSignFields(){
+ const type=document.getElementById('signType').value,fields=signConfigs[type];signVals={};
+ document.getElementById('signFields').innerHTML=fields.map(f=>{signVals[f[0]]=f[2];if(f[0]==='photo')return '<div class="field"><label>'+f[1]+'</label><select data-sf="'+f[0]+'"><option '+(f[2]==='Да'?'selected':'')+'>Да</option><option '+(f[2]==='Нет'?'selected':'')+'>Нет</option></select></div>';return '<div class="field"><label>'+f[1]+'</label><input data-sf="'+f[0]+'" type="number" step=".01" value="'+f[2]+'"></div>'}).join('');
+ document.querySelectorAll('[data-sf]').forEach(el=>el.oninput=()=>{signVals[el.dataset.sf]=el.tagName==='SELECT'?el.value:n(el.value);signCalc()});document.getElementById('signDesc').dataset.edited='';signCalc()
+}
+function signCalc(){
+ const type=document.getElementById('signType').value,v=signVals,rows=[];let desc='';
+ const add=(a,b,q,c)=>rows.push([a,b,q,c]);
+ if(type==='Световой объёмный короб'){
+  const face=n(v.boxW)*n(v.boxH),side=(n(v.boxW)+n(v.boxH))*2*n(v.boxD),per=(n(v.boxW)+n(v.boxH))*2;
+  add('Рама','Тюбинг + покраска',n(v.frameP).toFixed(1)+' м.п.',n(v.frameP)*420);add('Лицо короба','Акрил молочный',face.toFixed(2)+' м²',face*1450);add('Торцы','ПВХ',side.toFixed(2)+' м²',side*900);add('Задник','ПВХ',face.toFixed(2)+' м²',face*1100);add('Фрезеровка','Лицо/задник',per.toFixed(1)+' м.п.',per*110);desc='Световой объёмный короб '+v.boxW+' × '+v.boxH+' м, глубина '+v.boxD+' м. ';
+ } else {
+  const lp=n(v.letterP),la=n(v.letterA),ld=n(v.letterD);add('Рама','Тюбинг + покраска',n(v.frameP).toFixed(1)+' м.п.',n(v.frameP)*420);add('Лицо букв','Акрил / ПВХ',la.toFixed(2)+' м²',la*1450);add('Борт букв','ПВХ', (lp*ld).toFixed(2)+' м²',lp*ld*900);add('Задник букв','ПВХ',la.toFixed(2)+' м²',la*1000);add('Фрезеровка лица','По периметру букв',lp.toFixed(1)+' м.п.',lp*110);add('Фрезеровка задника','По периметру букв',lp.toFixed(1)+' м.п.',lp*80);
+  desc=type+'. Периметр букв '+lp+' м.п., площадь букв '+la+' м²'+(ld?', глубина '+ld+' м':'')+'. ';
+  if('backA' in v){const ba=n(v.backA),bp=n(v.backP),bd=n(v.backD);add('Подложка','Композит / ПВХ',ba.toFixed(2)+' м²',ba*1250);add('Оклейка подложки','Плёнка', (ba+bp*bd).toFixed(2)+' м²',(ba+bp*bd)*650);add('Фрезеровка подложки','По периметру',bp.toFixed(1)+' м.п.',bp*120);desc+='Подложка: периметр '+bp+' м.п., площадь '+ba+' м²'+(bd?', глубина '+bd+' м':'')+'. '}
+ }
+ add('Светодиоды','LED-модули',n(v.led)+' шт.',n(v.led)*42);add('Блоки питания','БП',n(v.psu)+' шт.',n(v.psu)*1800);if(v.photo==='Да')add('Фотореле','Комплект','1',500);add('Фурнитура / клей','Комплект','1',1800);
+ const cost=rows.reduce((s,r)=>s+r[3],0);document.getElementById('signMaterials').innerHTML=rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td class="right">'+r[2]+'</td><td class="right">'+money(r[3])+'</td></tr>').join('');
+ const coeff=n(document.getElementById('signCoeff').value),production=cost*coeff,mode=document.getElementById('mountMode').value;let mount=mode==='manual'?n(document.getElementById('mountManual').value):production*n(mode)/100;document.getElementById('mountManualWrap').style.display=mode==='manual'?'block':'none';document.getElementById('signCost').textContent=money(cost);document.getElementById('signProduction').textContent=money(production);document.getElementById('signMount').textContent=money(mount);document.getElementById('signFinal').textContent=money(production+mount);
+ const ta=document.getElementById('signDesc');if(!ta.dataset.edited)ta.value=desc+'Светодиодные модули '+n(v.led)+' шт., блоки питания '+n(v.psu)+' шт.'+(v.photo==='Да'?' Фотореле предусмотрено.':'')+' Материалы и цвет уточнить по утверждённому макету.'
+}
+document.getElementById('signType').onchange=renderSignFields;['signCoeff','mountMode','mountManual'].forEach(id=>document.getElementById(id).oninput=signCalc);document.getElementById('signDesc').oninput=e=>e.target.dataset.edited='1';document.getElementById('saveEstimate').onclick=()=>{localStorage.setItem('printirk-demo-estimate',JSON.stringify({type:document.getElementById('signType').value,values:signVals,description:document.getElementById('signDesc').value,coeff:document.getElementById('signCoeff').value,total:document.getElementById('signFinal').textContent,date:new Date().toISOString()}));document.getElementById('savedMsg').classList.add('show')};document.getElementById('printEstimate').onclick=()=>window.print();renderSignFields();
 </script>
 </body>
 </html>
