@@ -139,7 +139,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </section>
 
 <section class="view" id="errorView">
-<div class="head"><div><h1>Ошибки расчёта</h1><p>Обратная связь менеджеров по распознаванию, раскладке, цене и постобработке.</p></div><button class="btn" id="exportErrors">Скачать CSV ошибок</button></div>
+<div class="head"><div><h1>Ошибки расчёта</h1><p>Обратная связь менеджеров по распознаванию, раскладке, цене и постобработке.</p></div><div style="display:flex;gap:8px;align-items:center"><span class="badge" id="sharedLogStatus">Общий журнал: подключение…</span><button class="btn" id="exportErrors">Скачать CSV ошибок</button></div></div>
 <div class="panel">
 <div id="errorEmpty" class="note">Пока ошибок не отмечено.</div>
 <div id="errorList"></div>
@@ -164,6 +164,10 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
         <option>Неправильная себестоимость</option>
         <option>Другое</option>
       </select>
+    </div>
+    <div class="post" style="margin-top:10px">
+      <div class="field"><label>Менеджер</label><input id="errorManager" placeholder="Имя менеджера"></div>
+      <div class="field"><label>Офис</label><input id="errorOffice" placeholder="Иркутск / Ангарск / Шелехов / Усолье"></div>
     </div>
     <div class="field" style="margin-top:10px"><label>Как должно быть</label><textarea id="errorExpected" placeholder="Например: 1 биг по центру; цена 420 ₽; должно быть 8 шт. на SRA3"></textarea></div>
     <div class="field" style="margin-top:10px"><label>Комментарий менеджера</label><textarea id="errorComment" placeholder="Дополнительное пояснение, если нужно"></textarea></div>
@@ -190,6 +194,14 @@ function synonymMatch(t, kind){
 document.querySelectorAll('.nav button[data-view]').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.nav button[data-view]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(btn.dataset.view).classList.add('active');document.getElementById('topTitle').textContent=titles[btn.dataset.view]});
 
 let catalogData=null,catalogIndex=[];
+let errorLogConfig={enabled:false,endpoint:'',sheetName:'Журнал ошибок'};
+fetch('data/error_log_config.json').then(r=>r.ok?r.json():{}).then(cfg=>{
+  errorLogConfig={...errorLogConfig,...cfg};
+  const el=document.getElementById('sharedLogStatus');
+  if(el)el.textContent=errorLogConfig.enabled&&errorLogConfig.endpoint?'Общий журнал: подключён':'Общий журнал: ожидает подключения';
+}).catch(()=>{
+  const el=document.getElementById('sharedLogStatus');if(el)el.textContent='Общий журнал: локальный резерв';
+});
 const sectionNames={
  wide_format:'Широкоформатная печать',digital_print:'Цифровая печать',business_cards:'Визитки',offset_leaflets:'Офсетные листовки',
  sign_plates:'Таблички',uv_print:'УФ-печать',plotter_cut:'Плоттерная резка',evacuations:'Планы эвакуации',presswall:'Прессволы',
@@ -679,11 +691,50 @@ function renderAuto(){const disc=Math.max(0,n(document.getElementById('autoDisco
 function removeAuto(i){autoItems.splice(i,1);renderAuto()}
 let errorTarget=null;
 function readErrors(){try{return JSON.parse(localStorage.getItem('printirk-calc-errors')||'[]')}catch(e){return []}}
-function renderErrors(){const list=readErrors(),box=document.getElementById('errorList'),empty=document.getElementById('errorEmpty');empty.style.display=list.length?'none':'block';box.innerHTML=list.slice().reverse().map(e=>'<div class="error-row"><div><b>'+new Date(e.date).toLocaleString('ru-RU')+'</b><small style="display:block">'+(e.manager||'Менеджер')+' · '+(e.version||'')+'</small></div><div>'+e.type+'</div><div><b>'+e.source+'</b><small style="display:block"><b>Должно быть:</b> '+(e.expected||'—')+'</small><small style="display:block">'+(e.comment||'')+'</small></div><div>'+e.item+'<small style="display:block">'+e.total+'</small></div></div>').join('')}
-function openError(i){errorTarget=i;document.getElementById('errorExpected').value='';document.getElementById('errorComment').value='';document.getElementById('errorModal').classList.add('show')}
+function renderErrors(){const list=readErrors(),box=document.getElementById('errorList'),empty=document.getElementById('errorEmpty');empty.style.display=list.length?'none':'block';box.innerHTML=list.slice().reverse().map(e=>'<div class="error-row"><div><b>'+new Date(e.date).toLocaleString('ru-RU')+'</b><small style="display:block">'+(e.manager||'Менеджер')+' · '+(e.version||'')+'</small></div><div>'+e.type+'</div><div><b>'+e.source+'</b><small style="display:block"><b>Должно быть:</b> '+(e.expected||'—')+'</small><small style="display:block">'+(e.comment||'')+'</small></div><div>'+e.item+'<small style="display:block">'+e.total+' · '+(e.sync==='google'?'Google':'локально')+'</small></div></div>').join('')}
+function openError(i){
+ errorTarget=i;
+ document.getElementById('errorExpected').value='';
+ document.getElementById('errorComment').value='';
+ const visibleUser=document.querySelector('.top .user b')?.textContent?.trim()||'';
+ const mgr=document.getElementById('errorManager');if(mgr&&!mgr.value)mgr.value=visibleUser;
+ document.getElementById('errorModal').classList.add('show');
+}
 document.getElementById('cancelError').onclick=()=>document.getElementById('errorModal').classList.remove('show');
-document.getElementById('saveError').onclick=()=>{const x=autoItems[errorTarget];if(!x)return;const errs=readErrors();errs.push({date:new Date().toISOString(),version:CALC_VERSION,status:'new',manager:'Илья',type:document.getElementById('errorType').value,expected:document.getElementById('errorExpected').value.trim(),comment:document.getElementById('errorComment').value.trim(),source:x.source||'',parsed:x.parsed||'',details:(x.details||[]).join(' | '),item:x.name,total:money(x.price),cost:money(x.cost)});localStorage.setItem('printirk-calc-errors',JSON.stringify(errs));document.getElementById('errorModal').classList.remove('show');renderErrors()}
-document.getElementById('exportErrors').onclick=()=>{const rows=readErrors(),headers=['date','version','status','manager','type','source','item','total','cost','expected','comment','details','parsed'];const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';const csv='\ufeff'+headers.join(';')+'\n'+rows.map(r=>headers.map(h=>esc(r[h])).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='printirk_calc_errors.csv';a.click();URL.revokeObjectURL(a.href)}
+async function sendErrorToSharedLog(err){
+ if(!errorLogConfig.enabled||!errorLogConfig.endpoint)return false;
+ const payload=new URLSearchParams();
+ const map={
+   version:err.version,status:err.status,manager:err.manager,office:err.office,type:err.type,
+   source:err.source,item:err.item,price:err.price,cost:err.cost,expected:err.expected,
+   comment:err.comment,details:err.details,parsed:err.parsed,origin:location.href
+ };
+ Object.entries(map).forEach(([k,v])=>payload.append(k,String(v??'')));
+ try{
+   await fetch(errorLogConfig.endpoint,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:payload});
+   return true;
+ }catch(e){console.warn('Shared error log unavailable',e);return false}
+}
+document.getElementById('saveError').onclick=async()=>{
+ const x=autoItems[errorTarget];if(!x)return;
+ const err={
+   date:new Date().toISOString(),version:CALC_VERSION,status:'Новая',
+   manager:document.getElementById('errorManager').value.trim(),
+   office:document.getElementById('errorOffice').value.trim(),
+   type:document.getElementById('errorType').value,
+   expected:document.getElementById('errorExpected').value.trim(),
+   comment:document.getElementById('errorComment').value.trim(),
+   source:x.source||'',parsed:x.parsed||'',details:(x.details||[]).join(' | '),item:x.name,
+   price:Number(x.price)||0,cost:Number(x.cost)||0,total:money(x.price),costDisplay:money(x.cost),sync:'local'
+ };
+ const errs=readErrors();errs.push(err);localStorage.setItem('printirk-calc-errors',JSON.stringify(errs));
+ const sent=await sendErrorToSharedLog(err);err.sync=sent?'google':'local';
+ localStorage.setItem('printirk-calc-errors',JSON.stringify(errs));
+ const status=document.getElementById('sharedLogStatus');
+ if(status)status.textContent=sent?'Общий журнал: отправлено':'Общий журнал: локальный резерв';
+ document.getElementById('errorModal').classList.remove('show');renderErrors();
+}
+document.getElementById('exportErrors').onclick=()=>{const rows=readErrors(),headers=['date','version','status','manager','office','type','source','item','price','cost','total','expected','comment','details','parsed','sync'];const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';const csv='\ufeff'+headers.join(';')+'\n'+rows.map(r=>headers.map(h=>esc(r[h])).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='printirk_calc_errors.csv';a.click();URL.revokeObjectURL(a.href)}
 renderErrors();
 document.getElementById('recognizeBtn').onclick=recognize;document.getElementById('autoDiscount').oninput=renderAuto;renderAuto();
 
