@@ -455,20 +455,64 @@ function offsetSheetsA3(format,qty,color){const div={A3:1,A4:2,A5:4,A6:8,A7:16}[
 function offsetCustomCost(x){const sheets=offsetSheetsA3(x.format,x.qty,x.color), paper=paperCostA3[x.density]||2, forms=x.color==='4+4'?8:4, print=sheets*(x.color==='4+4'?0.6:0.3);return {cost:sheets*paper+forms*220+print,sheets}}
 let detected=[],autoItems=[];
 function recognize(){const raw=document.getElementById('orderText').value;detected=splitPositions(raw).map(parseLine);renderDetected()}
+function digitalPostUI(i,x){
+ const p=x.post||(x.post=postFromText('',x.qty));
+ const lam=[
+  ['none','Без ламинации'],
+  ['roll_gloss','Рулонная глянец 32 мкр · А3 · 2 стороны'],
+  ['roll_matte','Рулонная матовая 32 мкр · А3 · 2 стороны'],
+  ['roll_soft','Soft Touch 32 мкр · А3 · 2 стороны'],
+  ['roll_glitter','Глиттерная 115 мкр'],
+  ['100_gloss','Пакетная 100 мкр · глянец'],
+  ['100_matte','Пакетная 100 мкр · матовая'],
+  ['150_gloss','Пакетная 150 мкр · глянец'],
+  ['150_matte','Пакетная 150 мкр · матовая'],
+  ['200_gloss','Пакетная 200 мкр · глянец']
+ ].map(z=>'<option value="'+z[0]+'" '+(x.lamination===z[0]?'selected':'')+'>'+z[1]+'</option>').join('');
+ const binding=[
+  ['none','Без переплёта'],['A6','Пружина А6'],['A5','Пружина А5'],['A4','Пружина А4'],['A3','Пружина А3 · только короткая сторона'],['hard_A4','Твёрдая обложка на болтах А4'],['hard_A3','Твёрдая обложка на болтах А3']
+ ].map(z=>'<option value="'+z[0]+'" '+(p.binding===z[0]?'selected':'')+'>'+z[1]+'</option>').join('');
+ return '<div class="sectionline">Постобработка цифровой печати</div>'+
+ '<div class="post">'+
+ '<div class="field"><label>Ламинация</label><select onchange="detected['+i+'].lamination=this.value;renderDetected()">'+lam+'</select></div>'+
+ '<div class="field"><label>Резка, проходов</label><input type="number" min="0" value="'+(p.cutPasses||0)+'" onchange="detected['+i+'].post.cutPasses=+this.value"></div>'+
+ '<div class="field"><label>Биговка, бигов / изделие</label><input type="number" min="0" value="'+(p.bigs||0)+'" onchange="detected['+i+'].post.bigs=+this.value"></div>'+
+ '<div class="field"><label>Фальцовка, фальцев / изделие</label><input type="number" min="0" value="'+(p.folds||0)+'" onchange="detected['+i+'].post.folds=+this.value"></div>'+
+ '<label class="check"><input type="checkbox" '+(p.round?'checked':'')+' onchange="detected['+i+'].post.round=this.checked"> Скругление 4 углов</label>'+
+ '<label class="check"><input type="checkbox" '+(p.numbering?'checked':'')+' onchange="detected['+i+'].post.numbering=this.checked"> Нумерация</label>'+
+ '<div class="field"><label>Скоб / изделие</label><input type="number" min="0" value="'+(p.staples||0)+'" onchange="detected['+i+'].post.staples=+this.value"></div>'+
+ '<div class="field"><label>Отверстий / изделие</label><input type="number" min="0" value="'+(p.holes||0)+'" onchange="detected['+i+'].post.holes=+this.value"></div>'+
+ '<div class="field"><label>Люверсов / изделие</label><input type="number" min="0" value="'+(p.eyelets||0)+'" onchange="detected['+i+'].post.eyelets=+this.value"></div>'+
+ '<label class="check"><input type="checkbox" '+(p.collation?'checked':'')+' onchange="detected['+i+'].post.collation=this.checked"> Листоподборка</label>'+
+ '<div class="field"><label>Склейка блоков, шт.</label><input type="number" min="0" value="'+(p.blockGlue||0)+'" onchange="detected['+i+'].post.blockGlue=+this.value"></div>'+
+ '<div class="field"><label>Переплёт</label><select onchange="detected['+i+'].post.binding=this.value">'+binding+'</select></div>'+
+ '<div class="field"><label>Скотч, операций</label><input type="number" min="0" value="'+(p.tape||0)+'" onchange="detected['+i+'].post.tape=+this.value"></div>'+
+ '</div>';
+}
 function renderDetected(){
  const box=document.getElementById('detected');if(!detected.length){box.innerHTML='';return}
  box.innerHTML=detected.map((x,i)=>{
   if(x.error||x.type==='unknown')return '<div class="detected-card"><b>'+x.source+'</b><div class="chips"><span class="chip warn">Не удалось определить материал или размер</span></div></div>';
 
   if(x.type==='poly'){
-    const layout=bestDigitalLayout(x.wmm,x.hmm);
-    const tech=x.technology||'';
-    const sides=x.color==='4+4'?'двусторонняя':'односторонняя';
+    const tech=x.technology||'',sides=x.color==='4+4'?'двусторонняя':'односторонняя',opt=tech==='digital'?bestDigitalOption(x):null;
     let chips='<span class="chip">'+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+'</span><span class="chip">'+x.color+' · '+sides+'</span><span class="chip">'+x.density+' гр.</span><span class="chip">'+x.qty+' шт.</span>';
     if(tech==='digital'&&x.technologyReason) chips+='<span class="chip auto">Автовыбор: цифра · '+x.technologyReason+'</span>';
-    if(layout)chips+='<span class="chip auto">Цифра: '+layout.name+', '+layout.up+' шт./лист</span>'; else chips+='<span class="chip warn">Не помещается в SRA3</span>';
-    const lamOpts='<option value="none" '+(x.lamination==='none'?'selected':'')+'>Без ламинации</option><option value="gloss" '+(x.lamination==='gloss'?'selected':'')+'>Глянец</option><option value="matte" '+(x.lamination==='matte'?'selected':'')+'>Матовая</option><option value="soft" '+(x.lamination==='soft'?'selected':'')+'>Soft Touch</option>';
-    return '<div class="detected-card"><div class="detected-head"><div><b>Полиграфия</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Технология</label><select onchange="detected['+i+'].technology=this.value;renderDetected()"><option value="" '+(!tech?'selected':'')+'>Выбрать вручную</option><option value="digital" '+(tech==='digital'?'selected':'')+'>Цифровая печать</option><option value="offset-ready" '+(tech==='offset-ready'?'selected':'')+'>Офсет — сборный прайс</option><option value="offset-custom" '+(tech==='offset-custom'?'selected':'')+'>Офсет — свой спуск</option></select></div><div class="field"><label>Ламинация полиграфическая</label><select onchange="detected['+i+'].lamination=this.value">'+lamOpts+'</select></div></div></div>';
+    if(tech==='digital'){
+      if(opt)chips+='<span class="chip auto">'+opt.name+': '+opt.up+' шт./лист · '+opt.sheets+' лист.</span>';
+      else {
+        const inv=digitalOptions(x).find(o=>o.invalid);
+        chips+='<span class="chip warn">'+(inv?.invalid||'Не удаётся рассчитать на SRA4/SRA3 по текущему прайсу')+'</span>';
+      }
+    }
+    const papers=[90,130,170,300];if(!papers.includes(x.density))papers.unshift(x.density);
+    const paperOpts=papers.map(p=>'<option value="'+p+'" '+(x.density===p?'selected':'')+'>'+p+' гр.'+(![90,130,170,300].includes(p)?' · требует цены':'')+'</option>').join('');
+    const colorOpts='<option '+(x.color==='4+0'?'selected':'')+'>4+0</option><option '+(x.color==='4+4'?'selected':'')+'>4+4</option>';
+    let controls='<div class="post"><div class="field"><label>Технология</label><select onchange="detected['+i+'].technology=this.value;renderDetected()"><option value="" '+(!tech?'selected':'')+'>Выбрать вручную</option><option value="digital" '+(tech==='digital'?'selected':'')+'>Цифровая печать</option><option value="offset-ready" '+(tech==='offset-ready'?'selected':'')+'>Офсет — сборный прайс</option><option value="offset-custom" '+(tech==='offset-custom'?'selected':'')+'>Офсет — свой спуск</option></select></div>'+
+    '<div class="field"><label>Красочность</label><select onchange="detected['+i+'].color=this.value;renderDetected()">'+colorOpts+'</select></div>'+
+    '<div class="field"><label>Бумага</label><select onchange="detected['+i+'].density=+this.value;renderDetected()">'+paperOpts+'</select></div></div>';
+    if(tech==='digital')controls+=digitalPostUI(i,x);
+    return '<div class="detected-card"><div class="detected-head"><div><b>'+(x.productKind||'Полиграфия')+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div>'+controls+'</div>';
   }
 
   if(x.type==='poster'){
@@ -510,12 +554,16 @@ function addDetected(i){
    if(!x.technology){alert('Выберите технологию: цифра или офсет.');return}
    name=(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+' '+x.color+' '+x.density+' гр.';
    if(x.technology==='digital'){
-     const layout=bestDigitalLayout(x.wmm,x.hmm);if(!layout){alert('Размер не помещается в SRA3 320×450 мм.');return}
-     const sheets=Math.ceil(x.qty/layout.up);const clicks=sheets*(x.color==='4+4'?2:1);
-     const paper={130:5,170:9,300:11}[x.density]||5;
-     cost=sheets*paper+clicks*18;price=Math.max(100,sheets*(x.color==='4+4'?80:46)+Math.max(0,paper-5)*sheets);
-     details.push('цифровая печать',layout.name+', '+layout.up+' шт./лист','листов '+sheets,'бумага '+x.density+' гр.');
-     if(x.lamination!=='none'){const lam={gloss:37,matte:42,soft:46}[x.lamination]||0;price+=sheets*lam;cost+=sheets*lam*.45;details.push('ламинация '+(x.lamination==='soft'?'Soft Touch':x.lamination==='matte'?'матовая':'глянец'))}
+     const opt=bestDigitalOption(x);
+     if(!opt){
+       const inv=digitalOptions(x).find(o=>o.invalid);
+       alert(inv?.invalid||'Не удаётся рассчитать цифровую печать: размер/тираж вне текущих таблиц SRA4/SRA3.');return;
+     }
+     name=(x.productKind||'Полиграфия')+' '+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+' '+x.color+' '+x.density+' гр. · цифра';
+     price=opt.sale;cost=opt.cost;
+     details.push('цифровая печать '+x.color+(x.color==='4+4'?' · 2 стороны':' · 1 сторона'),opt.name+': '+opt.up+' шт./лист','печатных листов: '+opt.sheets,'бумага '+x.density+' гр.','печать + бумага: '+money(opt.sale));
+     const pp=digitalPostCalc(x,opt);price+=pp.sale;cost+=pp.cost;details.push(...pp.parts);
+     price=Math.max(digitalSection().minimum_order_rub||100,price);
    } else if(x.technology==='offset-custom'){
      const sheetFit=Math.max(1,Math.floor(297/x.wmm)*Math.floor(420/x.hmm),Math.floor(297/x.hmm)*Math.floor(420/x.wmm));
      const sheets=Math.ceil(x.qty/sheetFit);
