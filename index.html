@@ -232,8 +232,11 @@ function parseLine(line){
    if(!size)return {source:line,type:'unknown',error:'Не найден формат или размер'};
    const lamSoft=/софт|soft\s*touch|силк/.test(t);
    const lamMat=/матов/.test(t),lamGloss=/глян/.test(t);
-   const tech=/цифр/.test(t)?'digital':'';
-   return {source:line,type:'poly',format:fm?'A'+fm[1]:'',color:cm?'4+'+cm[1]:'4+0',density:density||130,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,lamination:lamSoft?'soft':lamMat?'matte':lamGloss?'gloss':'none'};
+   const format=fm?'A'+fm[1]:'';
+   let tech=/цифр/.test(t)?'digital':'';
+   if(lamSoft) tech='digital';
+   else if(!tech && qty && qty<=500 && format!=='A3') tech='digital';
+   return {source:line,type:'poly',format,color:cm?'4+'+cm[1]:'4+0',density:density||130,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,technologyReason:lamSoft?'Soft Touch доступен только в цифре':(!/цифр/.test(t)&&tech==='digital'?'тираж до 500 экз.':'явно указана цифра'),lamination:lamSoft?'soft':lamMat?'matte':lamGloss?'gloss':'none'};
  }
  if(!size)return {source:line,type:'unknown',error:'Не найден размер'};
  if(/постер|плакат/.test(t)){
@@ -275,7 +278,9 @@ function renderDetected(){
   if(x.type==='poly'){
     const layout=bestDigitalLayout(x.wmm,x.hmm);
     const tech=x.technology||'';
-    let chips='<span class="chip">'+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+'</span><span class="chip">'+x.color+'</span><span class="chip">'+x.density+' гр.</span><span class="chip">'+x.qty+' шт.</span>';
+    const sides=x.color==='4+4'?'двусторонняя':'односторонняя';
+    let chips='<span class="chip">'+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+'</span><span class="chip">'+x.color+' · '+sides+'</span><span class="chip">'+x.density+' гр.</span><span class="chip">'+x.qty+' шт.</span>';
+    if(tech==='digital'&&x.technologyReason) chips+='<span class="chip auto">Автовыбор: цифра · '+x.technologyReason+'</span>';
     if(layout)chips+='<span class="chip auto">Цифра: '+layout.name+', '+layout.up+' шт./лист</span>'; else chips+='<span class="chip warn">Не помещается в SRA3</span>';
     const lamOpts='<option value="none" '+(x.lamination==='none'?'selected':'')+'>Без ламинации</option><option value="gloss" '+(x.lamination==='gloss'?'selected':'')+'>Глянец</option><option value="matte" '+(x.lamination==='matte'?'selected':'')+'>Матовая</option><option value="soft" '+(x.lamination==='soft'?'selected':'')+'>Soft Touch</option>';
     return '<div class="detected-card"><div class="detected-head"><div><b>Полиграфия</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Технология</label><select onchange="detected['+i+'].technology=this.value;renderDetected()"><option value="" '+(!tech?'selected':'')+'>Выбрать вручную</option><option value="digital" '+(tech==='digital'?'selected':'')+'>Цифровая печать</option><option value="offset-ready" '+(tech==='offset-ready'?'selected':'')+'>Офсет — сборный прайс</option><option value="offset-custom" '+(tech==='offset-custom'?'selected':'')+'>Офсет — свой спуск</option></select></div><div class="field"><label>Ламинация полиграфическая</label><select onchange="detected['+i+'].lamination=this.value">'+lamOpts+'</select></div></div></div>';
