@@ -262,8 +262,16 @@ function splitPositions(raw){
   s=s.replace(/(?:^|\n|\s)(\d{1,2})[.)]\s+/g,'\n$1. ');
   return s.split(/\n+|;\s*|\s+\+\s+/).map(x=>x.replace(/^\s*(?:[-•]|\d{1,2}[.)])\s*/,'').trim()).filter(Boolean);
 }
-function upOnSheet(sw,sh,w,h){
-  return Math.max(Math.floor(sw/w)*Math.floor(sh/h),Math.floor(sw/h)*Math.floor(sh/w));
+function upOnSheet(sw,sh,w,h,format=''){
+  const standard={
+    '320x450':{A3:1,A4:2,A5:4,A6:8,A7:16},
+    '320x225':{A4:1,A5:2,A6:4,A7:8}
+  };
+  const key=sw+'x'+sh;
+  if(format&&standard[key]?.[format])return standard[key][format];
+  // Для нестандартных размеров закладываем технологический запас под резку.
+  const bw=w+4,bh=h+4;
+  return Math.max(Math.floor(sw/bw)*Math.floor(sh/bh),Math.floor(sw/bh)*Math.floor(sh/bw));
 }
 function digitalFallback(){
  return {
@@ -297,8 +305,8 @@ function isRollLam(v){return ['roll_gloss','roll_matte','roll_glitter','roll_sof
 function digitalOptions(x){
  const sec=digitalSection(),defs=[{name:'SRA4',fmt:'A4',w:320,h:225},{name:'SRA3',fmt:'A3',w:320,h:450}],paperKey=x.paperKey||String(x.density);
  return defs.map(s=>{
-   if(isRollLam(x.lamination)&&s.name!=='SRA3')return null;
-   const up=upOnSheet(s.w,s.h,x.wmm,x.hmm);if(!up)return null;
+   if(isRollLam(x.lamination)&&x.rollLamFormat&&x.rollLamFormat!=='auto'&&s.fmt!==x.rollLamFormat)return null;
+   const up=upOnSheet(s.w,s.h,x.wmm,x.hmm,x.format);if(!up)return null;
    const sheets=Math.ceil(x.qty/up);
    const unit=tierPrice(sec.base_90gsm?.[s.fmt]?.[x.color],sheets);if(unit==null)return null;
    const paper=sec.paper_addons_irku?.[s.name]?.[paperKey];
@@ -325,6 +333,11 @@ function packetFormat(w,h){
  if(fits(210,297))return 'A4';
  if(fits(297,420))return 'A3';
  return null;
+}
+function packetLamFormat(x,opt){
+ if(x.packetLamFormat&&x.packetLamFormat!=='auto')return x.packetLamFormat;
+ if(x.format==='A5')return 'A5';
+ return opt.fmt;
 }
 function digitalPaperKeyFromText(t,density){
  if(/самокле|самоклей|наклей/.test(t)&&/прозрач/.test(t))return 'Самоклеющаяся прозрачная';
@@ -382,9 +395,12 @@ function digitalPostCalc(x,opt){
    if(isRollLam(x.lamination)){
      const key={roll_gloss:'gloss',roll_matte:'matte',roll_glitter:'glitter',roll_soft:'soft_touch'}[x.lamination];
      const lam=sec.lamination?.roll_A3_two_sides?.[key],min=sec.lamination?.roll_A3_two_sides?.minimum_order_rub||300;
-     if(lam){add(lam.name,Math.max(min,lam.price*opt.sheets),Math.max(min/1.1,lam.cost*opt.sheets))}
+     if(lam){
+       const factor=opt.fmt==='A4'?0.5:1;
+       add(lam.name+' '+opt.fmt,Math.max(min,lam.price*factor*opt.sheets),Math.max(min/1.1,lam.cost*factor*opt.sheets));
+     }
    }else{
-     const fmt=packetFormat(x.wmm,x.hmm),lam=sec.lamination?.packet?.[x.lamination];
+     const fmt=packetLamFormat(x,opt),lam=sec.lamination?.packet?.[x.lamination];
      const lp=lam?.prices?.[fmt];
      if(lp!=null)add(lam.name+' '+fmt,lp*x.qty,(lam.costs?.[fmt]??lp/1.1)*x.qty);
      else parts.push('⚠ выбранная пакетная ламинация недоступна для этого формата');
@@ -488,6 +504,8 @@ function digitalPostUI(i,x){
  return '<div class="sectionline">Постобработка цифровой печати</div>'+
  '<div class="post">'+
  '<div class="field"><label>Ламинация</label><select onchange="detected['+i+'].lamination=this.value;renderDetected()">'+lam+'</select></div>'+
+ (x.lamination!=='none'&&!isRollLam(x.lamination)?'<div class="field"><label>Формат пакетной ламинации</label><select onchange="detected['+i+'].packetLamFormat=this.value;renderDetected()"><option value="auto" '+(!x.packetLamFormat||x.packetLamFormat==='auto'?'selected':'')+'>Авто: печатный лист</option><option value="A5" '+(x.packetLamFormat==='A5'?'selected':'')+'>A5</option><option value="A4" '+(x.packetLamFormat==='A4'?'selected':'')+'>A4</option><option value="A3" '+(x.packetLamFormat==='A3'?'selected':'')+'>A3</option></select></div>':'')+
+ (isRollLam(x.lamination)?'<div class="field"><label>Формат рулонной ламинации</label><select onchange="detected['+i+'].rollLamFormat=this.value;renderDetected()"><option value="auto" '+(!x.rollLamFormat||x.rollLamFormat==='auto'?'selected':'')+'>Авто: выгоднее A4/A3</option><option value="A4" '+(x.rollLamFormat==='A4'?'selected':'')+'>A4</option><option value="A3" '+(x.rollLamFormat==='A3'?'selected':'')+'>A3</option></select></div>':'')+
  '<div class="field"><label>Резка, проходов</label><input type="number" min="0" value="'+(p.cutPasses||0)+'" onchange="detected['+i+'].post.cutPasses=+this.value"></div>'+
  '<div class="field"><label>Биговка, бигов / изделие</label><input type="number" min="0" value="'+(p.bigs||0)+'" onchange="detected['+i+'].post.bigs=+this.value"></div>'+
  '<div class="field"><label>Фальцовка, фальцев / изделие</label><input type="number" min="0" value="'+(p.folds||0)+'" onchange="detected['+i+'].post.folds=+this.value"></div>'+
@@ -512,7 +530,7 @@ function renderDetected(){
     let chips='<span class="chip">'+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+'</span><span class="chip">'+x.color+' · '+sides+'</span><span class="chip">'+x.density+' гр.</span><span class="chip">'+x.qty+' шт.</span>';
     if(tech==='digital'&&x.technologyReason) chips+='<span class="chip auto">Автовыбор: цифра · '+x.technologyReason+'</span>';
     if(tech==='digital'){
-      if(opt)chips+='<span class="chip auto">'+opt.name+': '+opt.up+' шт./лист · '+opt.sheets+' лист.</span>';
+      if(opt)chips+='<span class="chip auto">'+opt.name+': '+opt.up+' шт./лист · '+opt.sheets+' печатн. лист.</span>';
       else {
         const inv=digitalOptions(x).find(o=>o.invalid);
         chips+='<span class="chip warn">'+(inv?.invalid||'Не удаётся рассчитать на SRA4/SRA3 по текущему прайсу')+'</span>';
