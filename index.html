@@ -305,7 +305,10 @@ function isRollLam(v){return ['roll_gloss','roll_matte','roll_glitter','roll_sof
 function digitalOptions(x){
  const sec=digitalSection(),defs=[{name:'SRA4',fmt:'A4',w:320,h:225},{name:'SRA3',fmt:'A3',w:320,h:450}],paperKey=x.paperKey||String(x.density);
  return defs.map(s=>{
-   if(isRollLam(x.lamination)&&x.rollLamFormat&&x.rollLamFormat!=='auto'&&s.fmt!==x.rollLamFormat)return null;
+   if(isRollLam(x.lamination)){
+     const rollFmt=(!x.rollLamFormat||x.rollLamFormat==='auto')?'A3':x.rollLamFormat;
+     if(s.fmt!==rollFmt)return null;
+   }
    const up=upOnSheet(s.w,s.h,x.wmm,x.hmm,x.format);if(!up)return null;
    const sheets=Math.ceil(x.qty/up);
    const unit=tierPrice(sec.base_90gsm?.[s.fmt]?.[x.color],sheets);if(unit==null)return null;
@@ -505,7 +508,7 @@ function digitalPostUI(i,x){
  '<div class="post">'+
  '<div class="field"><label>Ламинация</label><select onchange="detected['+i+'].lamination=this.value;renderDetected()">'+lam+'</select></div>'+
  (x.lamination!=='none'&&!isRollLam(x.lamination)?'<div class="field"><label>Формат пакетной ламинации</label><select onchange="detected['+i+'].packetLamFormat=this.value;renderDetected()"><option value="auto" '+(!x.packetLamFormat||x.packetLamFormat==='auto'?'selected':'')+'>Авто: печатный лист</option><option value="A5" '+(x.packetLamFormat==='A5'?'selected':'')+'>A5</option><option value="A4" '+(x.packetLamFormat==='A4'?'selected':'')+'>A4</option><option value="A3" '+(x.packetLamFormat==='A3'?'selected':'')+'>A3</option></select></div>':'')+
- (isRollLam(x.lamination)?'<div class="field"><label>Формат рулонной ламинации</label><select onchange="detected['+i+'].rollLamFormat=this.value;renderDetected()"><option value="auto" '+(!x.rollLamFormat||x.rollLamFormat==='auto'?'selected':'')+'>Авто: выгоднее A4/A3</option><option value="A4" '+(x.rollLamFormat==='A4'?'selected':'')+'>A4</option><option value="A3" '+(x.rollLamFormat==='A3'?'selected':'')+'>A3</option></select></div>':'')+
+ (isRollLam(x.lamination)?'<div class="field"><label>Формат рулонной ламинации</label><select onchange="detected['+i+'].rollLamFormat=this.value;renderDetected()"><option value="auto" '+(!x.rollLamFormat||x.rollLamFormat==='auto'?'selected':'')+'>По умолчанию A3</option><option value="A4" '+(x.rollLamFormat==='A4'?'selected':'')+'>A4</option><option value="A3" '+(x.rollLamFormat==='A3'?'selected':'')+'>A3</option></select></div>':'')+
  '<div class="field"><label>Резка, проходов</label><input type="number" min="0" value="'+(p.cutPasses||0)+'" onchange="detected['+i+'].post.cutPasses=+this.value"></div>'+
  '<div class="field"><label>Биговка, бигов / изделие</label><input type="number" min="0" value="'+(p.bigs||0)+'" onchange="detected['+i+'].post.bigs=+this.value"></div>'+
  '<div class="field"><label>Фальцовка, фальцев / изделие</label><input type="number" min="0" value="'+(p.folds||0)+'" onchange="detected['+i+'].post.folds=+this.value"></div>'+
