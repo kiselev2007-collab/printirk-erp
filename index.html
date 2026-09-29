@@ -195,7 +195,9 @@ const sectionNames={
  paper_labels:'Бумажные этикетки',thermal_transfer_labels:'Термотрансферные этикетки',lanyards:'Ланъярды',mugs:'Кружки',
  apparel:'Футболки / текстиль',pens:'Ручки',badges_round:'Значки',name_badges:'Бейджи',magnets:'Магниты',
  three_block_calendars:'Календари трёхблочные',diaries_engraving:'Ежедневники',pvd_bags:'Пакеты ПВД',wardrobe_tags:'Гардеробные номерки',
- discount_cards:'Дисконтные карты',folders:'Папки',black_white_duplication:'Тиражирование',notepads:'Блокноты',forms_stationery:'Бланочная продукция'
+ discount_cards:'Дисконтные карты',folders:'Папки',black_white_duplication:'Тиражирование',notepads:'Блокноты',forms_stationery:'Бланочная продукция',
+ stamps_seals:'Печати и штампы',binding:'Переплётные работы',design:'Дизайн',award_plaques:'Плакетки',
+ lightboxes:'Световые короба',volume_letters_quick:'Объёмные буквы · быстрый расчёт',a_stands:'Штендеры',flat_letters_spacers:'Необъёмные буквы'
 };
 function collectPrices(v,out=[]){
  if(v==null)return out;
@@ -222,18 +224,22 @@ function buildCatalogIndex(data){
  catalogIndex=[];
  Object.entries(data.sections||{}).forEach(([key,sec])=>{
    const secName=sectionNames[key]||key;
-   if(Array.isArray(sec.products))sec.products.forEach(x=>addIndexItem(secName,key,x,x.name));
-   if(Array.isArray(sec.items))sec.items.forEach(x=>addIndexItem(secName,key,x,x.name));
-   if(Array.isArray(sec.standard))sec.standard.forEach(x=>addIndexItem(secName,key,x,x.name));
-   if(Array.isArray(sec.frames))sec.frames.forEach(x=>addIndexItem(secName,key,x,x.name));
-   if(Array.isArray(sec.mounting))sec.mounting.forEach(x=>addIndexItem(secName,key,x,x.name));
-   if(Array.isArray(sec.work))sec.work.forEach(x=>addIndexItem(secName,key,x,x.name));
-   if(Array.isArray(sec.postprocessing))sec.postprocessing.forEach(x=>addIndexItem(secName+' · постобработка',key,x,x.name));
-   if(sec.product) addIndexItem(secName,key,sec,sec.product);
-   if(sec.product_family) addIndexItem(secName,key,sec,sec.product_family);
-   if(sec.inhouse?.product)addIndexItem(secName,key,sec.inhouse,sec.inhouse.product);
-   if(sec.standard?.size_mm)addIndexItem(secName,key,sec.standard,'Этикетка '+sec.standard.size_mm.join('×')+' мм');
-   if(sec.digital?.paper)addIndexItem(secName,key,sec.digital,'Визитки цифровые');
+   const seen=new Set();
+   function walk(v,path=''){
+     if(!v||typeof v!=='object')return;
+     if(Array.isArray(v)){v.forEach((x,i)=>walk(x,path+' '+i));return}
+     const name=v.name||v.product||v.product_family||v.method;
+     if(name){
+       const sig=name+'|'+path;
+       if(!seen.has(sig)){
+         seen.add(sig);
+         const text=(name+' '+secName+' '+key+' '+path+' '+JSON.stringify(v)).toLowerCase();
+         catalogIndex.push({name,cat:secName,sectionKey:key,obj:v,text,priceText:itemPriceText(v)});
+       }
+     }
+     Object.entries(v).forEach(([k,x])=>{if(k!=='source_sheet'&&k!=='notes'&&k!=='note'&&k!=='rules'&&k!=='description')walk(x,path+' '+k)});
+   }
+   walk(sec);
  });
 }
 fetch('data/catalog_v1.json').then(r=>r.json()).then(data=>{catalogData=data;buildCatalogIndex(data);const b=document.querySelector('.top .badge');if(b)b.textContent='Прайс · '+catalogIndex.length+' позиций в поиске'}).catch(()=>{});
