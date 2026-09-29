@@ -43,7 +43,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 <div class="role"><small>Роль</small><div><b>Менеджер</b></div><small>Прайс редактировать нельзя</small></div>
 </aside>
 <main>
-<div class="top"><strong id="topTitle">Прайс</strong><span class="badge">Прототип v2 · цены демонстрационные</span><div class="user"><b>Илья</b><small>Менеджер</small></div></div>
+<div class="top"><strong id="topTitle">Прайс</strong><span class="badge">Прайс · загрузка данных…</span><div class="user"><b>Илья</b><small>Менеджер</small></div></div>
 <div class="content">
 
 <section class="view active" id="priceView">
@@ -187,15 +187,64 @@ function synonymMatch(t, kind){
 }
 document.querySelectorAll('.nav button[data-view]').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.nav button[data-view]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(btn.dataset.view).classList.add('active');document.getElementById('topTitle').textContent=titles[btn.dataset.view]});
 
-const demoCatalog=[
-{name:'Баннер 300 гр., 240 dpi',cat:'Наружная реклама · Баннеры',cost:180,price:690,unit:'м²'},
-{name:'Баннер 510 литой, 360 dpi',cat:'Наружная реклама · Баннеры',cost:230,price:980,unit:'м²'},
-{name:'Плёнка Orajet, 720 dpi',cat:'Наружная реклама · Наклейки',cost:170,price:720,unit:'м²'},
-{name:'ПВХ 5 мм + УФ печать',cat:'Наружная реклама · УФ-печать',cost:890,price:1900,unit:'м²'},
-{name:'Листовки А5 — цифровая печать',cat:'Полиграфия · Цифровая печать',cost:3.8,price:7.5,unit:'шт.'},
-{name:'Листовки А5 — офсетная печать',cat:'Полиграфия · Офсетная печать',cost:1.1,price:2.2,unit:'шт.'}
-];
-function searchCatalog(){const q=document.getElementById('catalogSearch').value.trim().toLowerCase(),box=document.getElementById('searchResults'),rows=document.getElementById('resultRows');if(!q){box.classList.remove('active');return}const found=demoCatalog.filter(x=>(x.name+' '+x.cat).toLowerCase().includes(q));rows.innerHTML=found.length?found.map(x=>'<div class="result-row"><div><b>'+x.name+'</b><small style="display:block">'+x.cat+'</small></div><div class="hide-mobile"><small>Себестоимость</small><div class="money">'+money(x.cost)+' / '+x.unit+'</div></div><div><small>Прайс</small><div class="money">'+money(x.price)+' / '+x.unit+'</div></div><button class="btn hide-mobile" onclick="goAuto()">Рассчитать</button></div>').join(''):'<p class="note">В демонстрационном наборе совпадений нет.</p>';box.classList.add('active')}
+let catalogData=null,catalogIndex=[];
+const sectionNames={
+ wide_format:'Широкоформатная печать',digital_print:'Цифровая печать',business_cards:'Визитки',offset_leaflets:'Офсетные листовки',
+ sign_plates:'Таблички',uv_print:'УФ-печать',plotter_cut:'Плоттерная резка',evacuations:'Планы эвакуации',presswall:'Прессволы',
+ milling_laser:'Фрезеровка / лазер',constructions_installation:'Конструкции / монтаж',digital_packaging:'Цифровая упаковка',
+ paper_labels:'Бумажные этикетки',thermal_transfer_labels:'Термотрансферные этикетки',lanyards:'Ланъярды',mugs:'Кружки',
+ apparel:'Футболки / текстиль',pens:'Ручки',badges_round:'Значки',name_badges:'Бейджи',magnets:'Магниты',
+ three_block_calendars:'Календари трёхблочные',diaries_engraving:'Ежедневники',pvd_bags:'Пакеты ПВД',wardrobe_tags:'Гардеробные номерки',
+ discount_cards:'Дисконтные карты',folders:'Папки',black_white_duplication:'Тиражирование',notepads:'Блокноты',forms_stationery:'Бланочная продукция'
+};
+function collectPrices(v,out=[]){
+ if(v==null)return out;
+ if(typeof v==='number'){if(v>0)out.push(v);return out}
+ if(Array.isArray(v)){v.forEach(x=>collectPrices(x,out));return out}
+ if(typeof v==='object'){Object.entries(v).forEach(([k,x])=>{if(/price|prices|tiers|руб|rub/i.test(k))collectPrices(x,out)});return out}
+ return out;
+}
+function itemPriceText(obj){
+ const p=collectPrices(obj,[]).filter(Number.isFinite);
+ if(!p.length)return 'по расчёту';
+ const min=Math.min(...p),max=Math.max(...p);
+ return min===max?money(min):'от '+money(min);
+}
+function addIndexItem(section,key,obj,label){
+ if(!obj||typeof obj!=='object')return;
+ const name=obj.name||obj.product||obj.product_family||obj.method||label;
+ if(name){
+   const text=(name+' '+section+' '+key+' '+JSON.stringify(obj)).toLowerCase();
+   catalogIndex.push({name,cat:sectionNames[key]||section||key,sectionKey:key,obj,text,priceText:itemPriceText(obj)});
+ }
+}
+function buildCatalogIndex(data){
+ catalogIndex=[];
+ Object.entries(data.sections||{}).forEach(([key,sec])=>{
+   const secName=sectionNames[key]||key;
+   if(Array.isArray(sec.products))sec.products.forEach(x=>addIndexItem(secName,key,x,x.name));
+   if(Array.isArray(sec.items))sec.items.forEach(x=>addIndexItem(secName,key,x,x.name));
+   if(Array.isArray(sec.standard))sec.standard.forEach(x=>addIndexItem(secName,key,x,x.name));
+   if(Array.isArray(sec.frames))sec.frames.forEach(x=>addIndexItem(secName,key,x,x.name));
+   if(Array.isArray(sec.mounting))sec.mounting.forEach(x=>addIndexItem(secName,key,x,x.name));
+   if(Array.isArray(sec.work))sec.work.forEach(x=>addIndexItem(secName,key,x,x.name));
+   if(Array.isArray(sec.postprocessing))sec.postprocessing.forEach(x=>addIndexItem(secName+' · постобработка',key,x,x.name));
+   if(sec.product) addIndexItem(secName,key,sec,sec.product);
+   if(sec.product_family) addIndexItem(secName,key,sec,sec.product_family);
+   if(sec.inhouse?.product)addIndexItem(secName,key,sec.inhouse,sec.inhouse.product);
+   if(sec.standard?.size_mm)addIndexItem(secName,key,sec.standard,'Этикетка '+sec.standard.size_mm.join('×')+' мм');
+   if(sec.digital?.paper)addIndexItem(secName,key,sec.digital,'Визитки цифровые');
+ });
+}
+fetch('data/catalog_v1.json').then(r=>r.json()).then(data=>{catalogData=data;buildCatalogIndex(data);const b=document.querySelector('.top .badge');if(b)b.textContent='Прайс · '+catalogIndex.length+' позиций в поиске'}).catch(()=>{});
+function searchCatalog(){
+ const q=norm(document.getElementById('catalogSearch').value),box=document.getElementById('searchResults'),rows=document.getElementById('resultRows');
+ if(!q){box.classList.remove('active');return}
+ const terms=q.split(' ').filter(Boolean);
+ const found=catalogIndex.filter(x=>terms.every(t=>x.text.includes(t))).slice(0,50);
+ rows.innerHTML=found.length?found.map(x=>'<div class="result-row"><div><b>'+x.name+'</b><small style="display:block">'+x.cat+'</small></div><div class="hide-mobile"><small>Источник</small><div>'+x.sectionKey+'</div></div><div><small>Цена</small><div class="money">'+x.priceText+'</div></div><button class="btn hide-mobile" onclick="goAuto()">Рассчитать</button></div>').join(''):'<p class="note">Совпадений в уже перенесённой части прайса нет. Остальные разделы продолжают переноситься.</p>';
+ box.classList.add('active');
+}
 document.getElementById('searchBtn').onclick=searchCatalog;document.getElementById('catalogSearch').onkeydown=e=>{if(e.key==='Enter')searchCatalog()};function goAuto(){document.querySelector('[data-view="autoView"]').click()}
 
 function norm(s){return String(s||'').toLowerCase().replaceAll('ё','е').replace(/\s+/g,' ').trim()}
