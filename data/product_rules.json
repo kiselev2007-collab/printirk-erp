@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "principle": "postprocessing_is_defined_by_product",
+  "products": {
+    "banner": {
+      "aliases": [
+        "баннер",
+        "баннер китай",
+        "баннер корея",
+        "баннер европа"
+      ],
+      "roll_width_m": 3,
+      "minimum_order_rub": 199,
+      "allowed_postprocessing": [
+        "cut_edge",
+        "auto_gluing_if_needed",
+        "edge_reinforcement",
+        "grommets",
+        "wind_pockets"
+      ],
+      "grommet_steps_mm": [
+        200,
+        300,
+        400,
+        500
+      ],
+      "forbidden_postprocessing": [
+        "lamination"
+      ],
+      "notes": [
+        "If area > 25 m2, perimeter gluing is recommended.",
+        "If area > 60 m2, reinforced perimeter with rope is mandatory and 510 g cast banner is used."
+      ]
+    },
+    "film": {
+      "aliases_source": "data/synonyms.json",
+      "minimum_print_order_rub": 299,
+      "allowed_postprocessing": [
+        "cut_edge",
+        "wide_lamination",
+        "contour_cut",
+        "mounting_film",
+        "floor_lamination"
+      ]
+    },
+    "poster": {
+      "aliases": [
+        "постер",
+        "постерка",
+        "плакат"
+      ],
+      "minimum_order_rub": 149,
+      "allowed_postprocessing": [
+        "cut_edge",
+        "wide_lamination"
+      ]
+    },
+    "digital_print": {
+      "sheet_sizes_mm": {
+        "SRA4": [
+          320,
+          225
+        ],
+        "SRA3": [
+          320,
+          450
+        ]
+      },
+      "minimum_order_rub": 100,
+      "technology_selection": "manual_when_not_explicit",
+      "allowed_postprocessing": [
+        "cutting",
+        "collation",
+        "block_gluing",
+        "wire_binding",
+        "numbering",
+        "scoring",
+        "punching",
+        "eyelet",
+        "folding",
+        "corner_rounding",
+        "packet_lamination",
+        "roll_lamination_gloss",
+        "roll_lamination_matte",
+        "roll_lamination_soft_touch"
+      ]
+    },
+    "offset_print": {
+      "technology_selection": "manual_when_not_explicit",
+      "standard_leaflet_paper_gsm": 130,
+      "standard_prices_source": "ПРАЙС ОТП 2025 / 3.9 Листовки",
+      "custom_paper_cost_source": "Офсет учет 2022 / Константы/ОФД / Закупка бумаги",
+      "custom_imposition_min_sheet": "A3",
+      "custom_imposition_min_sheets": 250,
+      "standard_or_custom": "standard price table for listed assemblies; separate calculator for own imposition or nonstandard paper"
+    }
+  }
+}
