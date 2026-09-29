@@ -274,7 +274,7 @@ function parseLine(line){
  const density=Number((densMatch||[])[1]||0);
  const dpi=Number((t.match(/\b(240|360|720|1440)\s*(?:dpi|дпи)/)||[])[1]||240);
 
- const fm=t.match(/\b[аa]([3-7])\b/i);
+ const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
  const cm=t.match(/4\s*\+\s*(0|4)/);
  const poly=/листовк|буклет|флаер|винн\w* карт|меню|визит/.test(t);
  if(poly && /офсет/.test(t)){
