@@ -23,6 +23,9 @@ main{min-width:0}.top{height:70px;background:#fff;border-bottom:1px solid var(--
 .post{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr));gap:8px;margin-top:8px}.post .field label{text-transform:none;font-size:11px}.check{border:1px solid var(--line);padding:9px 10px;border-radius:9px;font-size:12px;background:#fafbfd;display:flex;gap:7px;align-items:center}
 table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1px solid #eef1f5;text-align:left;font-size:12px;vertical-align:top}th{color:#8390a2;text-transform:uppercase;font-size:10px}td.right,th.right{text-align:right}
 .summaryline{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed #e6eaf0}.summaryline span{color:var(--muted)}.summaryline strong{font-size:15px}.total{margin-top:10px;padding:13px;background:var(--pink2);border-radius:11px;display:flex;justify-content:space-between;align-items:center}.total strong{font-size:23px;color:#c72f70}.note{font-size:12px;line-height:1.5}.warning{background:#fff8e9;border:1px solid #f2dfb6;padding:11px;border-radius:10px;color:#7b622c;font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}.step{font-size:11px;padding:7px 9px;border-radius:999px;background:#f4f6f9;color:#657287}.step.active{background:var(--pink2);color:#c92c70;font-weight:800}.saved{margin-top:16px;display:none;background:#effaf5;border:1px solid #c8e8d7;padding:11px;border-radius:10px;color:#24734e;font-size:12px}.saved.show{display:block}.sectionline{grid-column:1/-1;font-weight:800;font-size:12px;padding:7px 9px;background:#f6f8fb;border-radius:9px;color:#35445a}
+.flagbtn{border:1px solid #f0c6c9;background:#fff7f7;color:#b33d49;border-radius:8px;padding:6px 8px;font-size:11px}
+.modalback{position:fixed;inset:0;background:rgba(20,28,42,.38);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}.modalback.show{display:flex}.modal{width:min(560px,100%);background:#fff;border-radius:16px;padding:18px;box-shadow:0 28px 80px rgba(25,35,55,.25)}.modal h3{margin:0 0 12px}.modal .actions{justify-content:flex-end}
+.error-row{display:grid;grid-template-columns:140px 130px 1fr 180px;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:12px}.error-row small{color:var(--muted)}
 @media(max-width:1050px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.formgrid,.post{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.app{grid-template-columns:1fr}aside{display:none}.content{padding:14px}.top{padding:0 14px}.grid{grid-template-columns:1fr}.formgrid,.post{grid-template-columns:1fr}.recognizer{grid-template-columns:1fr}.result-row{grid-template-columns:1fr 90px}.hide-mobile{display:none}}@media print{aside,.top,.head,.steps,.no-print,#priceView,#autoView{display:none!important}body,.app,main,.content,.view{background:#fff!important;display:block!important}#signView{display:block!important}.panel{box-shadow:none;border:1px solid #bbb}.two{grid-template-columns:1fr}}
 </style>
 </head>
@@ -34,6 +37,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 <button class="active" data-view="priceView">▦ Прайс</button>
 <button data-view="autoView">⚡ Автоматический расчёт</button>
 <button data-view="signView">▣ Расчёт вывесок</button>
+<button data-view="errorView">⚑ Ошибки расчёта</button>
 <div class="sep"></div><button disabled style="opacity:.45">Заказы — следующий этап</button>
 </div>
 <div class="role"><small>Роль</small><div><b>Менеджер</b></div><small>Прайс редактировать нельзя</small></div>
@@ -69,7 +73,9 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 <button class="btn primary" id="recognizeBtn">Распознать</button>
 </div>
 <div class="example"><b>Можно писать по-разному:</b><br>
-Листовка А4 4+0 130 гр., офсет, тираж 1000<br>
+1. Постеры 720 dpi 882х387 мм. с резкой в край 1 шт.<br>
+2. Листовки А6 130 гр. 4+4 200 шт.<br>
+3. Винная карта 105х290 мм., 300 гр., 4+4 ламинация софтач 30 шт.<br>
 Баннер 300 гр., 2х3 м, люверсы через 300 мм., карманы ветровые<br>
 баннер 300, 2000х3000 мм, люв. через 500 мм<br>
 плёнка белая 1х2 м, с резкой в край<br>
@@ -131,14 +137,43 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 </div>
 </section>
+
+<section class="view" id="errorView">
+<div class="head"><div><h1>Ошибки расчёта</h1><p>Обратная связь менеджеров по распознаванию, раскладке, цене и постобработке.</p></div><button class="btn" id="exportErrors">Скачать CSV ошибок</button></div>
+<div class="panel">
+<div id="errorEmpty" class="note">Пока ошибок не отмечено.</div>
+<div id="errorList"></div>
+</div>
+</section>
+
 </div>
 </main>
+</div>
+
+<div class="modalback" id="errorModal">
+  <div class="modal">
+    <h3>Сообщить об ошибке</h3>
+    <div class="field"><label>Тип ошибки</label>
+      <select id="errorType">
+        <option>Неправильно распознана продукция</option>
+        <option>Неправильно распознан размер</option>
+        <option>Неправильно выбран материал</option>
+        <option>Неправильная постобработка</option>
+        <option>Неправильная раскладка</option>
+        <option>Неправильная цена</option>
+        <option>Неправильная себестоимость</option>
+        <option>Другое</option>
+      </select>
+    </div>
+    <div class="field" style="margin-top:10px"><label>Комментарий менеджера</label><textarea id="errorComment" placeholder="Например: написал «самоклейка белая», а система выбрала прозрачную"></textarea></div>
+    <div class="actions"><button class="btn" id="cancelError">Отмена</button><button class="btn primary" id="saveError">Сохранить ошибку</button></div>
+  </div>
 </div>
 
 <script>
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
-const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок'};
+const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
 let synonymRows=[];
 fetch('data/synonyms.json').then(r=>r.ok?r.json():[]).then(x=>synonymRows=x).catch(()=>{});
 function synonymMatch(t, kind){
@@ -165,7 +200,17 @@ document.getElementById('searchBtn').onclick=searchCatalog;document.getElementBy
 
 function norm(s){return String(s||'').toLowerCase().replaceAll('ё','е').replace(/\s+/g,' ').trim()}
 function meters(v,u){v=n(v);u=(u||'').toLowerCase();if(u.startsWith('мм'))return v/1000;if(u.startsWith('см'))return v/100;return v}
-function parseSize(t){const m=t.match(/(\d+(?:[.,]\d+)?)\s*(мм|см|м)?\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*(мм|см|м)?/i);if(!m)return null;let u1=m[2],u2=m[4];if(!u1&&u2)u1=u2;if(!u2&&u1)u2=u1;return {w:meters(m[1],u1),h:meters(m[3],u2)}}
+function parseSize(t){const m=t.match(/(\d+(?:[.,]\d+)?)\s*(мм|см|м)?\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*(мм|см|м)?/i);if(!m)return null;let u1=m[2],u2=m[4];if(!u1&&u2)u1=u2;if(!u2&&u1)u2=u1;return {w:meters(m[1],u1),h:meters(m[3],u2),wmm:meters(m[1],u1)*1000,hmm:meters(m[3],u2)*1000}}
+const formatsMM={A3:[297,420],A4:[210,297],A5:[148,210],A6:[105,148],A7:[74,105]};
+function splitPositions(raw){
+  let s=String(raw||'').replace(/\r/g,'\n');
+  s=s.replace(/(?:^|\n|\s)(\d{1,2})[.)]\s+/g,'\n$1. ');
+  return s.split(/\n+|;\s*|\s+\+\s+/).map(x=>x.replace(/^\s*(?:[-•]|\d{1,2}[.)])\s*/,'').trim()).filter(Boolean);
+}
+function bestDigitalLayout(w,h){
+  const sheets=[{name:'SRA4',w:320,h:225},{name:'SRA3',w:320,h:450}];
+  return sheets.map(s=>{const a=Math.floor(s.w/w)*Math.floor(s.h/h),b=Math.floor(s.w/h)*Math.floor(s.h/w);return {...s,up:Math.max(a,b)}}).filter(x=>x.up>0).sort((a,b)=>b.up-a.up || (a.w*a.h)-(b.w*b.h))[0]||null;
+}
 function parseLine(line){
  const t=norm(line);
  const qtyMatch=t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт/);
@@ -174,13 +219,26 @@ function parseLine(line){
  const density=Number((densMatch||[])[1]||0);
  const dpi=Number((t.match(/\b(240|360|720|1440)\s*(?:dpi|дпи)/)||[])[1]||240);
 
- if((/листовк|буклет/.test(t)) && /офсет/.test(t)){
-   const fm=t.match(/\b[аa]([3-7])\b/i);
-   const cm=t.match(/4\s*\+\s*(0|4)/);
+ const fm=t.match(/\b[аa]([3-7])\b/i);
+ const cm=t.match(/4\s*\+\s*(0|4)/);
+ const poly=/листовк|буклет|флаер|винн\w* карт|меню|визит/.test(t);
+ if(poly && /офсет/.test(t)){
    return {source:line,type:'offset',format:fm?'A'+fm[1]:'',color:cm?'4+'+cm[1]:'4+0',density:density||130,qty};
  }
 
- const size=parseSize(t);if(!size)return {source:line,type:'unknown',error:'Не найден размер'};
+ let size=parseSize(t);
+ if(!size && fm && formatsMM['A'+fm[1]]){const z=formatsMM['A'+fm[1]];size={w:z[0]/1000,h:z[1]/1000,wmm:z[0],hmm:z[1]}}
+ if(poly){
+   if(!size)return {source:line,type:'unknown',error:'Не найден формат или размер'};
+   const lamSoft=/софт|soft\s*touch|силк/.test(t);
+   const lamMat=/матов/.test(t),lamGloss=/глян/.test(t);
+   const tech=/цифр/.test(t)?'digital':'';
+   return {source:line,type:'poly',format:fm?'A'+fm[1]:'',color:cm?'4+'+cm[1]:'4+0',density:density||130,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,lamination:lamSoft?'soft':lamMat?'matte':lamGloss?'gloss':'none'};
+ }
+ if(!size)return {source:line,type:'unknown',error:'Не найден размер'};
+ if(/постер|плакат/.test(t)){
+   return {source:line,type:'poster',density:density||0,dpi,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,edgeCut:/резк[^,;]*край/.test(t),laminate:/ламинац|ламинир/.test(t)};
+ }
  let type='unknown';
  if(/баннер|сетк/.test(t)||synonymMatch(t,'banner'))type='banner';
  else if(/пленк|плёнк|ораджет|orajet|оракал|oracal|самокле|наклей|винил/.test(t)||synonymMatch(t,'film'))type='film';
@@ -208,11 +266,25 @@ const paperCostA3={65:1.41,80:1.28,90:2.19,105:1.95,115:2.09,120:2.18,130:2.32,1
 function offsetSheetsA3(format,qty,color){const div={A3:1,A4:2,A5:4,A6:8,A7:16}[format]||1;return qty/div+(color==='4+4'?100:50)}
 function offsetCustomCost(x){const sheets=offsetSheetsA3(x.format,x.qty,x.color), paper=paperCostA3[x.density]||2, forms=x.color==='4+4'?8:4, print=sheets*(x.color==='4+4'?0.6:0.3);return {cost:sheets*paper+forms*220+print,sheets}}
 let detected=[],autoItems=[];
-function recognize(){const raw=document.getElementById('orderText').value;detected=raw.split(/\n|;|\s+\+\s+/).map(x=>x.trim()).filter(Boolean).map(parseLine);renderDetected()}
+function recognize(){const raw=document.getElementById('orderText').value;detected=splitPositions(raw).map(parseLine);renderDetected()}
 function renderDetected(){
  const box=document.getElementById('detected');if(!detected.length){box.innerHTML='';return}
  box.innerHTML=detected.map((x,i)=>{
   if(x.error||x.type==='unknown')return '<div class="detected-card"><b>'+x.source+'</b><div class="chips"><span class="chip warn">Не удалось определить материал или размер</span></div></div>';
+
+  if(x.type==='poly'){
+    const layout=bestDigitalLayout(x.wmm,x.hmm);
+    const tech=x.technology||'';
+    let chips='<span class="chip">'+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+'</span><span class="chip">'+x.color+'</span><span class="chip">'+x.density+' гр.</span><span class="chip">'+x.qty+' шт.</span>';
+    if(layout)chips+='<span class="chip auto">Цифра: '+layout.name+', '+layout.up+' шт./лист</span>'; else chips+='<span class="chip warn">Не помещается в SRA3</span>';
+    const lamOpts='<option value="none" '+(x.lamination==='none'?'selected':'')+'>Без ламинации</option><option value="gloss" '+(x.lamination==='gloss'?'selected':'')+'>Глянец</option><option value="matte" '+(x.lamination==='matte'?'selected':'')+'>Матовая</option><option value="soft" '+(x.lamination==='soft'?'selected':'')+'>Soft Touch</option>';
+    return '<div class="detected-card"><div class="detected-head"><div><b>Полиграфия</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Технология</label><select onchange="detected['+i+'].technology=this.value;renderDetected()"><option value="" '+(!tech?'selected':'')+'>Выбрать вручную</option><option value="digital" '+(tech==='digital'?'selected':'')+'>Цифровая печать</option><option value="offset-ready" '+(tech==='offset-ready'?'selected':'')+'>Офсет — сборный прайс</option><option value="offset-custom" '+(tech==='offset-custom'?'selected':'')+'>Офсет — свой спуск</option></select></div><div class="field"><label>Ламинация полиграфическая</label><select onchange="detected['+i+'].lamination=this.value">'+lamOpts+'</select></div></div></div>';
+  }
+
+  if(x.type==='poster'){
+    let chips='<span class="chip">'+x.wmm.toFixed(0)+'×'+x.hmm.toFixed(0)+' мм</span><span class="chip">'+x.dpi+' dpi</span><span class="chip">'+x.qty+' шт.</span>';
+    return '<div class="detected-card"><div class="detected-head"><div><b>Постерная бумага</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><label class="check"><input type="checkbox" '+(x.edgeCut?'checked':'')+' onchange="detected['+i+'].edgeCut=this.checked"> Резка в край</label><label class="check"><input type="checkbox" '+(x.laminate?'checked':'')+' onchange="detected['+i+'].laminate=this.checked"> Ламинация широкоформатная</label></div></div>';
+  }
 
   if(x.type==='offset'){
     const standard=x.density===130;
@@ -244,6 +316,37 @@ function addDetected(i){
  const x=detected[i];if(!x||x.error||x.type==='unknown')return;
  const details=[];let cost=0,price=0,name='';
 
+ if(x.type==='poly'){
+   if(!x.technology){alert('Выберите технологию: цифра или офсет.');return}
+   name=(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+' '+x.color+' '+x.density+' гр.';
+   if(x.technology==='digital'){
+     const layout=bestDigitalLayout(x.wmm,x.hmm);if(!layout){alert('Размер не помещается в SRA3 320×450 мм.');return}
+     const sheets=Math.ceil(x.qty/layout.up);const clicks=sheets*(x.color==='4+4'?2:1);
+     const paper={130:5,170:9,300:11}[x.density]||5;
+     cost=sheets*paper+clicks*18;price=Math.max(100,sheets*(x.color==='4+4'?80:46)+Math.max(0,paper-5)*sheets);
+     details.push('цифровая печать',layout.name+', '+layout.up+' шт./лист','листов '+sheets,'бумага '+x.density+' гр.');
+     if(x.lamination!=='none'){const lam={gloss:37,matte:42,soft:46}[x.lamination]||0;price+=sheets*lam;cost+=sheets*lam*.45;details.push('ламинация '+(x.lamination==='soft'?'Soft Touch':x.lamination==='matte'?'матовая':'глянец'))}
+   } else if(x.technology==='offset-custom'){
+     const sheetFit=Math.max(1,Math.floor(297/x.wmm)*Math.floor(420/x.hmm),Math.floor(297/x.hmm)*Math.floor(420/x.wmm));
+     const sheets=Math.ceil(x.qty/sheetFit);
+     if(sheets<250){alert('Свой офсетный спуск: минимум 250 листов А3. Сейчас получается '+sheets+'.');return}
+     const tmp={format:'A3',qty:sheets,color:x.color,density:x.density};const custom=offsetCustomCost(tmp);cost=custom.cost;price=cost*1.8;details.push('офсет — свой спуск','на листе A3: '+sheetFit+' шт.','листов A3: '+sheets,'бумага '+x.density+' гр.');
+   } else {
+     if(!x.format){alert('Для сборного офсета нужен стандартный формат из прайса.');return}
+     const idx=offsetTirages.indexOf(x.qty);
+     if(idx<0){alert('Для сборного офсета выберите тираж, который есть в прайсе.');return}
+     const tmp={format:x.format,qty:x.qty,color:x.color,density:130};const custom=offsetCustomCost(tmp);cost=custom.cost;price=(offsetPrices[x.color]?.[x.format]||[])[idx]||0;details.push('офсет — сборный прайс','готовая цена 130 гр.');
+   }
+   autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
+ if(x.type==='poster'){
+   const area=x.w*x.h*x.qty,per=2*(x.w+x.h);name='Постер '+x.dpi+' dpi';cost=area*103;price=area*(x.dpi>=1440?659:549);details.push('печать '+area.toFixed(2)+' м²');
+   if(x.edgeCut){cost+=per*8*x.qty;price+=per*22*x.qty;details.push('резка в край')}
+   if(x.laminate){cost+=area*120;price+=area*274;details.push('ламинация широкоформатная')}
+   price=Math.max(price,149);autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
  if(x.type==='offset'){
    if(!x.format||!x.qty){alert('Для офсета нужно указать формат и тираж.');return}
    name='Листовка '+x.format+' '+x.color+' '+x.density+' гр. · офсет';
@@ -254,7 +357,7 @@ function addDetected(i){
    } else {
       price=cost*1.8;details.push('индивидуальная офсетная расчётка');
    }
-   autoItems.push({name,cost,price,details});renderAuto();return;
+   autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
  const area=x.w*x.h*x.qty,per=2*(x.w+x.h);
@@ -273,10 +376,18 @@ function addDetected(i){
   const lam=x.lamination||(x.laminate?(x.lamMatte?'matte':'gloss'):'none');if(lam!=='none'){cost+=area*120;price+=area*274;details.push('ламинация '+(lam==='matte'?'матовая':'глянец'))}
   if(x.contour){cost+=area*170;price+=area*439;details.push('контурная резка')}else if(x.edgeCut){cost+=per*8*x.qty;price+=per*22*x.qty;details.push('резка в край')}
  }
- autoItems.push({name,cost,price,details});renderAuto();
+ autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();
 }
-function renderAuto(){const disc=Math.max(0,n(document.getElementById('autoDiscount').value));document.getElementById('autoRows').innerHTML=autoItems.length?autoItems.map((x,i)=>'<tr><td><b>'+x.name+'</b></td><td>'+x.details.join('<br>')+'</td><td class="right">'+money(x.cost)+'</td><td class="right">'+money(x.price)+'</td><td class="right"><b>'+money(x.price*(1-disc/100))+'</b></td><td><button class="btn danger" onclick="removeAuto('+i+')">×</button></td></tr>').join(''):'<tr><td colspan="6" class="note">Пока нет позиций. Введите заказ обычным текстом выше.</td></tr>';const p=autoItems.reduce((s,x)=>s+x.price,0),c=autoItems.reduce((s,x)=>s+x.cost,0),final=p*(1-disc/100);document.getElementById('autoPrice').textContent=money(p);document.getElementById('autoDiscRub').textContent=money(p-final);document.getElementById('autoCost').textContent=money(c);document.getElementById('autoMargin').textContent=money(final-c);document.getElementById('autoFinal').textContent=money(final)}
+function renderAuto(){const disc=Math.max(0,n(document.getElementById('autoDiscount').value));document.getElementById('autoRows').innerHTML=autoItems.length?autoItems.map((x,i)=>'<tr><td><b>'+x.name+'</b><br><button class="flagbtn" onclick="openError('+i+')">⚑ Ошибка</button></td><td>'+x.details.join('<br>')+'</td><td class="right">'+money(x.cost)+'</td><td class="right">'+money(x.price)+'</td><td class="right"><b>'+money(x.price*(1-disc/100))+'</b></td><td><button class="btn danger" onclick="removeAuto('+i+')">×</button></td></tr>').join(''):'<tr><td colspan="6" class="note">Пока нет позиций. Введите заказ обычным текстом выше.</td></tr>';const p=autoItems.reduce((s,x)=>s+x.price,0),c=autoItems.reduce((s,x)=>s+x.cost,0),final=p*(1-disc/100);document.getElementById('autoPrice').textContent=money(p);document.getElementById('autoDiscRub').textContent=money(p-final);document.getElementById('autoCost').textContent=money(c);document.getElementById('autoMargin').textContent=money(final-c);document.getElementById('autoFinal').textContent=money(final)}
 function removeAuto(i){autoItems.splice(i,1);renderAuto()}
+let errorTarget=null;
+function readErrors(){try{return JSON.parse(localStorage.getItem('printirk-calc-errors')||'[]')}catch(e){return []}}
+function renderErrors(){const list=readErrors(),box=document.getElementById('errorList'),empty=document.getElementById('errorEmpty');empty.style.display=list.length?'none':'block';box.innerHTML=list.slice().reverse().map(e=>'<div class="error-row"><div><b>'+new Date(e.date).toLocaleString('ru-RU')+'</b><small style="display:block">'+(e.manager||'Менеджер')+'</small></div><div>'+e.type+'</div><div><b>'+e.source+'</b><small style="display:block">'+e.comment+'</small></div><div>'+e.item+'<small style="display:block">'+e.total+'</small></div></div>').join('')}
+function openError(i){errorTarget=i;document.getElementById('errorComment').value='';document.getElementById('errorModal').classList.add('show')}
+document.getElementById('cancelError').onclick=()=>document.getElementById('errorModal').classList.remove('show');
+document.getElementById('saveError').onclick=()=>{const x=autoItems[errorTarget];if(!x)return;const errs=readErrors();errs.push({date:new Date().toISOString(),manager:'Илья',type:document.getElementById('errorType').value,comment:document.getElementById('errorComment').value.trim(),source:x.source||'',parsed:x.parsed||'',item:x.name,total:money(x.price),cost:money(x.cost)});localStorage.setItem('printirk-calc-errors',JSON.stringify(errs));document.getElementById('errorModal').classList.remove('show');renderErrors()}
+document.getElementById('exportErrors').onclick=()=>{const rows=readErrors(),headers=['date','manager','type','source','item','total','cost','comment','parsed'];const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';const csv='\ufeff'+headers.join(';')+'\n'+rows.map(r=>headers.map(h=>esc(r[h])).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='printirk_calc_errors.csv';a.click();URL.revokeObjectURL(a.href)}
+renderErrors();
 document.getElementById('recognizeBtn').onclick=recognize;document.getElementById('autoDiscount').oninput=renderAuto;renderAuto();
 
 const signConfigs={
