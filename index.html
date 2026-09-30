@@ -167,7 +167,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='design-2026-09-30.13';
+const CALC_VERSION='signs-2026-09-30.14';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -856,6 +856,68 @@ function renderDetected(){
 function addDetected(i){
  const x=detected[i];if(!x||x.error||x.type==='unknown'||x.invalidReason)return;
  const details=[];let cost=0,price=0,name='';
+
+ if(x.type==='milling'){
+   if(!x.meters||!x.material){alert('Для фрезеровки укажите материал и количество погонных метров.');return}
+   if(x.meters>100){alert('В прайсе ставка фрезеровки указана до 100 п.м. Для объёма свыше 100 п.м. требуется ручное согласование.');return}
+   const r=millingRate(x.material);if(!r){alert('Не найдена ставка фрезеровки для выбранного материала.');return}
+   const raw=x.meters*Number(r.price),sale=Math.max(Number(millingSection().minimum_order_rub||500),raw);
+   name='Фрезеровка · '+x.material;price=sale;cost=0;
+   details.push(x.meters+' п.м. × '+money(r.price)+'/п.м. — '+money(raw));
+   if(sale>raw)details.push('минимальный заказ на фрезеровку — '+money(sale));
+   details.push('себестоимость фрезеровки: не задана в прайсе');
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
+ if(x.type==='sign_plate'){
+   if(!x.w||!x.h||!x.material){alert('Для таблички укажите размер и материал.');return}
+   const areaOne=x.w*x.h,totalArea=areaOne*x.qty;
+   let baseSale=0,baseLabel='';
+   if(String(x.technology).startsWith('film_')){
+     const p=signProduct(x.material);if(!p){alert('Материал не найден в прайсе 1.5 Таблички.');return}
+     const key={film_360:'360',film_720:'720',film_720_lam:'720_lam',film_1440:'1440',film_oracal_bg:'oracal_bg',film_oracal_applique:'oracal_bg_applique',film_double_720_lam:'double_720_lam'}[x.technology];
+     const rate=Number(p.prices?.[key]||0);if(!rate){alert('Для выбранного материала нет цены на эту технологию таблички.');return}
+     const coeff=areaOne<0.1?2.5:areaOne<0.25?1.5:1;
+     const rawPerItem=areaOne*rate*coeff,perItem=Math.max(Number(signSection().minimum_item_rub||249),rawPerItem);
+     baseSale=Math.max(Number(signSection().minimum_order_rub||990),perItem*x.qty);
+     baseLabel='табличка с плёнкой: '+totalArea.toFixed(3)+' м² × '+money(rate)+'/м²'+(coeff>1?' × коэф. '+coeff:'')+' — '+money(baseSale);
+   }else{
+     const p=uvProductForSign(x.material);if(!p){alert('Для выбранного материала нет цены УФ-печати.');return}
+     const max=uvSection().max_size_mm||[1200,2300],fits=(x.wmm<=max[0]&&x.hmm<=max[1])||(x.wmm<=max[1]&&x.hmm<=max[0]);
+     if(!fits){alert('Максимальный размер УФ-печати '+max[0]+'×'+max[1]+' мм.');return}
+     let rate=0;
+     if(x.technology==='uv_standard')rate=Number(p.prices?.[totalArea<=1?'<=1m2':'>1m2']||0);
+     if(x.technology==='uv_white')rate=Number(p.prices?.white||0);
+     if(x.technology==='uv_cmyk')rate=Number(p.prices?.cmyk||0);
+     if(x.technology==='uv_cmykwl')rate=Number(p.prices?.['cmyk+w+l']||0);
+     if(!rate){alert('Для выбранного режима УФ-печати нет цены.');return}
+     baseSale=Math.max(Number(uvSection().minimum_order_rub||1999),totalArea*rate);
+     baseLabel='УФ-печать: '+totalArea.toFixed(3)+' м² × '+money(rate)+'/м² — '+money(baseSale);
+   }
+   price=baseSale;cost=0;name='Табличка · '+x.material;
+   details.push(baseLabel);
+   if(x.millingMeters){
+     if(x.millingMeters>100){alert('Фрезеровка свыше 100 п.м. требует ручного согласования.');return}
+     const mat=x.millingMaterial||millingMaterialFromText(x.material,x.material),r=millingRate(mat);
+     if(!r){alert('Для таблички не удалось подобрать ставку фрезеровки. Выберите материал фрезеровки вручную.');return}
+     const raw=x.millingMeters*Number(r.price),millSale=Math.max(Number(millingSection().minimum_order_rub||500),raw);
+     price+=millSale;details.push('фрезеровка '+x.millingMeters+' п.м. × '+money(r.price)+'/п.м. — '+money(raw));
+     if(millSale>raw)details.push('минимальный заказ на фрезеровку — '+money(millSale));
+   }
+   details.push('себестоимость таблички: не задана отдельной итоговой строкой в прайсе');
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
+ if(x.type==='design_banner'){
+   if(!x.designVariant){alert('Выберите вид дизайна баннера.');return}
+   const full=(designSection().items||[]).find(z=>/баннера: картинки \+ текст \+ лого/i.test(z.name||''))?.price||1590;
+   const textOnly=(designSection().items||[]).find(z=>/баннера: текст/i.test(z.name||''))?.price||590;
+   const unit=x.designVariant==='full'?full:textOnly;
+   name='Дизайн баннера · '+(x.designVariant==='full'?'картинки + текст + лого':'текст / текст на авто');
+   price=unit*x.qty;cost=0;
+   details.push((x.designVariant==='full'?'картинки + текст + лого':'только текст / текст на авто')+' × '+x.qty+' — '+money(price),'себестоимость дизайна: не задана в прайсе');
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
 
  if(x.type==='quarter_calendar'){
    const tier=quarterCalendarTier(x.qty);
