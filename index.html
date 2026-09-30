@@ -793,6 +793,7 @@ function addDetected(i){
   name=prod.name+' · '+x.dpi+' dpi';
   const rate=Number(prod.prices?.[String(x.dpi)]||0),costRate=Number(prod.costs_per_m2?.[String(x.dpi)]||0);
   if(!rate){alert('Для «'+prod.name+'» нет подтверждённой цены '+x.dpi+' dpi.');return}
+  if(!costRate&&prod.cost_status==='needs_confirmation'){alert('Продажная цена для «'+prod.name+'» подтверждена, но себестоимость требует уточнения. Расчёт временно заблокирован, чтобы не показывать неверную маржу.');return}
   const lam=x.lamination||(x.laminate?(x.lamMatte?'matte':'gloss'):'none'),combo=wideFormatSection().standard_combos||{};
   if((x.productId||'film_white')==='film_white'&&x.dpi===720&&x.contour){
     const cfg=lam!=='none'?combo.white_film_720_contour_lamination:combo.white_film_720_contour;
