@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='error-workflow-2026-09-30.21';
+const CALC_VERSION='errors-fixed-2026-09-30.22';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -740,6 +740,11 @@ function parseFoldCount(t){
 }
 function postFromText(t,qty){
  const numAfter=(rx,def=1)=>{const m=t.match(rx);return m?Number(m[1]||def):0};
+ const tapePerItem=(()=>{
+   if(!/скотч/.test(t))return 0;
+   const m=t.match(/(\d+)\s*(?:полос[аы]?|кусочк[аи]?|шт\.?)?\s*(?:двухсторонн[а-яё]*\s*)?скотч/i);
+   return Number(m?.[1]||1);
+ })();
  return {
   cutPasses:/резк/.test(t)?1:0,
   bigs:parseBigCount(t),
@@ -752,7 +757,7 @@ function postFromText(t,qty){
   collation:/листоподбор/.test(t),
   blockGlue:numAfter(/(\d+)\s*блок/)||(/склейк\w*\s+блок/.test(t)?1:0),
   binding:/пружин/.test(t)?'A4':'none',
-  tape:/скотч/.test(t)?1:0
+  tape:tapePerItem*Math.max(1,Number(qty)||1)
  };
 }
 function parseDigitalLamination(t){
@@ -898,6 +903,14 @@ function parseLine(line){
    const numbering=/нумерац|с\s*номером|номер[а-яё]*\s+с\s*\d/i.test(t);
    const mixedSides=(t.match(/1\s*\+\s*[01]/g)||[]).length>1;
    return {source:line,type:'self_copy_form',format:fmt?'A'+fmt:'',qty:qty||0,layers,glue,blockSize:Number(blockM?.[1]||50),numbering,mixedSides,invalidReason:!fmt?'Укажите формат БСО':(!qty?'Укажите тираж БСО':(layers!==2?'Автоматический расчёт сейчас подтверждён только для 2 слоёв':(mixedSides?'Разная печать по слоям требует отдельного расчёта':'')))};
+ }
+
+ const noPrintMaterial=/без\s+печати|без\s+нанесения|только\s+материал/.test(t);
+ const rawMaterialName=noPrintMaterial?signMaterialFromText(t):'';
+ if(noPrintMaterial&&rawMaterialName){
+   const rs=parseSize(t),prod=signProduct(rawMaterialName);
+   const materialCost=Number(prod?.material_cost_per_m2||0);
+   return {source:line,type:'raw_sign_material',material:rawMaterialName,qty:qty||1,w:rs?.w||0,h:rs?.h||0,wmm:rs?.wmm||0,hmm:rs?.hmm||0,materialCost,perM2:!rs,invalidReason:!materialCost?'Не задана актуальная себестоимость материала':''};
  }
 
  const isSign=/таблич|табл\.?(?:\s|$)|шильд/.test(t);
@@ -1070,7 +1083,7 @@ function digitalPostUI(i,x){
  '<label class="check"><input type="checkbox" '+(p.collation?'checked':'')+' onchange="detected['+i+'].post.collation=this.checked"> Листоподборка</label>'+
  '<div class="field"><label>Склейка блоков, шт.</label><input type="number" min="0" value="'+(p.blockGlue||0)+'" onchange="detected['+i+'].post.blockGlue=+this.value"></div>'+
  '<div class="field"><label>Переплёт</label><select onchange="detected['+i+'].post.binding=this.value">'+binding+'</select></div>'+
- '<div class="field"><label>Скотч, операций</label><input type="number" min="0" value="'+(p.tape||0)+'" onchange="detected['+i+'].post.tape=+this.value"></div>'+
+ '<div class="field"><label>Скотч, операций всего</label><input type="number" min="0" value="'+(p.tape||0)+'" onchange="detected['+i+'].post.tape=+this.value"></div>'+
  '</div>';
 }
 function renderDetected(){
@@ -1146,7 +1159,29 @@ function renderDetected(){
       '</div></div>';
   }
 
-  if(x.type==='sign_plate'){
+  if(x.type==='raw_sign_material'){
+    const area=x.perM2?1:(x.w*x.h*x.qty);
+    const mult=Number(signSection()?.raw_material_sale_rule?.multiplier||2.2);
+    const pricePerM2=Math.ceil(Number(x.materialCost||0)*mult);
+    let chips='<span class="chip">'+x.material+'</span><span class="chip">без печати</span>';
+    chips+='<span class="chip">'+(x.perM2?'цена за 1 м²':area.toFixed(3)+' м²')+'</span>';
+    if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
+    return '<div class="detected-card"><div class="detected-head"><div><b>'+x.material+' · без печати</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="note" style="margin-top:10px">Себестоимость '+money(x.materialCost)+'/м² × '+mult+' = <b>'+money(pricePerM2)+'/м²</b></div></div>';
+  }
+
+  if(x.type==='raw_sign_material'){
+   if(x.invalidReason){alert(x.invalidReason);return}
+   const mult=Number(signSection()?.raw_material_sale_rule?.multiplier||2.2);
+   const area=x.perM2?1:(x.w*x.h*x.qty);
+   cost=area*Number(x.materialCost||0);
+   price=Math.ceil(cost*mult);
+   name=x.material+' · без печати'+(x.perM2?' · за 1 м²':'');
+   details.push((x.perM2?'1,000':area.toFixed(3))+' м² × '+money(x.materialCost)+'/м² себестоимости — '+money(cost));
+   details.push('наценка × '+mult+' — '+money(price));
+   autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
+ if(x.type==='sign_plate'){
     const mats=(signSection().products||[]).map(p=>'<option value="'+p.name.replace(/"/g,'&quot;')+'" '+(x.material===p.name?'selected':'')+'>'+p.name+'</option>').join('');
     const techs=[
       ['film_360','Плёнка · 360 dpi'],['film_720','Плёнка · 720 dpi'],['film_720_lam','Плёнка · 720 dpi + ламинация'],['film_1440','Плёнка · 1440 dpi'],
