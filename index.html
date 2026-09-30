@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='digital-80-included-2026-09-30.26';
+const CALC_VERSION='new-errors-fixed-2026-09-30.27';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -590,6 +590,10 @@ function laserSection(){return catalogData?.sections?.milling_laser?.laser||{}}
 function interiorSection(){return catalogData?.sections?.interior_print||{}}
 function apparelSection(){return catalogData?.sections?.apparel||{}}
 function duplicationSection(){return catalogData?.sections?.black_white_duplication||{}}
+function businessCardsSection(){return catalogData?.sections?.business_cards||{}}
+function mugsSection(){return catalogData?.sections?.mugs||{}}
+function badgesSection(){return catalogData?.sections?.badges_round||{}}
+function installationSection(){return catalogData?.sections?.constructions_installation||{}}
 function selfCopySection(){return duplicationSection().self_copy_forms||{}}
 function bindingSection(){return catalogData?.sections?.binding||{}}
 function duplicationPaperName(t){
@@ -648,6 +652,14 @@ function rectPerimeterM(size,qty=1){return size?2*(size.w+size.h)*Math.max(1,Num
 function interiorProductByName(rx){return (interiorSection().products||[]).find(x=>rx.test(norm(x.name)))||null}
 function apparelTierPrice(tiers,qty){
  let best=null;for(const r of (tiers||[])){if(qty>=Number(r[0]))best=Number(r[1]);else break}return best;
+}
+function simpleTierUnit(tiers,qty){
+ let best=null;for(const r of (tiers||[])){if(qty>=Number(r[0]))best=Number(r[1]);else break}return best;
+}
+function businessCardDigitalTotal(color,qty){
+ const rows=businessCardsSection()?.digital?.[color]||[];
+ let best=null;for(const r of rows){if(qty>=Number(r[0]))best=r;else break}
+ return best?{unit:Number(best[1]),total:Number(best[2]),tier:Number(best[0])}:null;
 }
 function apparelFormatForSize(wmm,hmm){
  const fits=(w,h)=>((wmm<=w&&hmm<=h)||(wmm<=h&&hmm<=w));
@@ -969,6 +981,26 @@ function parseLine(line){
    return {source:line,type:'apparel_application',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,method,invalidReason:!sz?'Укажите размер нанесения':''};
  }
 
+ const isBusinessCard=/визит|визикт/.test(t);
+ if(isBusinessCard){
+   const sz=parseSize(t),cardSize=/85\s*[xх×]\s*55|55\s*[xх×]\s*85/.test(t)?'85×55':'90×50';
+   const color=cm?'4+'+cm[1]:'4+4';
+   const mode=(qty===1000&&!/цифр/.test(t))?'offset':'digital';
+   return {source:line,type:'business_card',qty:qty||1000,color,cardSize,mode,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0};
+ }
+ if(/кружк/.test(t))return {source:line,type:'mug',qty:qty||1};
+ if(/значк/.test(t))return {source:line,type:'badge_round',qty:qty||1};
+ const installFrame=/монтаж[^\n]*(?:рам|каркас)|(?:рам|каркас)[^\n]*монтаж/.test(t);
+ if(installFrame){
+   const sz=parseSize(t),area=sz?sz.w*sz.h:0;
+   return {source:line,type:'frame_mount',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,area,invalidReason:!sz?'Укажите размер рамной конструкции':''};
+ }
+ const directUv=/\b(?:уф|uv)\b/.test(t),directUvMaterial=directUv?signMaterialFromText(t):'';
+ if(directUv&&directUvMaterial){
+   const sz=parseSize(t);
+   return {source:line,type:'sign_plate',qty:qty||1,material:directUvMaterial,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,technology:'uv_standard',millingRequested:false,millingMeters:0,millingMaterial:'',invalidReason:!sz?'Укажите размер УФ-печати':''};
+ }
+
  const noPrintMaterial=/без\s+печати|без\s+нанесения|только\s+материал/.test(t);
  const rawMaterialName=noPrintMaterial?signMaterialFromText(t):'';
  if(noPrintMaterial&&rawMaterialName){
@@ -1085,7 +1117,7 @@ function parseLine(line){
  let invalidReason='';
  if(productId==='film_perforated'&&![240,360].includes(effectiveDpi))invalidReason='Перфорированная плёнка печатается только 240 или 360 dpi. '+effectiveDpi+' dpi — ошибка ввода.';
  if(productId==='film_lightblock')invalidReason='На светоблокирующей плёнке не печатаем.';
- return {source:line,type,productId,density,dpi:effectiveDpi,qty:qty||1,w:size.w,h:size.h,grommet,grommetCount,noGrommets,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк|обрезк/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир|ламин/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов|матлам/.test(t),white:productId==='film_white',invalidReason};
+ return {source:line,type,productId,density,dpi:effectiveDpi,qty:qty||1,w:size.w,h:size.h,grommet,grommetCount,noGrommets,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк|обрезк/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир|ламин/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов|матлам/.test(t),white:productId==='film_white',uv:/\b(?:уф|uv)\b/.test(t),invalidReason};
 }
 function bannerLayout(w,h){
  const roll=3;
@@ -1176,6 +1208,28 @@ function renderDetected(){
  box.innerHTML=detected.map((x,i)=>{
   if(x.error||x.type==='unknown')return '<div class="detected-card"><div class="detected-head"><div><b>'+x.source+'</b><div class="chips"><span class="chip warn">Не удалось определить материал или размер</span></div></div><button class="flagbtn" onclick="openDetectedError('+i+')">⚑ Сообщить об ошибке</button></div></div>';
 
+  if(x.type==='business_card'){
+    const digital=businessCardDigitalTotal(x.color,x.qty);
+    let chips='<span class="chip">'+x.qty+' шт.</span><span class="chip">'+x.color+'</span><span class="chip">'+x.cardSize+'</span><span class="chip auto">'+(x.mode==='offset'?'сборный спуск':'цифровая печать')+'</span>';
+    const modeOpts='<option value="offset" '+(x.mode==='offset'?'selected':'')+'>Сборный спуск</option><option value="digital" '+(x.mode==='digital'?'selected':'')+'>Цифровая печать</option>';
+    const sizeOpts=['90×50','85×55'].map(v=>'<option '+(x.cardSize===v?'selected':'')+'>'+v+'</option>').join('');
+    return '<div class="detected-card"><div class="detected-head"><div><b>Визитки</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Вариант расчёта</label><select onchange="detected['+i+'].mode=this.value;renderDetected()">'+modeOpts+'</select></div><div class="field"><label>Размер</label><select onchange="detected['+i+'].cardSize=this.value;renderDetected()">'+sizeOpts+'</select></div><div class="field"><label>Красочность</label><select onchange="detected['+i+'].color=this.value;renderDetected()"><option '+(x.color==='4+0'?'selected':'')+'>4+0</option><option '+(x.color==='4+4'?'selected':'')+'>4+4</option></select></div></div>'+(x.mode==='digital'&&digital?'<div class="note">Цифровой прайс: '+money(digital.total)+'</div>':'')+'</div>';
+  }
+  if(x.type==='mug'){
+    const unit=simpleTierUnit(mugsSection().tiers,x.qty),raw=(unit||0)*x.qty,pp=Math.max(Number(mugsSection().minimum_order_rub||0),raw);
+    return '<div class="detected-card"><div class="detected-head"><div><b>Кружка с фото / сублимация</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips"><span class="chip">'+x.qty+' шт.</span><span class="chip auto">'+(unit?money(unit)+'/шт. · '+money(pp):'нет тарифа')+'</span></div></div>';
+  }
+  if(x.type==='badge_round'){
+    const unit=simpleTierUnit(badgesSection().tiers,x.qty),raw=(unit||0)*x.qty,pp=Math.max(Number(badgesSection().minimum_order_rub||0),raw);
+    return '<div class="detected-card"><div class="detected-head"><div><b>Значки</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips"><span class="chip">'+x.qty+' шт.</span><span class="chip">Ø '+(badgesSection().badge_mm||55)+' мм</span><span class="chip auto">'+(unit?money(unit)+'/шт. · '+money(pp):'нет тарифа')+'</span></div></div>';
+  }
+  if(x.type==='frame_mount'){
+    const rate=Number((installationSection().mounting||[]).find(z=>/рамной конструкции из профтрубы/i.test(z.name||''))?.price||220);
+    const minimum=Number((installationSection().mounting||[]).find(z=>/Минимальный монтаж\/демонтаж/i.test(z.name||''))?.price||5000);
+    const raw=x.area*rate*x.qty,pp=Math.max(minimum,raw);
+    return '<div class="detected-card"><div class="detected-head"><div><b>Монтаж рамной конструкции из профтрубы</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips"><span class="chip">'+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм</span><span class="chip">'+x.area.toFixed(2)+' м²</span><span class="chip auto">'+money(pp)+'</span></div></div>';
+  }
+
   if(x.type==='design_banner'){
     const full=(designSection().items||[]).find(z=>/баннера: картинки \+ текст \+ лого/i.test(z.name||''))?.price||1590;
     const textOnly=(designSection().items||[]).find(z=>/баннера: текст/i.test(z.name||''))?.price||590;
@@ -1183,6 +1237,35 @@ function renderDetected(){
     const opts='<option value="" '+(!x.designVariant?'selected':'')+'>Выберите</option><option value="full" '+(x.designVariant==='full'?'selected':'')+'>Картинки + текст + лого — '+money(full)+'</option><option value="text" '+(x.designVariant==='text'?'selected':'')+'>Только текст / текст на авто — '+money(textOnly)+'</option>';
     return '<div class="detected-card"><div class="detected-head"><div><b>Дизайн баннера</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Вид дизайна</label><select onchange="detected['+i+'].designVariant=this.value;renderDetected()">'+opts+'</select></div></div></div>';
   }
+
+ if(x.type==='business_card'){
+   if(x.mode==='offset'){
+     const row=(businessCardsSection().offset_collective||[]).find(z=>Number(z.qty)===x.qty&&String(z.name||'').includes(x.cardSize));
+     if(!row){alert('Для сборного спуска нет готовой цены на выбранный размер/тираж. Переключите на цифровую печать.');return}
+     price=Number(row.price);cost=0;name='Визитки '+x.cardSize+' · сборный спуск · '+x.qty+' шт.';details.push('готовая цена сборного спуска — '+money(price));
+   }else{
+     const d=businessCardDigitalTotal(x.color,x.qty);if(!d){alert('Для этого тиража нет цифровой цены визиток.');return}
+     price=d.total;cost=0;name='Визитки '+x.cardSize+' · '+x.color+' · цифра · '+x.qty+' шт.';details.push(x.qty+' шт. × '+money(d.unit)+'/шт. — '+money(price));
+   }
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+ if(x.type==='mug'){
+   const unit=simpleTierUnit(mugsSection().tiers,x.qty);if(unit==null){alert('Для этого тиража кружек нет тарифа.');return}
+   const raw=unit*x.qty;price=Math.max(Number(mugsSection().minimum_order_rub||1000),raw);cost=0;name='Кружка с фото · сублимация · '+x.qty+' шт.';details.push(x.qty+' шт. × '+money(unit)+' — '+money(raw));if(price>raw)details.push('минимальный заказ — '+money(price));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+ if(x.type==='badge_round'){
+   const unit=simpleTierUnit(badgesSection().tiers,x.qty);if(unit==null){alert('Для этого тиража значков нет тарифа.');return}
+   const raw=unit*x.qty;price=Math.max(Number(badgesSection().minimum_order_rub||1000),raw);cost=0;name='Значки Ø '+(badgesSection().badge_mm||55)+' мм · '+x.qty+' шт.';details.push(x.qty+' шт. × '+money(unit)+' — '+money(raw));if(price>raw)details.push('минимальный заказ — '+money(price));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+ if(x.type==='frame_mount'){
+   if(x.invalidReason){alert(x.invalidReason);return}
+   const rate=Number((installationSection().mounting||[]).find(z=>/рамной конструкции из профтрубы/i.test(z.name||''))?.price||220);
+   const minimum=Number((installationSection().mounting||[]).find(z=>/Минимальный монтаж\/демонтаж/i.test(z.name||''))?.price||5000);
+   const area=x.area*x.qty,raw=area*rate;price=Math.max(minimum,raw);cost=0;name='Монтаж рамной конструкции из профтрубы';details.push(area.toFixed(2)+' м² × '+money(rate)+'/м² — '+money(raw));if(price>raw)details.push('минимальный монтаж — '+money(price));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
 
  if(x.type==='duplication'){
     const lay=duplicationLayout(x),min=x.printSheet==='A4'?100:50;
@@ -1680,6 +1763,16 @@ function addDetected(i){
       if(custom.cost==null){alert(custom.error);return}price=cost*1.8;details.push('индивидуальная офсетная расчётка');
    }
    autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
+ if(x.type==='film'&&x.uv){
+   const rawArea=x.w*x.h*x.qty,per=2*(x.w+x.h),prod=wideProduct(x.productId||'film_white');
+   const uvRow=(uvSection().print_only||[]).find(z=>/CMYK без материала/i.test(z.name||'')),uvRate=Number(uvRow?.price_per_m2||1999);
+   const printSale=Math.max(Number(uvSection().minimum_order_rub||1999),rawArea*uvRate);
+   price=printSale;cost=0;name=(prod?.name||'Плёнка')+' · УФ CMYK';details.push('УФ CMYK без материала: '+rawArea.toFixed(4)+' м² × '+money(uvRate)+'/м² — '+money(printSale),'стоимость самой плёнки в УФ-разделе отдельно не задана');
+   if(x.contour){const plot=catalogData?.sections?.plotter_cut,work=(plot?.work||[]).find(z=>/Контурная резка наклеек/.test(z.name||''));const cs=Math.max(Number(work?.minimum||399),rawArea*Number(work?.price||990));price+=cs;details.push('контурная резка — '+money(cs))}
+   else if(x.edgeCut){const cut=widePost('cut_edge'),cutLen=per*x.qty,cutRate=Number(cut?.price||22),cutSale=cutLen*cutRate;price+=cutSale;details.push('резка в край '+cutLen.toFixed(2)+' п.м. × '+money(cutRate)+'/п.м. — '+money(cutSale))}
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
  const rawArea=x.w*x.h*x.qty,per=2*(x.w+x.h);
