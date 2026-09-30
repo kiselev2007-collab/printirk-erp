@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='errors-duplication-2026-09-30.23';
+const CALC_VERSION='errors-duplication-2026-09-30.24';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -702,10 +702,6 @@ function isRollLam(v){return ['roll_gloss','roll_matte','roll_glitter','roll_sof
 function digitalOptions(x){
  const sec=digitalSection(),defs=[{name:'SRA4',fmt:'A4',w:320,h:225},{name:'SRA3',fmt:'A3',w:320,h:450}],paperKey=x.paperKey||String(x.density);
  return defs.map(s=>{
-   if(isRollLam(x.lamination)){
-     const rollFmt=(!x.rollLamFormat||x.rollLamFormat==='auto')?'A3':x.rollLamFormat;
-     if(s.fmt!==rollFmt)return null;
-   }
    const up=upOnSheet(s.w,s.h,x.wmm,x.hmm,x.format);if(!up)return null;
    const sheets=Math.ceil(x.qty/up);
    const unit=tierPrice(sec.base_90gsm?.[s.fmt]?.[x.color],sheets);if(unit==null)return null;
@@ -1076,13 +1072,14 @@ function parseLine(line){
  }
 
  const noGrommets=/без\s+люверс/.test(t);
+ const hasGrommets=/люверс|люв\.?/.test(t);
  const gm=t.match(/(?:люверс[а-яё]*|люв\.?)[^\d]{0,20}(\d{2,4})\s*мм|через\s*(\d{2,4})\s*мм/i);
  const gcm=t.match(/(?:люверс[а-яё]*|люв\.?)[^\d]{0,20}(\d{1,2})\s*см|через\s*(\d{1,2})\s*см/i);
- let grommet=noGrommets?0:(gm?Number(gm[1]||gm[2]):gcm?Number(gcm[1]||gcm[2])*10:0);
+ let grommet=noGrommets?0:(gm?Number(gm[1]||gm[2]):gcm?Number(gcm[1]||gcm[2])*10:(hasGrommets?300:0));
  let grommetCount=0;
  if(!noGrommets){
-   const gc=t.match(/(\d+)\s*люверс[а-яё]*/i);
-   if(gc)grommetCount=Number(gc[1]);
+   const gc=t.match(/(?:люверс[а-яё]*|люв\.?)\s*[-:]?\s*(\d+)\s*шт|(?:^|[^\d])(\d+)\s*шт\.?\s*(?:люверс[а-яё]*|люв\.?)/i);
+   if(gc)grommetCount=Number(gc[1]||gc[2]);
    else if(/люверс[а-яё]*\s+по\s+углам|по\s+углам[^,;]*люверс/i.test(t))grommetCount=4;
  }
  let invalidReason='';
