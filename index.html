@@ -167,7 +167,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='signs-2026-09-30.14';
+const CALC_VERSION='spacing-2026-09-30.15';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -348,6 +348,16 @@ function designSection(){return catalogData?.sections?.design||{}}
 function signSection(){return catalogData?.sections?.sign_plates||{}}
 function uvSection(){return catalogData?.sections?.uv_print||{}}
 function millingSection(){return catalogData?.sections?.milling_laser?.milling||{}}
+function productionSpacingMm(kind,fallback){
+ const v=catalogData?.production_rules?.spacing_mm?.[kind];
+ return Number(v==null?fallback:v);
+}
+function technologicalArea(w,h,qty,gapMm){
+ qty=Math.max(1,Number(qty)||1);gapMm=Math.max(0,Number(gapMm)||0);
+ if(qty<=1||gapMm<=0)return w*h*qty;
+ const g=gapMm/1000;
+ return (w+g)*(h+g)*qty;
+}
 function nearestOffsetStickerSize(wmm,hmm,qty){
  const sec=paperStickerSection().offset||{},rows=sec.rectangles||[],tir=sec.tirages||[],detail=sec.detailed_tirages||[];
  const fits=r=>((wmm<=r.w&&hmm<=r.h)||(wmm<=r.h&&hmm<=r.w));
@@ -871,14 +881,18 @@ function addDetected(i){
 
  if(x.type==='sign_plate'){
    if(!x.w||!x.h||!x.material){alert('Для таблички укажите размер и материал.');return}
-   const areaOne=x.w*x.h,totalArea=areaOne*x.qty;
+   const areaOne=x.w*x.h;
+   const millingGap=(x.millingRequested||x.millingMeters)?productionSpacingMm('milling_between_items',5):0;
+   const totalArea=technologicalArea(x.w,x.h,x.qty,millingGap);
+   const techAreaOne=totalArea/x.qty;
    let baseSale=0,baseLabel='';
+   if(millingGap&&x.qty>1)details.push('чистая площадь изделий: '+(areaOne*x.qty).toFixed(4)+' м²','зазор под фрезеровку: '+millingGap+' мм','технологическая площадь: '+totalArea.toFixed(4)+' м²');
    if(String(x.technology).startsWith('film_')){
      const p=signProduct(x.material);if(!p){alert('Материал не найден в прайсе 1.5 Таблички.');return}
      const key={film_360:'360',film_720:'720',film_720_lam:'720_lam',film_1440:'1440',film_oracal_bg:'oracal_bg',film_oracal_applique:'oracal_bg_applique',film_double_720_lam:'double_720_lam'}[x.technology];
      const rate=Number(p.prices?.[key]||0);if(!rate){alert('Для выбранного материала нет цены на эту технологию таблички.');return}
      const coeff=areaOne<0.1?2.5:areaOne<0.25?1.5:1;
-     const rawPerItem=areaOne*rate*coeff,perItem=Math.max(Number(signSection().minimum_item_rub||249),rawPerItem);
+     const rawPerItem=techAreaOne*rate*coeff,perItem=Math.max(Number(signSection().minimum_item_rub||249),rawPerItem);
      baseSale=Math.max(Number(signSection().minimum_order_rub||990),perItem*x.qty);
      baseLabel='табличка с плёнкой: '+totalArea.toFixed(3)+' м² × '+money(rate)+'/м²'+(coeff>1?' × коэф. '+coeff:'')+' — '+money(baseSale);
    }else{
@@ -973,7 +987,7 @@ function addDetected(i){
  if(x.type==='poster'){
    const area=x.w*x.h*x.qty,per=2*(x.w+x.h),prod=wideProduct('poster'),rate=Number(prod?.prices?.[String(x.dpi)]||0),costRate=Number(prod?.costs_per_m2?.[String(x.dpi)]||0);
    if(!rate){alert('Для постера '+x.dpi+' dpi нет подтверждённой цены в прайсе.');return}
-   name='Постер '+x.dpi+' dpi';const printSale=Math.max(Number(wideFormatSection().minimums_rub?.poster||149),area*rate);price=printSale;cost=area*costRate;details.push('печать '+area.toFixed(2)+' м² × '+money(rate)+'/м² — '+money(printSale));
+   name='Постер '+x.dpi+' dpi';const printSale=Math.max(Number(wideFormatSection().minimums_rub?.poster||149),area*rate);price=printSale;cost=area*costRate;details.push('печать '+(x.contour?area.toFixed(4):area.toFixed(2))+' м² × '+money(rate)+'/м² — '+money(printSale));
    const cut=widePost('cut_edge');if(x.edgeCut){cost+=per*Number(cut?.cost||20)*x.qty;price+=per*Number(cut?.price||22)*x.qty;details.push('резка в край '+(per*x.qty).toFixed(2)+' п.м. × '+money(Number(cut?.price||22))+'/п.м. — '+money(per*Number(cut?.price||22)*x.qty))}
    if(x.laminate){const lam=widePost('wide_lamination_standard'),ls=Math.max(Number(wideFormatSection().minimums_rub?.wide_lamination||199),area*Number(lam?.price||274));price+=ls;cost+=area*Number(lam?.cost||54.78);details.push('ламинация '+area.toFixed(2)+' м² × '+money(Number(lam?.price||274))+'/м² — '+money(ls))}
    autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
@@ -992,7 +1006,10 @@ function addDetected(i){
    autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
- const area=x.w*x.h*x.qty,per=2*(x.w+x.h);
+ const rawArea=x.w*x.h*x.qty,per=2*(x.w+x.h);
+ const contourGap=(x.type==='film'&&x.contour)?productionSpacingMm('contour_cut_stickers',2):0;
+ const area=(x.type==='film'&&x.contour)?technologicalArea(x.w,x.h,x.qty,contourGap):rawArea;
+ if(x.type==='film'&&x.contour&&x.qty>1)details.push('чистая площадь наклеек: '+rawArea.toFixed(4)+' м²','зазор между наклейками: '+contourGap+' мм','технологическая площадь печати: '+area.toFixed(4)+' м²');
  if(x.type==='banner'){
   const prod=wideProduct(x.productId||'banner_290');
   if(!prod){alert('Материал баннера не найден в прайсе.');return}
@@ -1036,13 +1053,13 @@ function addDetected(i){
     const cfg=lam!=='none'?combo.white_film_720_contour_lamination:combo.white_film_720_contour;
     price=Math.max(Number(cfg?.minimum_order_rub||0),area*Number(cfg?.price_per_m2||rate));
     cost=area*Number(cfg?.cost_per_m2||costRate);
-    details.push('печать'+(lam!=='none'?' + ламинация':'')+' + контурная резка '+area.toFixed(2)+' м² × '+money(cfg?.price_per_m2||rate)+'/м² — '+money(price));
+    details.push('печать'+(lam!=='none'?' + ламинация':'')+' + контурная резка '+area.toFixed(4)+' м² × '+money(cfg?.price_per_m2||rate)+'/м² — '+money(price));
   }else{
     const printSale=Math.max(Number(wideFormatSection().minimums_rub?.film||299),area*rate);
     price=printSale;cost=area*costRate;
     details.push('печать '+area.toFixed(2)+' м² × '+money(rate)+'/м² — '+money(printSale));
     if(lam!=='none'){const lp=widePost('wide_lamination_standard'),ls=Math.max(Number(wideFormatSection().minimums_rub?.wide_lamination||199),area*Number(lp?.price||274));price+=ls;cost+=area*Number(lp?.cost||54.78);details.push('ламинация '+area.toFixed(2)+' м² × '+money(Number(lp?.price||274))+'/м² — '+money(ls))}
-    if(x.contour){const plot=catalogData?.sections?.plotter_cut,work=(plot?.work||[]).find(z=>/Контурная резка наклеек/.test(z.name||''));const cs=Math.max(Number(work?.minimum||399),area*Number(work?.price||990));price+=cs;details.push('контурная резка '+area.toFixed(2)+' м² × '+money(Number(work?.price||990))+'/м² — '+money(cs))}
+    if(x.contour){const plot=catalogData?.sections?.plotter_cut,work=(plot?.work||[]).find(z=>/Контурная резка наклеек/.test(z.name||''));const cs=Math.max(Number(work?.minimum||399),area*Number(work?.price||990));price+=cs;details.push('контурная резка '+area.toFixed(4)+' м² × '+money(Number(work?.price||990))+'/м² — '+money(cs))}
     else if(x.edgeCut){const cut=widePost('cut_edge'),cutLen=per*x.qty,cutRate=Number(cut?.price||22),cutSale=cutLen*cutRate;price+=cutSale;cost+=cutLen*Number(cut?.cost||20);details.push('резка в край '+cutLen.toFixed(2)+' п.м. × '+money(cutRate)+'/п.м. — '+money(cutSale))}
   }
  }
