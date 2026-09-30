@@ -572,16 +572,23 @@ const offsetPrices={
   A5:[3219,4389,6584,8954,10534,11997,13343,14849,16620,18170,19019],
   A6:[1902,2487,3804,5135,6145,7022,7812,8705,9714,10534,11119]
  }};
-const paperCostA3={65:1.41,80:1.28,90:2.19,105:1.95,115:2.09,120:2.18,130:2.32,157:2.87,170:3.42,180:6,200:3.76,250:6.36,300:7.87};
 function offsetSheetsA3(format,qty,color){const div={A3:1,A4:2,A5:4,A6:8,A7:16}[format]||1;return qty/div+(color==='4+4'?100:50)}
-function offsetCustomCost(x){const sheets=offsetSheetsA3(x.format,x.qty,x.color), paper=paperCostA3[x.density]||2, forms=x.color==='4+4'?8:4, print=sheets*(x.color==='4+4'?0.6:0.3);return {cost:sheets*paper+forms*220+print,sheets}}
+function offsetCustomCost(x){
+ const calc=offsetSection().custom_calculation||{},paperMap=calc.paper_costs_A3||{};
+ const key=String(x.density||''),paper=paperMap[key],sheets=offsetSheetsA3(x.format,x.qty,x.color);
+ if(paper==null)return {cost:null,sheets,error:'Для бумаги '+key+' г нет подтверждённой себестоимости в офсетной расчётке'};
+ const forms=x.color==='4+4'?8:4,ink=Number(calc.ink_cost_per_A3_impression||0.3),plate=Number(calc.plate_with_prepress||220);
+ return {cost:sheets*paper+forms*plate+sheets*(x.color==='4+4'?ink*2:ink),sheets};
+}
 function quarterCalendarTier(qty){
- if(qty<=10)return {unit:499,costUnit:454,label:'до 10 шт.'};
- if(qty<=50)return {unit:389,costUnit:354,label:'11–50 шт.'};
- if(qty<=100)return {unit:329,costUnit:299,label:'51–100 шт.'};
- if(qty<=300)return {unit:299,costUnit:272,label:'101–300 шт.'};
- if(qty<=500)return {unit:249,costUnit:226,label:'301–500 шт.'};
- return {unit:249,costUnit:226,label:'свыше 500 · ставка последней ступени'};
+ const tiers=quarterCalendarSection().tiers||[],parsed=tiers.map(x=>{
+  const nums=String(x.range||'').match(/\d+/g)?.map(Number)||[];let max=Infinity;
+  if(/до/.test(x.range||'')&&nums.length)max=nums[0];else if(nums.length>=2)max=nums[1];else if(nums.length===1)max=nums[0];
+  return {max,unit:Number(x.price),label:x.range||''};
+ }).filter(x=>Number.isFinite(x.unit));
+ const found=parsed.find(x=>qty<=x.max)||parsed[parsed.length-1];if(!found)return null;
+ const lastMax=parsed[parsed.length-1]?.max||0,label=qty>lastMax?'свыше '+lastMax+' · ставка последней ступени':found.label;
+ return {unit:found.unit,costUnit:found.unit/1.1,label};
 }
 let detected=[],autoItems=[];
 async function recognize(){await Promise.all([synonymReady,catalogReady]);const raw=document.getElementById('orderText').value;detected=splitPositions(raw).map(parseLine);renderDetected()}
@@ -723,12 +730,12 @@ function addDetected(i){
      const sheetFit=Math.max(1,Math.floor(297/x.wmm)*Math.floor(420/x.hmm),Math.floor(297/x.hmm)*Math.floor(420/x.wmm));
      const sheets=Math.ceil(x.qty/sheetFit);
      if(sheets<250){alert('Свой офсетный спуск: минимум 250 листов А3. Сейчас получается '+sheets+'.');return}
-     const tmp={format:'A3',qty:sheets,color:x.color,density:x.density};const custom=offsetCustomCost(tmp);cost=custom.cost;price=cost*1.8;details.push('офсет — свой спуск','на листе A3: '+sheetFit+' шт.','листов A3: '+sheets,'бумага '+x.density+' гр.');
+     const tmp={format:'A3',qty:sheets,color:x.color,density:x.density};const custom=offsetCustomCost(tmp);if(custom.cost==null){alert(custom.error);return}cost=custom.cost;price=cost*1.8;details.push('офсет — свой спуск','на листе A3: '+sheetFit+' шт.','листов A3: '+sheets,'бумага '+x.density+' гр.');
    } else {
      if(!x.format){alert('Для сборного офсета нужен стандартный формат из прайса.');return}
      const idx=offsetTirages.indexOf(x.qty);
      if(idx<0){alert('Для сборного офсета выберите тираж, который есть в прайсе.');return}
-     const tmp={format:x.format,qty:x.qty,color:x.color,density:130};const custom=offsetCustomCost(tmp);cost=custom.cost;price=(offsetPrices[x.color]?.[x.format]||[])[idx]||0;details.push('офсет — сборный прайс','готовая цена 130 гр.');
+     const tmp={format:x.format,qty:x.qty,color:x.color,density:130};const custom=offsetCustomCost(tmp);cost=custom.cost;price=(offsetSection().prices?.[x.color]?.[x.format]||offsetPrices[x.color]?.[x.format]||[])[idx]||0;details.push('офсет — сборный прайс','готовая цена 130 гр.');
    }
    autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
@@ -743,12 +750,12 @@ function addDetected(i){
  if(x.type==='offset'){
    if(!x.format||!x.qty){alert('Для офсета нужно указать формат и тираж.');return}
    name='Листовка '+x.format+' '+x.color+' '+x.density+' гр. · офсет';
-   const custom=offsetCustomCost(x);cost=custom.cost;details.push('бумага '+x.density+' гр.','тираж '+x.qty+' шт.','расчётных листов A3: '+Math.ceil(custom.sheets));
+   const custom=offsetCustomCost(x);cost=custom.cost??0;details.push('бумага '+x.density+' гр.','тираж '+x.qty+' шт.','расчётных листов A3: '+Math.ceil(custom.sheets));
    const idx=offsetTirages.indexOf(x.qty);
-   if(x.density===130 && idx>=0 && offsetPrices[x.color] && offsetPrices[x.color][x.format]){
-      price=offsetPrices[x.color][x.format][idx];details.push('готовая цена из прайса 130 гр.');
+   if(x.density===130 && idx>=0 && (offsetSection().prices?.[x.color]?.[x.format]||offsetPrices[x.color]?.[x.format])){
+      price=(offsetSection().prices?.[x.color]?.[x.format]||offsetPrices[x.color][x.format])[idx];details.push('готовая цена из прайса 130 гр.');
    } else {
-      price=cost*1.8;details.push('индивидуальная офсетная расчётка');
+      if(custom.cost==null){alert(custom.error);return}price=cost*1.8;details.push('индивидуальная офсетная расчётка');
    }
    autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
