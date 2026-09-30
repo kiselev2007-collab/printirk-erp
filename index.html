@@ -586,6 +586,9 @@ function designSection(){return catalogData?.sections?.design||{}}
 function signSection(){return catalogData?.sections?.sign_plates||{}}
 function uvSection(){return catalogData?.sections?.uv_print||{}}
 function millingSection(){return catalogData?.sections?.milling_laser?.milling||{}}
+function laserSection(){return catalogData?.sections?.milling_laser?.laser||{}}
+function interiorSection(){return catalogData?.sections?.interior_print||{}}
+function apparelSection(){return catalogData?.sections?.apparel||{}}
 function duplicationSection(){return catalogData?.sections?.black_white_duplication||{}}
 function selfCopySection(){return duplicationSection().self_copy_forms||{}}
 function bindingSection(){return catalogData?.sections?.binding||{}}
@@ -605,6 +608,50 @@ function duplicationRate(format,sides,sheets){
 }
 function duplicationPaperSale(format,paper){
  return Number(duplicationSection()?.paper_cost_per_sheet?.[format]?.[paper]||0);
+}
+function duplicationFinishedSize(x){
+ if(x.finishedFormat&&formatsMM[x.finishedFormat]){
+   const z=formatsMM[x.finishedFormat];return {wmm:z[0],hmm:z[1],label:x.finishedFormat};
+ }
+ if(x.wmm&&x.hmm)return {wmm:x.wmm,hmm:x.hmm,label:Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм'};
+ return null;
+}
+function duplicationLayout(x){
+ const size=duplicationFinishedSize(x);if(!size)return null;
+ const printFmt=x.printSheet||'A3',sheet=printFmt==='A4'?[210,297]:[297,420];
+ const variants=[
+   {cols:Math.floor(sheet[0]/size.wmm),rows:Math.floor(sheet[1]/size.hmm),rot:false},
+   {cols:Math.floor(sheet[0]/size.hmm),rows:Math.floor(sheet[1]/size.wmm),rot:true}
+ ].filter(v=>v.cols>0&&v.rows>0).map(v=>{
+   const up=v.cols*v.rows;
+   const cutPasses=(v.cols>1?Math.ceil(Math.log2(v.cols)):0)+(v.rows>1?Math.ceil(Math.log2(v.rows)):0);
+   return {...v,up,cutPasses};
+ }).sort((a,b)=>b.up-a.up||a.cutPasses-b.cutPasses);
+ const best=variants[0];if(!best)return null;
+ const printSheets=Math.ceil((Number(x.qty)||0)/best.up);
+ const cutBatches=Math.ceil(printSheets/250);
+ const cutRate=Number(duplicationSection()?.postprocessing_rules?.cut_up_to_250_print_sheets_rub||60);
+ return {...best,printFmt,sheetW:sheet[0],sheetH:sheet[1],printSheets,cutBatches,cutSale:best.up>1?best.cutPasses*cutBatches*cutRate:0,size};
+}
+function laserMaterialFromText(t){
+ const th=parseThicknessMm(t);
+ if(/акрил/.test(t)){
+   if(!th)return '';
+   if(th<=2)return 'Акрил 1–2 мм';if(th<=4)return 'Акрил 3–4 мм';if(th<=6)return 'Акрил 5–6 мм';if(th<=10)return 'Акрил 8–10 мм';return 'Акрил до 20 мм';
+ }
+ if(/пэт|pet|вивак/.test(t))return 'ПЭТ';
+ if(/картон/.test(t))return 'Картон';
+ return '';
+}
+function laserRate(material){return (laserSection().prices_per_m||[]).find(x=>norm(x.material)===norm(material))||null}
+function rectPerimeterM(size,qty=1){return size?2*(size.w+size.h)*Math.max(1,Number(qty)||1):0}
+function interiorProductByName(rx){return (interiorSection().products||[]).find(x=>rx.test(norm(x.name)))||null}
+function apparelTierPrice(tiers,qty){
+ let best=null;for(const r of (tiers||[])){if(qty>=Number(r[0]))best=Number(r[1]);else break}return best;
+}
+function apparelFormatForSize(wmm,hmm){
+ const fits=(w,h)=>((wmm<=w&&hmm<=h)||(wmm<=h&&hmm<=w));
+ if(fits(148,210))return 'A5';if(fits(210,297))return 'A4';if(fits(297,420))return 'A3';return '';
 }
 function bindingJournalTier(format,type,leaves){
  const table=bindingSection()?.journal_binding?.[format]?.[type]||{};
