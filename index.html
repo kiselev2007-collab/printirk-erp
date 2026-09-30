@@ -1238,35 +1238,6 @@ function renderDetected(){
     return '<div class="detected-card"><div class="detected-head"><div><b>Дизайн баннера</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Вид дизайна</label><select onchange="detected['+i+'].designVariant=this.value;renderDetected()">'+opts+'</select></div></div></div>';
   }
 
- if(x.type==='business_card'){
-   if(x.mode==='offset'){
-     const row=(businessCardsSection().offset_collective||[]).find(z=>Number(z.qty)===x.qty&&String(z.name||'').includes(x.cardSize));
-     if(!row){alert('Для сборного спуска нет готовой цены на выбранный размер/тираж. Переключите на цифровую печать.');return}
-     price=Number(row.price);cost=0;name='Визитки '+x.cardSize+' · сборный спуск · '+x.qty+' шт.';details.push('готовая цена сборного спуска — '+money(price));
-   }else{
-     const d=businessCardDigitalTotal(x.color,x.qty);if(!d){alert('Для этого тиража нет цифровой цены визиток.');return}
-     price=d.total;cost=0;name='Визитки '+x.cardSize+' · '+x.color+' · цифра · '+x.qty+' шт.';details.push(x.qty+' шт. × '+money(d.unit)+'/шт. — '+money(price));
-   }
-   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
- }
- if(x.type==='mug'){
-   const unit=simpleTierUnit(mugsSection().tiers,x.qty);if(unit==null){alert('Для этого тиража кружек нет тарифа.');return}
-   const raw=unit*x.qty;price=Math.max(Number(mugsSection().minimum_order_rub||1000),raw);cost=0;name='Кружка с фото · сублимация · '+x.qty+' шт.';details.push(x.qty+' шт. × '+money(unit)+' — '+money(raw));if(price>raw)details.push('минимальный заказ — '+money(price));
-   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
- }
- if(x.type==='badge_round'){
-   const unit=simpleTierUnit(badgesSection().tiers,x.qty);if(unit==null){alert('Для этого тиража значков нет тарифа.');return}
-   const raw=unit*x.qty;price=Math.max(Number(badgesSection().minimum_order_rub||1000),raw);cost=0;name='Значки Ø '+(badgesSection().badge_mm||55)+' мм · '+x.qty+' шт.';details.push(x.qty+' шт. × '+money(unit)+' — '+money(raw));if(price>raw)details.push('минимальный заказ — '+money(price));
-   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
- }
- if(x.type==='frame_mount'){
-   if(x.invalidReason){alert(x.invalidReason);return}
-   const rate=Number((installationSection().mounting||[]).find(z=>/рамной конструкции из профтрубы/i.test(z.name||''))?.price||220);
-   const minimum=Number((installationSection().mounting||[]).find(z=>/Минимальный монтаж\/демонтаж/i.test(z.name||''))?.price||5000);
-   const area=x.area*x.qty,raw=area*rate;price=Math.max(minimum,raw);cost=0;name='Монтаж рамной конструкции из профтрубы';details.push(area.toFixed(2)+' м² × '+money(rate)+'/м² — '+money(raw));if(price>raw)details.push('минимальный монтаж — '+money(price));
-   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
- }
-
  if(x.type==='duplication'){
     const lay=duplicationLayout(x),min=x.printSheet==='A4'?100:50;
     const finished=duplicationFinishedSize(x);
@@ -1483,6 +1454,36 @@ function renderDetected(){
 function addDetected(i){
  const x=detected[i];if(!x||x.error||x.type==='unknown'||x.invalidReason)return;
  const details=[];let cost=0,price=0,name='';
+
+ if(x.type==='business_card'){
+   if(x.mode==='offset'){
+     const row=(businessCardsSection().offset_collective||[]).find(z=>Number(z.qty)===x.qty&&String(z.name||'').includes(x.cardSize));
+     if(!row){alert('Для сборного спуска нет готовой цены на выбранный размер/тираж. Переключите на цифровую печать.');return}
+     price=Number(row.price);cost=0;name='Визитки '+x.cardSize+' · сборный спуск · '+x.qty+' шт.';details.push('готовая цена сборного спуска — '+money(price));
+   }else{
+     const d=businessCardDigitalTotal(x.color,x.qty);if(!d){alert('Для этого тиража нет цифровой цены визиток.');return}
+     price=d.total;cost=0;name='Визитки '+x.cardSize+' · '+x.color+' · цифра · '+x.qty+' шт.';details.push(x.qty+' шт. × '+money(d.unit)+'/шт. — '+money(price));
+   }
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+ if(x.type==='mug'){
+   const unit=simpleTierUnit(mugsSection().tiers,x.qty);if(unit==null){alert('Для этого тиража кружек нет тарифа.');return}
+   const raw=unit*x.qty;price=Math.max(Number(mugsSection().minimum_order_rub||1000),raw);cost=0;name='Кружка с фото · сублимация · '+x.qty+' шт.';details.push(x.qty+' шт. × '+money(unit)+' — '+money(raw));if(price>raw)details.push('минимальный заказ — '+money(price));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+ if(x.type==='badge_round'){
+   const unit=simpleTierUnit(badgesSection().tiers,x.qty);if(unit==null){alert('Для этого тиража значков нет тарифа.');return}
+   const raw=unit*x.qty;price=Math.max(Number(badgesSection().minimum_order_rub||1000),raw);cost=0;name='Значки Ø '+(badgesSection().badge_mm||55)+' мм · '+x.qty+' шт.';details.push(x.qty+' шт. × '+money(unit)+' — '+money(raw));if(price>raw)details.push('минимальный заказ — '+money(price));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+ if(x.type==='frame_mount'){
+   if(x.invalidReason){alert(x.invalidReason);return}
+   const rate=Number((installationSection().mounting||[]).find(z=>/рамной конструкции из профтрубы/i.test(z.name||''))?.price||220);
+   const minimum=Number((installationSection().mounting||[]).find(z=>/Минимальный монтаж\/демонтаж/i.test(z.name||''))?.price||5000);
+   const area=x.area*x.qty,raw=area*rate;price=Math.max(minimum,raw);cost=0;name='Монтаж рамной конструкции из профтрубы';details.push(area.toFixed(2)+' м² × '+money(rate)+'/м² — '+money(raw));if(price>raw)details.push('минимальный монтаж — '+money(price));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
 
  if(x.type==='duplication'){
    if(x.invalidReason){alert(x.invalidReason);return}
