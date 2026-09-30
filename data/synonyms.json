@@ -5,22 +5,31 @@
     "synonyms": [
       "Баннер Китай",
       "обычный",
-      "дешевый"
-    ]
+      "дешевый",
+      "баннер китай",
+      "китай баннер"
+    ],
+    "source": "orders_current_archive_irkutsk"
   },
   {
     "name": "Баннер 440 гр/м2  240 дпи",
     "type": "баннер себестоимость 74,8 р",
     "synonyms": [
-      "Баннер Корея"
-    ]
+      "Баннер Корея",
+      "баннер корея",
+      "корея баннер"
+    ],
+    "source": "orders_current_archive_irkutsk"
   },
   {
     "name": "Баннер 510 гр/м2  240 дпи",
     "type": "баннер себестоимость 47,3 р",
     "synonyms": [
-      "Баннер Европа"
-    ]
+      "Баннер Европа",
+      "баннер европа",
+      "европа баннер"
+    ],
+    "source": "orders_current_archive_irkutsk"
   },
   {
     "name": "Баннер 300 гр/м2  360 дпи",
@@ -2347,6 +2356,432 @@
     "synonyms": [
       "АКП 3 мм + 720 dpi",
       "алюкобонд 3 мм + 720 dpi"
+    ]
+  },
+  {
+    "name": "Листовка",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "листовка",
+      "листовки",
+      "листовкм",
+      "листовочки"
+    ]
+  },
+  {
+    "name": "Визитка",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "визитка",
+      "визитки",
+      "визикти",
+      "визиточка",
+      "визитные карточки"
+    ]
+  },
+  {
+    "name": "Буклет",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "буклет",
+      "буклеты"
+    ]
+  },
+  {
+    "name": "Флаер",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "флаер",
+      "флаеры"
+    ]
+  },
+  {
+    "name": "Открытка",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "открытка",
+      "открытки"
+    ]
+  },
+  {
+    "name": "Приглашение",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "приглашение",
+      "приглашения"
+    ]
+  },
+  {
+    "name": "Сертификат",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "сертификат",
+      "сертификаты",
+      "серт",
+      "серты",
+      "евросертификат",
+      "евросертификаты",
+      "сертфиикат",
+      "сертификаты евро"
+    ]
+  },
+  {
+    "name": "Благодарственное письмо",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "благодарственное письмо",
+      "благодарственные письма",
+      "благ письмо",
+      "благ письма",
+      "благодарность",
+      "благодарности"
+    ]
+  },
+  {
+    "name": "Грамота",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "грамота",
+      "грамоты"
+    ]
+  },
+  {
+    "name": "Купон",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "купон",
+      "купоны"
+    ]
+  },
+  {
+    "name": "Абонемент",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "абонемент",
+      "абонементы",
+      "абонимент",
+      "абонименты"
+    ]
+  },
+  {
+    "name": "Билет",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "билет",
+      "билеты",
+      "билетик",
+      "билетики"
+    ]
+  },
+  {
+    "name": "Меню",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "меню",
+      "барная карта",
+      "барная карта меню"
+    ]
+  },
+  {
+    "name": "Винная карта",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "винная карта",
+      "винная карта меню"
+    ]
+  },
+  {
+    "name": "Вкладыш",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "вкладыш",
+      "вкладыши"
+    ]
+  },
+  {
+    "name": "Прайс-лист",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "прайс-лист",
+      "прайс лист",
+      "прайс"
+    ]
+  },
+  {
+    "name": "Бейдж-вкладыш",
+    "type": "digital_product",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "вкладыш в бейдж",
+      "вкладыши в бейдж"
+    ]
+  },
+  {
+    "name": "Пленка перфорированная 720 дпи",
+    "type": "Пленка",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "перфа пленка",
+      "перфа плёнка",
+      "перфопленка",
+      "перфоплёнка",
+      "перфорированная пленка",
+      "перфорированная плёнка"
+    ]
+  },
+  {
+    "name": "Пленка самоклеющаяся",
+    "type": "Пленка",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "самоклейка",
+      "самоклей",
+      "самоклейке",
+      "самоклеящаяся пленка",
+      "самоклеющаяся плёнка",
+      "белая самоклейка"
+    ]
+  },
+  {
+    "name": "Пленка прозрачная",
+    "type": "Пленка",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "прозрачка",
+      "прозрачная пленка",
+      "прозрачная плёнка"
+    ]
+  },
+  {
+    "name": "Постерная бумага",
+    "type": "Постерная бумага",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "постер",
+      "постеры",
+      "постерка",
+      "плакат",
+      "плакаты"
+    ]
+  },
+  {
+    "name": "Резка в край",
+    "type": "post_cut",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "резка в край",
+      "с резкой в край",
+      "срезкой в край",
+      "срезкой",
+      "обрезка в край",
+      "с обрезкой в край",
+      "обрезкой в край"
+    ]
+  },
+  {
+    "name": "Люверсы",
+    "type": "post_grommet",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "люверс",
+      "люверсы",
+      "люв",
+      "люв.",
+      "люверсовка",
+      "люверсы по углам",
+      "4 люверса",
+      "без люверсов"
+    ]
+  },
+  {
+    "name": "Контурная резка",
+    "type": "post_contour",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "контурная резка",
+      "конт резка",
+      "конт. резка",
+      "контурка",
+      "плоттерная резка",
+      "плоттерка",
+      "фигурная резка"
+    ]
+  },
+  {
+    "name": "Скругление",
+    "type": "post_round",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "скругление",
+      "скругление углов",
+      "скругленные углы",
+      "скруглённые углы",
+      "скругденные углы",
+      "закругление углов"
+    ]
+  },
+  {
+    "name": "Пакетная ламинация",
+    "type": "post_lam_packet",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "пакетная ламинация",
+      "пакетаня ламинация",
+      "пакетка",
+      "глян пакетка",
+      "гл пакетка",
+      "мат пакетка",
+      "матовая пакетка"
+    ]
+  },
+  {
+    "name": "Рулонная ламинация",
+    "type": "post_lam_roll",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "рулонная ламинация",
+      "рулонка",
+      "глянцевая рулонка",
+      "глян рулонка",
+      "матовая рулонка",
+      "мат рулонка"
+    ]
+  },
+  {
+    "name": "Soft Touch",
+    "type": "post_lam_soft",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "soft touch",
+      "softtouch",
+      "софт тач",
+      "софт-тач",
+      "софтач",
+      "силк тач",
+      "силк-тач",
+      "силктач",
+      "silk touch"
+    ]
+  },
+  {
+    "name": "Матовая ламинация",
+    "type": "post_lam_matte",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "матовая ламинация",
+      "мат ламинация",
+      "мат. ламинация",
+      "мат ламин",
+      "матлам",
+      "мат.лам"
+    ]
+  },
+  {
+    "name": "Глянцевая ламинация",
+    "type": "post_lam_gloss",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "глянцевая ламинация",
+      "глян ламинация",
+      "глянец ламинация",
+      "гл ламинация",
+      "глян ламин"
+    ]
+  },
+  {
+    "name": "Переплёт на пружине",
+    "type": "post_binding_wire",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "пружинка",
+      "на пружине",
+      "на пружинке",
+      "переплет пружинка",
+      "переплёт пружинка",
+      "пружинный переплет",
+      "пружинный переплёт"
+    ]
+  },
+  {
+    "name": "Дизайнерский картон",
+    "type": "digital_material",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "диз картон",
+      "диз.картон",
+      "дизайнерский картон"
+    ]
+  },
+  {
+    "name": "Перламутровый дизайнерский картон",
+    "type": "digital_material",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "перламутр",
+      "перламутровый",
+      "шайн перламутр",
+      "shyne перламутр",
+      "сирио перл",
+      "sirio pearl"
+    ]
+  },
+  {
+    "name": "Бейдж",
+    "type": "name_badges",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "бэйдж",
+      "бэйджи",
+      "бейджик",
+      "бейджики"
+    ]
+  },
+  {
+    "name": "Кружка",
+    "type": "mugs",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "кружка",
+      "кружки",
+      "кружек"
+    ]
+  },
+  {
+    "name": "Футболка",
+    "type": "apparel",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "футболка",
+      "футболки",
+      "футболкти"
+    ]
+  },
+  {
+    "name": "Дистанционное крепление",
+    "type": "sign_mounting",
+    "source": "orders_current_archive_irkutsk",
+    "synonyms": [
+      "дистанционки",
+      "дистанционках",
+      "дистанции хром",
+      "дистанционное крепление",
+      "дистанционные держатели"
     ]
   }
 ]
