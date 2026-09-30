@@ -176,7 +176,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='digital-2026-09-30.3';
+const CALC_VERSION='digital-2026-09-30.4';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -461,7 +461,7 @@ function digitalPostCalc(x,opt){
 }
 function parseLine(line){
  const t=norm(line);
- const qtyMatch=t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт|^(\d+)\s+(?=(?:а|a)\s*[3-7](?:\s|$))/i);
+ const qtyMatch=t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт|^(\d+)\s+(?=[a-zа-яё])/i);
  const qty=Number((qtyMatch||[]).slice(1).find(Boolean)||0);
  const densMatch=t.match(/\b(65|80|90|105|115|120|128|130|157|170|180|200|250|300|340|400|440|510)\s*(?:гр|г)(?=$|[^0-9a-zа-яё])/i);
  const density=Number((densMatch||[])[1]||0);
@@ -470,7 +470,11 @@ function parseLine(line){
  const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
  const cm=t.match(/4\s*\+\s*(0|4)/);
 
- if(/квартал(?:ьн)?[а-яё]*\s+календар[а-яё]*|календар[а-яё]*\s+квартал(?:ьн)?[а-яё]*/i.test(t) || synonymMatch(t,'three_block_calendars')){
+ if(
+   /квартал(?:ьн)?[а-яё]*\s+календар[а-яё]*|календар[а-яё]*\s+квартал(?:ьн)?[а-яё]*/i.test(t) ||
+   /(?:^|[^а-яё])квартальник(?:и|а|ов|ами|ах)?(?=$|[^а-яё])/i.test(t) ||
+   synonymMatch(t,'three_block_calendars')
+ ){
    return {source:line,type:'quarter_calendar',qty:qty||1};
  }
  const namedPoly=/листовк|буклет|флаер|винн\w* карт|меню|визит|открытк|приглаш|сертификат|бланк/.test(t);
