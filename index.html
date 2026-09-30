@@ -167,7 +167,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='spacing-2026-09-30.15';
+const CALC_VERSION='bso-2026-09-30.16';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -348,6 +348,8 @@ function designSection(){return catalogData?.sections?.design||{}}
 function signSection(){return catalogData?.sections?.sign_plates||{}}
 function uvSection(){return catalogData?.sections?.uv_print||{}}
 function millingSection(){return catalogData?.sections?.milling_laser?.milling||{}}
+function duplicationSection(){return catalogData?.sections?.black_white_duplication||{}}
+function selfCopySection(){return duplicationSection().self_copy_forms||{}}
 function productionSpacingMm(kind,fallback){
  const v=catalogData?.production_rules?.spacing_mm?.[kind];
  return Number(v==null?fallback:v);
@@ -573,6 +575,18 @@ function parseLine(line){
  const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
  const cm=t.match(/4\s*\+\s*(0|4)/);
 
+ const isSelfCopy=/(?:^|[^а-яё])бсо(?=$|[^а-яё])|самокопир|копирк[а-яё]*/i.test(t);
+ if(isSelfCopy){
+   const fmt=(t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([4-7])(?=$|[^0-9a-zа-яё])/i)||[])[1];
+   const lm=t.match(/(\d+)\s*(?:сло[яеёв]|-?х\s*сло)/i);
+   const layers=Number(lm?.[1]||2);
+   const blockM=t.match(/(?:по|блок[а-яё]*\s+по)\s*(50|100)\s*(?:шт|комплект|лист)/i);
+   const glue=/склей|проклей|клеев[а-яё]*\s+блок/i.test(t);
+   const numbering=/нумерац|с\s*номером|номер[а-яё]*\s+с\s*\d/i.test(t);
+   const mixedSides=(t.match(/1\s*\+\s*[01]/g)||[]).length>1;
+   return {source:line,type:'self_copy_form',format:fmt?'A'+fmt:'',qty:qty||0,layers,glue,blockSize:Number(blockM?.[1]||50),numbering,mixedSides,invalidReason:!fmt?'Укажите формат БСО':(!qty?'Укажите тираж БСО':(layers!==2?'Автоматический расчёт сейчас подтверждён только для 2 слоёв':(mixedSides?'Разная печать по слоям требует отдельного расчёта':'')))};
+ }
+
  const isSign=/таблич|табл\.?(?:\s|$)|шильд/.test(t);
  const hasMilling=/фрезеров|фрезерн|фрезеровк/.test(t);
  if(isSign){
@@ -759,7 +773,21 @@ function renderDetected(){
     return '<div class="detected-card"><div class="detected-head"><div><b>Дизайн баннера</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Вид дизайна</label><select onchange="detected['+i+'].designVariant=this.value;renderDetected()">'+opts+'</select></div></div></div>';
   }
 
- if(x.type==='sign_plate'){
+ if(x.type==='self_copy_form'){
+    const cfg=selfCopySection().calculator_A6||{};
+    let chips='<span class="chip">'+(x.format||'формат не указан')+'</span><span class="chip">'+(x.qty||0)+' комплектов</span><span class="chip">'+x.layers+' слоя</span><span class="chip">ЧБ</span>';
+    if(x.glue)chips+='<span class="chip auto">склейка по '+x.blockSize+'</span>';
+    if(x.numbering)chips+='<span class="chip auto">нумерация</span>';
+    if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
+    const blockOpts=[50,100].map(v=>'<option value="'+v+'" '+(x.blockSize===v?'selected':'')+'>'+v+' комплектов</option>').join('');
+    return '<div class="detected-card"><div class="detected-head"><div><b>БСО / самокопирующиеся бланки</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
+      '<label class="check"><input type="checkbox" '+(x.glue?'checked':'')+' onchange="detected['+i+'].glue=this.checked;renderDetected()"> Склейка в блок</label>'+
+      '<div class="field"><label>Комплектов в блоке</label><select onchange="detected['+i+'].blockSize=+this.value;renderDetected()">'+blockOpts+'</select></div>'+
+      '<label class="check"><input type="checkbox" '+(x.numbering?'checked':'')+' onchange="detected['+i+'].numbering=this.checked;renderDetected()"> Нумерация</label>'+
+      '</div></div>';
+  }
+
+  if(x.type==='sign_plate'){
     const mats=(signSection().products||[]).map(p=>'<option value="'+p.name.replace(/"/g,'&quot;')+'" '+(x.material===p.name?'selected':'')+'>'+p.name+'</option>').join('');
     const techs=[
       ['film_360','Плёнка · 360 dpi'],['film_720','Плёнка · 720 dpi'],['film_720_lam','Плёнка · 720 dpi + ламинация'],['film_1440','Плёнка · 1440 dpi'],
@@ -866,6 +894,33 @@ function renderDetected(){
 function addDetected(i){
  const x=detected[i];if(!x||x.error||x.type==='unknown'||x.invalidReason)return;
  const details=[];let cost=0,price=0,name='';
+
+ if(x.type==='self_copy_form'){
+   if(x.invalidReason){alert(x.invalidReason);return}
+   if(x.format!=='A6'){alert('Автоматический калькулятор самокопирующихся бланков в текущей вкладке подтверждён для А6. Для '+x.format+' пока требуется отдельная формула.');return}
+   if(x.layers!==2){alert('Для самокопирующихся БСО сейчас подтверждён автоматический расчёт только 2-слойного комплекта.');return}
+   const cfg=selfCopySection().calculator_A6||{};
+   const q=x.qty,paperCount=Math.ceil(q/2);
+   const top=paperCount*Number(cfg.top_paper_unit||2.1);
+   const bottom=paperCount*Number(cfg.bottom_paper_unit||4);
+   const print=q*Number(cfg.black_white_print_unit||0.43);
+   const coll=q*x.layers*Number(cfg.collation_unit||0.44);
+   const cut=Number(cfg.cutting_passes||6)*Number(cfg.cutting_unit||20);
+   const blocks=x.glue?Math.ceil(q/Math.max(1,x.blockSize||50)):0;
+   const glue=blocks*Number(cfg.glue_per_block||60);
+   const numbering=x.numbering?q*Number(cfg.numbering_unit||0.66):0;
+   price=top+bottom+print+coll+cut+glue+numbering;cost=0;
+   name='БСО А6 · самокопирка 2 слоя · '+q+' компл.';
+   details.push('верх: '+paperCount+' × '+money(cfg.top_paper_unit||2.1)+' — '+money(top));
+   details.push('низ: '+paperCount+' × '+money(cfg.bottom_paper_unit||4)+' — '+money(bottom));
+   details.push('ЧБ тиражирование: '+q+' × '+money(cfg.black_white_print_unit||0.43)+' — '+money(print));
+   details.push('листоподбор: '+(q*x.layers)+' × '+money(cfg.collation_unit||0.44)+' — '+money(coll));
+   details.push('резка: '+Number(cfg.cutting_passes||6)+' × '+money(cfg.cutting_unit||20)+' — '+money(cut));
+   if(x.glue)details.push('склейка: '+blocks+' блок. × '+money(cfg.glue_per_block||60)+' — '+money(glue));
+   if(x.numbering)details.push('нумерация: '+q+' × '+money(cfg.numbering_unit||0.66)+' — '+money(numbering));
+   details.push('итого по калькулятору самокопирующихся бланков — '+money(price),'себестоимость отдельно не задана в этом блоке прайса');
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
 
  if(x.type==='milling'){
    if(!x.meters||!x.material){alert('Для фрезеровки укажите материал и количество погонных метров.');return}
