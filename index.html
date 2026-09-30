@@ -167,7 +167,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='stickers-2026-09-30.12';
+const CALC_VERSION='design-2026-09-30.13';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -344,6 +344,7 @@ function widePost(id){return (wideFormatSection().postprocessing||[]).find(x=>x.
 function offsetSection(){return catalogData?.sections?.offset_leaflets||{}}
 function quarterCalendarSection(){return catalogData?.sections?.three_block_calendars||{}}
 function paperStickerSection(){return catalogData?.sections?.paper_stickers||{}}
+function designSection(){return catalogData?.sections?.design||{}}
 function nearestOffsetStickerSize(wmm,hmm,qty){
  const sec=paperStickerSection().offset||{},rows=sec.rectangles||[],tir=sec.tirages||[],detail=sec.detailed_tirages||[];
  const fits=r=>((wmm<=r.w&&hmm<=r.h)||(wmm<=r.h&&hmm<=r.w));
@@ -525,6 +526,13 @@ function parseLine(line){
  const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
  const cm=t.match(/4\s*\+\s*(0|4)/);
 
+ if(/(?:дизайн|макет|разработк[а-яё]*)[^\n]*баннер|баннер[^\n]*(?:дизайн|макет)/i.test(t)){
+   let designVariant='';
+   if(/только\s+текст|текст\s+на\s+авто|без\s+(?:картин|фото|лого)/i.test(t))designVariant='text';
+   else if(/картин|фото|изображ|лого|логотип/i.test(t))designVariant='full';
+   return {source:line,type:'design_banner',qty:qty||1,designVariant};
+ }
+
  if(
    /квартал(?:ьн)?[а-яё]*\s+календар[а-яё]*|календар[а-яё]*\s+квартал(?:ьн)?[а-яё]*/i.test(t) ||
    /(?:^|[^а-яё])квартальник(?:и|а|ов|ами|ах)?(?=$|[^а-яё])/i.test(t) ||
@@ -677,7 +685,26 @@ function renderDetected(){
  box.innerHTML=detected.map((x,i)=>{
   if(x.error||x.type==='unknown')return '<div class="detected-card"><div class="detected-head"><div><b>'+x.source+'</b><div class="chips"><span class="chip warn">Не удалось определить материал или размер</span></div></div><button class="flagbtn" onclick="openDetectedError('+i+')">⚑ Сообщить об ошибке</button></div></div>';
 
-  if(x.type==='quarter_calendar'){
+  if(x.type==='design_banner'){
+    const full=(designSection().items||[]).find(z=>/баннера: картинки \+ текст \+ лого/i.test(z.name||''))?.price||1590;
+    const textOnly=(designSection().items||[]).find(z=>/баннера: текст/i.test(z.name||''))?.price||590;
+    const chips='<span class="chip">'+x.qty+' шт.</span>'+(x.designVariant?'<span class="chip auto">'+(x.designVariant==='full'?'картинки + текст + лого':'только текст / текст на авто')+'</span>':'<span class="chip warn">выберите вид дизайна</span>');
+    const opts='<option value="" '+(!x.designVariant?'selected':'')+'>Выберите</option><option value="full" '+(x.designVariant==='full'?'selected':'')+'>Картинки + текст + лого — '+money(full)+'</option><option value="text" '+(x.designVariant==='text'?'selected':'')+'>Только текст / текст на авто — '+money(textOnly)+'</option>';
+    return '<div class="detected-card"><div class="detected-head"><div><b>Дизайн баннера</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Вид дизайна</label><select onchange="detected['+i+'].designVariant=this.value;renderDetected()">'+opts+'</select></div></div></div>';
+  }
+
+  if(x.type==='design_banner'){
+   if(!x.designVariant){alert('Выберите вид дизайна баннера.');return}
+   const full=(designSection().items||[]).find(z=>/баннера: картинки \+ текст \+ лого/i.test(z.name||''))?.price||1590;
+   const textOnly=(designSection().items||[]).find(z=>/баннера: текст/i.test(z.name||''))?.price||590;
+   const unit=x.designVariant==='full'?full:textOnly;
+   name='Дизайн баннера · '+(x.designVariant==='full'?'картинки + текст + лого':'текст / текст на авто');
+   price=unit*x.qty;cost=0;
+   details.push((x.designVariant==='full'?'картинки + текст + лого':'только текст / текст на авто')+' × '+x.qty+' — '+money(price),'себестоимость дизайна: не задана в прайсе');
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
+ if(x.type==='quarter_calendar'){
     const tier=quarterCalendarTier(x.qty);
     const chips='<span class="chip">'+x.qty+' шт.</span>'+(tier?'<span class="chip auto">'+tier.label+' · '+money(tier.unit)+' / шт.</span>':'');
     return '<div class="detected-card"><div class="detected-head"><div><b>Календарь трёхблочный со стандартной сеткой</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div></div>';
