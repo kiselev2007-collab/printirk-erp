@@ -176,7 +176,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='digital-2026-09-29.4';
+const CALC_VERSION='digital-2026-09-30.1';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -464,6 +464,10 @@ function parseLine(line){
 
  const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
  const cm=t.match(/4\s*\+\s*(0|4)/);
+
+ if(/квартал(?:ьн)?\w*\s+календар|календар\w*\s+квартал/i.test(t)){
+   return {source:line,type:'quarter_calendar',qty:qty||1};
+ }
  const namedPoly=/листовк|буклет|флаер|винн\w* карт|меню|визит|открытк|приглаш|сертификат|бланк/.test(t);
  const genericPoly=!!(cm&&density&&qty&&(fm||parseSize(t)));
  const poly=namedPoly||genericPoly;
@@ -515,6 +519,14 @@ const offsetPrices={
 const paperCostA3={65:1.41,80:1.28,90:2.19,105:1.95,115:2.09,120:2.18,130:2.32,157:2.87,170:3.42,180:6,200:3.76,250:6.36,300:7.87};
 function offsetSheetsA3(format,qty,color){const div={A3:1,A4:2,A5:4,A6:8,A7:16}[format]||1;return qty/div+(color==='4+4'?100:50)}
 function offsetCustomCost(x){const sheets=offsetSheetsA3(x.format,x.qty,x.color), paper=paperCostA3[x.density]||2, forms=x.color==='4+4'?8:4, print=sheets*(x.color==='4+4'?0.6:0.3);return {cost:sheets*paper+forms*220+print,sheets}}
+function quarterCalendarTier(qty){
+ if(qty<=10)return {unit:499,costUnit:454,label:'до 10 шт.'};
+ if(qty<=50)return {unit:389,costUnit:354,label:'11–50 шт.'};
+ if(qty<=100)return {unit:329,costUnit:299,label:'51–100 шт.'};
+ if(qty<=300)return {unit:299,costUnit:272,label:'101–300 шт.'};
+ if(qty<=500)return {unit:249,costUnit:226,label:'301–500 шт.'};
+ return null;
+}
 let detected=[],autoItems=[];
 function recognize(){const raw=document.getElementById('orderText').value;detected=splitPositions(raw).map(parseLine);renderDetected()}
 function digitalPostUI(i,x){
@@ -556,7 +568,13 @@ function digitalPostUI(i,x){
 function renderDetected(){
  const box=document.getElementById('detected');if(!detected.length){box.innerHTML='';return}
  box.innerHTML=detected.map((x,i)=>{
-  if(x.error||x.type==='unknown')return '<div class="detected-card"><b>'+x.source+'</b><div class="chips"><span class="chip warn">Не удалось определить материал или размер</span></div></div>';
+  if(x.error||x.type==='unknown')return '<div class="detected-card"><div class="detected-head"><div><b>'+x.source+'</b><div class="chips"><span class="chip warn">Не удалось определить материал или размер</span></div></div><button class="flagbtn" onclick="openDetectedError('+i+')">⚑ Сообщить об ошибке</button></div></div>';
+
+  if(x.type==='quarter_calendar'){
+    const tier=quarterCalendarTier(x.qty);
+    const chips='<span class="chip">'+x.qty+' шт.</span>'+(tier?'<span class="chip auto">'+tier.label+' · '+money(tier.unit)+' / шт.</span>':'<span class="chip warn">Тираж свыше 500 — цена не заведена</span>');
+    return '<div class="detected-card"><div class="detected-head"><div><b>Календарь трёхблочный со стандартной сеткой</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div></div>';
+  }
 
   if(x.type==='poly'){
     const tech=x.technology||'',sides=x.color==='4+4'?'двусторонняя':'односторонняя',opt=tech==='digital'?bestDigitalOption(x):null;
@@ -620,6 +638,16 @@ function renderDetected(){
 function addDetected(i){
  const x=detected[i];if(!x||x.error||x.type==='unknown')return;
  const details=[];let cost=0,price=0,name='';
+
+ if(x.type==='quarter_calendar'){
+   const tier=quarterCalendarTier(x.qty);
+   if(!tier){alert('Для квартального календаря в текущем прайсе заведены тиражи только до 500 шт.');return}
+   name='Календарь трёхблочный · '+x.qty+' шт.';
+   price=tier.unit*x.qty;
+   cost=tier.costUnit*x.qty;
+   details.push('стандартная сетка',tier.label,'цена за шт.: '+money(tier.unit),'себестоимость за шт.: '+money(tier.costUnit));
+   autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
 
  if(x.type==='poly'){
    if(!x.technology){alert('Выберите технологию: цифра или офсет.');return}
@@ -689,16 +717,25 @@ function addDetected(i){
 }
 function renderAuto(){const disc=Math.max(0,n(document.getElementById('autoDiscount').value));document.getElementById('autoRows').innerHTML=autoItems.length?autoItems.map((x,i)=>'<tr><td><b>'+x.name+'</b><br><button class="flagbtn" onclick="openError('+i+')">⚑ Ошибка</button></td><td>'+x.details.join('<br>')+'</td><td class="right">'+money(x.cost)+'</td><td class="right">'+money(x.price)+'</td><td class="right"><b>'+money(x.price*(1-disc/100))+'</b></td><td><button class="btn danger" onclick="removeAuto('+i+')">×</button></td></tr>').join(''):'<tr><td colspan="6" class="note">Пока нет позиций. Введите заказ обычным текстом выше.</td></tr>';const p=autoItems.reduce((s,x)=>s+x.price,0),c=autoItems.reduce((s,x)=>s+x.cost,0),final=p*(1-disc/100);document.getElementById('autoPrice').textContent=money(p);document.getElementById('autoDiscRub').textContent=money(p-final);document.getElementById('autoCost').textContent=money(c);document.getElementById('autoMargin').textContent=money(final-c);document.getElementById('autoFinal').textContent=money(final)}
 function removeAuto(i){autoItems.splice(i,1);renderAuto()}
-let errorTarget=null;
+let errorTarget=null,errorContext=null;
 function readErrors(){try{return JSON.parse(localStorage.getItem('printirk-calc-errors')||'[]')}catch(e){return []}}
 function renderErrors(){const list=readErrors(),box=document.getElementById('errorList'),empty=document.getElementById('errorEmpty');empty.style.display=list.length?'none':'block';box.innerHTML=list.slice().reverse().map(e=>'<div class="error-row"><div><b>'+new Date(e.date).toLocaleString('ru-RU')+'</b><small style="display:block">'+(e.manager||'Менеджер')+' · '+(e.version||'')+'</small></div><div>'+e.type+'</div><div><b>'+e.source+'</b><small style="display:block"><b>Должно быть:</b> '+(e.expected||'—')+'</small><small style="display:block">'+(e.comment||'')+'</small></div><div>'+e.item+'<small style="display:block">'+e.total+' · '+(e.sync==='google'?'Google':'локально')+'</small></div></div>').join('')}
-function openError(i){
- errorTarget=i;
+function prepareErrorModal(){
  document.getElementById('errorExpected').value='';
  document.getElementById('errorComment').value='';
  const visibleUser=document.querySelector('.top .user b')?.textContent?.trim()||'';
  const mgr=document.getElementById('errorManager');if(mgr&&!mgr.value)mgr.value=visibleUser;
  document.getElementById('errorModal').classList.add('show');
+}
+function openError(i){
+ errorTarget=i;errorContext=autoItems[i]||null;prepareErrorModal();
+}
+function openDetectedError(i){
+ const x=detected[i];if(!x)return;
+ errorTarget=null;
+ errorContext={name:'Не распознано',price:0,cost:0,details:[x.error||'Не удалось распознать позицию'],source:x.source||'',parsed:JSON.stringify(x)};
+ document.getElementById('errorType').value='Неправильно распознана продукция';
+ prepareErrorModal();
 }
 document.getElementById('cancelError').onclick=()=>document.getElementById('errorModal').classList.remove('show');
 async function sendErrorToSharedLog(err){
@@ -716,7 +753,7 @@ async function sendErrorToSharedLog(err){
  }catch(e){console.warn('Shared error log unavailable',e);return false}
 }
 document.getElementById('saveError').onclick=async()=>{
- const x=autoItems[errorTarget];if(!x)return;
+ const x=errorContext||autoItems[errorTarget];if(!x)return;
  const err={
    date:new Date().toISOString(),version:CALC_VERSION,status:'Новая',
    manager:document.getElementById('errorManager').value.trim(),
@@ -732,7 +769,7 @@ document.getElementById('saveError').onclick=async()=>{
  localStorage.setItem('printirk-calc-errors',JSON.stringify(errs));
  const status=document.getElementById('sharedLogStatus');
  if(status)status.textContent=sent?'Общий журнал: отправлено':'Общий журнал: локальный резерв';
- document.getElementById('errorModal').classList.remove('show');renderErrors();
+ document.getElementById('errorModal').classList.remove('show');errorContext=null;errorTarget=null;renderErrors();
 }
 document.getElementById('exportErrors').onclick=()=>{const rows=readErrors(),headers=['date','version','status','manager','office','type','source','item','price','cost','total','expected','comment','details','parsed','sync'];const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';const csv='\ufeff'+headers.join(';')+'\n'+rows.map(r=>headers.map(h=>esc(r[h])).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='printirk_calc_errors.csv';a.click();URL.revokeObjectURL(a.href)}
 renderErrors();
