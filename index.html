@@ -253,23 +253,13 @@ function addIndexItem(section,key,obj,label){
 function buildCatalogIndex(data){
  catalogIndex=[];
  Object.entries(data.sections||{}).forEach(([key,sec])=>{
-   const secName=sectionNames[key]||key;
-   const seen=new Set();
-   function walk(v,path=''){
-     if(!v||typeof v!=='object')return;
-     if(Array.isArray(v)){v.forEach((x,i)=>walk(x,path+' '+i));return}
-     const name=v.name||v.product||v.product_family||v.method;
-     if(name){
-       const sig=name+'|'+path;
-       if(!seen.has(sig)){
-         seen.add(sig);
-         const text=(name+' '+secName+' '+key+' '+path+' '+JSON.stringify(v)).toLowerCase();
-         catalogIndex.push({name,cat:secName,sectionKey:key,obj:v,text,priceText:itemPriceText(v)});
-       }
-     }
-     Object.entries(v).forEach(([k,x])=>{if(k!=='source_sheet'&&k!=='notes'&&k!=='note'&&k!=='rules'&&k!=='description')walk(x,path+' '+k)});
-   }
-   walk(sec);
+   // Поиск менеджера индексирует только то, что реально показывается в рабочем прайсе.
+   if(['sheet_material_reference','consumables_reference','print_cost_reference'].includes(key))return;
+   const secName=sectionNames[key]||sec.name||key;
+   managerPriceRows(sec,key).forEach(r=>{
+     const text=(r.name+' '+r.conditions+' '+secName).toLowerCase();
+     catalogIndex.push({name:r.name,cat:secName,sectionKey:key,text,priceText:r.price});
+   });
  });
 }
 
@@ -474,7 +464,7 @@ function searchCatalog(){
  if(!q){box.classList.remove('active');return}
  const terms=q.split(' ').filter(Boolean);
  const found=catalogIndex.filter(x=>terms.every(t=>x.text.includes(t))).slice(0,50);
- rows.innerHTML=found.length?found.map(x=>'<div class="result-row"><div><b>'+x.name+'</b><small style="display:block">'+x.cat+'</small></div><div class="hide-mobile"><small>Раздел</small><div>'+x.sectionKey+'</div></div><div><small>Цена</small><div class="money">'+x.priceText+'</div></div><button class="btn hide-mobile" onclick="openCatalogSection(\''+x.sectionKey+'\',document.querySelector(\'.catbtn[data-section=&quot;'+x.sectionKey+'&quot;]\'))">Открыть</button></div>').join(''):'<p class="note">Совпадений в текущем каталоге нет.</p>';
+ rows.innerHTML=found.length?found.map(x=>'<div class="result-row"><div><b>'+x.name+'</b><small style="display:block">'+x.cat+'</small></div><div><small>Цена</small><div class="money">'+x.priceText+'</div></div><button class="btn hide-mobile" onclick="openCatalogSection(\''+x.sectionKey+'\',document.querySelector(\'.catbtn[data-section=&quot;'+x.sectionKey+'&quot;]\'))">Открыть раздел</button></div>').join(''):'<p class="note">Ничего не найдено. Попробуйте другое название позиции.</p>';
  box.classList.add('active');
 }
 document.getElementById('searchBtn').onclick=searchCatalog;document.getElementById('catalogSearch').onkeydown=e=>{if(e.key==='Enter')searchCatalog()};function goAuto(){document.querySelector('[data-view="autoView"]').click()}
