@@ -374,7 +374,12 @@ function sectionTariffRows(sec,key=''){
    for(const [k,x] of Object.entries(v)){
      if(['source_sheet','source_sheets','note','notes','warning','status','price','cost','unit_price','price_per_item','price_per_cm2','price_per_m2','price_from','price_to','total','prices','costs'].includes(k))continue;
      if(x&&typeof x==='object')walk(x,path?path+'.'+k:k);
-     else if(typeof x==='number'&&/(sale|minimum_order_rub|minimum_item_rub|price|cost)/i.test(k))add((name?name+' · ':'')+prettyKey(k),'',/cost/i.test(k)?money(x):'',/cost/i.test(k)?'':money(x),path+'.'+k);
+     else if(typeof x==='number'){
+       const full=(path+'.'+k).toLowerCase();
+       const looksCost=/cost|себест|paper_cost|material_cost/.test(full);
+       const looksPrice=/sale|price|minimum_order_rub|minimum_item_rub|postprocessing_per_item|price_per|per_item|one_side|two_side|simple|complex|canvas|frame|pockets|extras|price_per_hit|_unit$|glue_per_block|numbering_unit/.test(full);
+       if(looksCost||looksPrice)add((name?name+' · ':'')+prettyKey(k),'',looksCost?money(x):'',looksCost?'':money(x),path+'.'+k);
+     }
    }
  }
  walk(sec,'');
@@ -401,7 +406,7 @@ function searchCatalog(){
  if(!q){box.classList.remove('active');return}
  const terms=q.split(' ').filter(Boolean);
  const found=catalogIndex.filter(x=>terms.every(t=>x.text.includes(t))).slice(0,50);
- rows.innerHTML=found.length?found.map(x=>'<div class="result-row"><div><b>'+x.name+'</b><small style="display:block">'+x.cat+'</small></div><div class="hide-mobile"><small>Источник</small><div>'+x.sectionKey+'</div></div><div><small>Цена</small><div class="money">'+x.priceText+'</div></div><button class="btn hide-mobile" onclick="goAuto()">Рассчитать</button></div>').join(''):'<p class="note">Совпадений в уже перенесённой части прайса нет. Остальные разделы продолжают переноситься.</p>';
+ rows.innerHTML=found.length?found.map(x=>'<div class="result-row"><div><b>'+x.name+'</b><small style="display:block">'+x.cat+'</small></div><div class="hide-mobile"><small>Раздел</small><div>'+x.sectionKey+'</div></div><div><small>Цена</small><div class="money">'+x.priceText+'</div></div><button class="btn hide-mobile" onclick="openCatalogSection(\''+x.sectionKey+'\',document.querySelector(\'.catbtn[data-section=&quot;'+x.sectionKey+'&quot;]\'))">Открыть</button></div>').join(''):'<p class="note">Совпадений в текущем каталоге нет.</p>';
  box.classList.add('active');
 }
 document.getElementById('searchBtn').onclick=searchCatalog;document.getElementById('catalogSearch').onkeydown=e=>{if(e.key==='Enter')searchCatalog()};function goAuto(){document.querySelector('[data-view="autoView"]').click()}
