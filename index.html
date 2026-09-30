@@ -176,7 +176,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='digital-2026-09-30.4';
+const CALC_VERSION='digital-2026-09-30.5';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -534,7 +534,7 @@ function quarterCalendarTier(qty){
  if(qty<=100)return {unit:329,costUnit:299,label:'51–100 шт.'};
  if(qty<=300)return {unit:299,costUnit:272,label:'101–300 шт.'};
  if(qty<=500)return {unit:249,costUnit:226,label:'301–500 шт.'};
- return null;
+ return {unit:249,costUnit:226,label:'свыше 500 · ставка последней ступени'};
 }
 let detected=[],autoItems=[];
 function recognize(){const raw=document.getElementById('orderText').value;detected=splitPositions(raw).map(parseLine);renderDetected()}
@@ -581,7 +581,7 @@ function renderDetected(){
 
   if(x.type==='quarter_calendar'){
     const tier=quarterCalendarTier(x.qty);
-    const chips='<span class="chip">'+x.qty+' шт.</span>'+(tier?'<span class="chip auto">'+tier.label+' · '+money(tier.unit)+' / шт.</span>':'<span class="chip warn">Тираж свыше 500 — цена не заведена</span>');
+    const chips='<span class="chip">'+x.qty+' шт.</span>'+(tier?'<span class="chip auto">'+tier.label+' · '+money(tier.unit)+' / шт.</span>':'');
     return '<div class="detected-card"><div class="detected-head"><div><b>Календарь трёхблочный со стандартной сеткой</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div></div>';
   }
 
@@ -650,7 +650,6 @@ function addDetected(i){
 
  if(x.type==='quarter_calendar'){
    const tier=quarterCalendarTier(x.qty);
-   if(!tier){alert('Для квартального календаря в текущем прайсе заведены тиражи только до 500 шт.');return}
    name='Календарь трёхблочный · '+x.qty+' шт.';
    price=tier.unit*x.qty;
    cost=tier.costUnit*x.qty;
