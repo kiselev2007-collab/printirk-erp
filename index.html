@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='price-ui-2026-09-30.18';
+const CALC_VERSION='error-modal-2026-09-30.19';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -1594,6 +1594,9 @@ async function sendErrorToSharedLog(err){
 }
 document.getElementById('saveError').onclick=async()=>{
  const x=errorContext||autoItems[errorTarget];if(!x)return;
+ const btn=document.getElementById('saveError');
+ if(btn.dataset.saving==='1')return;
+ btn.dataset.saving='1';
  const err={
    date:new Date().toISOString(),version:CALC_VERSION,status:'Новая',
    manager:document.getElementById('errorManager').value.trim(),
@@ -1605,11 +1608,27 @@ document.getElementById('saveError').onclick=async()=>{
    price:Number(x.price)||0,cost:Number(x.cost)||0,total:money(x.price),costDisplay:money(x.cost),sync:'local'
  };
  const errs=readErrors();errs.push(err);localStorage.setItem('printirk-calc-errors',JSON.stringify(errs));
- const sent=await sendErrorToSharedLog(err);err.sync=sent?'google':'local';
- localStorage.setItem('printirk-calc-errors',JSON.stringify(errs));
+
+ // Закрываем окно сразу. Общий журнал синхронизируется уже после закрытия,
+ // чтобы медленный Apps Script не блокировал менеджера.
+ document.getElementById('errorModal').classList.remove('show');
+ errorContext=null;errorTarget=null;renderErrors();
  const status=document.getElementById('sharedLogStatus');
- if(status)status.textContent=sent?'Общий журнал: отправлено':'Общий журнал: локальный резерв';
- document.getElementById('errorModal').classList.remove('show');errorContext=null;errorTarget=null;renderErrors();
+ if(status)status.textContent='Общий журнал: отправка…';
+
+ try{
+   const sent=await Promise.race([
+     sendErrorToSharedLog(err),
+     new Promise(resolve=>setTimeout(()=>resolve(false),5000))
+   ]);
+   err.sync=sent?'google':'local';
+   const saved=readErrors(),idx=saved.findIndex(e=>e.date===err.date);
+   if(idx>=0){saved[idx]=err;localStorage.setItem('printirk-calc-errors',JSON.stringify(saved))}
+   if(status)status.textContent=sent?'Общий журнал: отправлено':'Общий журнал: локальный резерв';
+   renderErrors();
+ } finally {
+   btn.dataset.saving='';
+ }
 }
 document.getElementById('exportErrors').onclick=()=>{const rows=readErrors(),headers=['date','version','status','manager','office','type','source','item','price','cost','total','expected','comment','details','parsed','sync'];const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';const csv='\ufeff'+headers.join(';')+'\n'+rows.map(r=>headers.map(h=>esc(r[h])).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='printirk_calc_errors.csv';a.click();URL.revokeObjectURL(a.href)}
 renderErrors();
