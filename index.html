@@ -305,13 +305,38 @@ function formatCatalogValue(v,key=''){
  if(Array.isArray(v))return v.map(x=>typeof x==='number'?money(x):String(x)).join(' · ');
  return String(v);
 }
-function sectionTariffRows(sec){
+function sectionTariffRows(sec,key=''){
  const rows=[],seen=new Set(),rootTirages=Array.isArray(sec?.tirages)?sec.tirages:null;
  const add=(name,conditions,cost,price,path)=>{const sig=[name,conditions,cost,price,path].join('|');if(seen.has(sig))return;seen.add(sig);rows.push({name,conditions:conditions||'',cost:cost||'',price:price||'',path:path||''})};
+ function priceTree(v,label,path,tiers){
+   if(v==null)return;
+   if(typeof v==='number'){add(label,'','',money(v),path);return}
+   if(Array.isArray(v)){
+     if(v.length&&v.every(n=>typeof n==='number')){
+       const tt=tiers&&tiers.length===v.length?tiers:null;
+       if(tt)v.forEach((n,i)=>add(label+' · '+tt[i]+' шт.','','',money(n),path+'['+i+']'));
+       else add(label,'','',v.map(money).join(' · '),path);
+       return;
+     }
+     v.forEach((x,i)=>priceTree(x,label+' · '+i,path+'['+i+']',tiers));return;
+   }
+   if(typeof v==='object')for(const [k,x] of Object.entries(v))priceTree(x,label+' · '+k,path+'.'+k,tiers);
+ }
  function walk(v,path=''){
    if(v==null)return;
    if(Array.isArray(v)){
-     if(v.length&&v.every(x=>Array.isArray(x)&&x.length>=2&&typeof x[0]==='number'&&typeof x[1]==='number')){v.forEach(x=>add((path||'Тираж')+' · '+x[0]+' шт.','','',money(x[1]),path));return}
+     if(v.length&&v.every(x=>Array.isArray(x)&&x.length===2&&typeof x[0]==='number'&&typeof x[1]==='number')){
+       v.forEach(x=>add((path||'Тираж')+' · '+x[0]+' шт.','','',money(x[1]),path));return;
+     }
+     if(v.length&&v.every(x=>Array.isArray(x)&&x.length===3&&x.every(n=>typeof n==='number'))){
+       if(key==='digital_print'&&path.includes('base_90gsm')){
+         v.forEach(x=>add(path.replaceAll('.',' · ')+' · '+x[0]+'–'+x[1]+' шт.','','',money(x[2]),path));return;
+       }
+       if(key==='business_cards'&&path.startsWith('digital')){
+         v.forEach(x=>add(path.replaceAll('.',' · ')+' · '+x[0]+' шт.','за шт.: '+money(x[1]),'',money(x[2]),path));return;
+       }
+       v.forEach(x=>add(path.replaceAll('.',' · ')+' · '+x[0]+' / '+x[1],'','',money(x[2]),path));return;
+     }
      v.forEach((x,i)=>walk(x,path+'['+i+']'));return;
    }
    if(typeof v!=='object')return;
@@ -337,22 +362,19 @@ function sectionTariffRows(sec){
      if(Array.isArray(x)&&x.length&&x.every(n=>typeof n==='number')&&/(price|cost|total|simple|complex)/i.test(k)){
        const tiers=Array.isArray(v.tirages)&&v.tirages.length===x.length?v.tirages:(rootTirages&&rootTirages.length===x.length?rootTirages:null);
        if(tiers)x.forEach((n,i)=>add((name?name+' · ':'')+prettyKey(k)+' · '+tiers[i]+' шт.','','',/cost/i.test(k)?money(n):'',/cost/i.test(k)?'':money(n),path+'.'+k));
-       else add((name?name+' · ':'')+prettyKey(k),'','',formatCatalogValue(x,k),path+'.'+k);
+       else add((name?name+' · ':'')+prettyKey(k),'',/cost/i.test(k)?formatCatalogValue(x,k):'',/cost/i.test(k)?'':formatCatalogValue(x,k),path+'.'+k);
      }
    }
-   if(v.prices&&typeof v.prices==='object'&&!Array.isArray(v.prices)){
-     for(const [pk,pv] of Object.entries(v.prices)){
-       if(typeof pv==='number')add((name?name+' · ':'')+pk,'','',money(pv),path+'.prices.'+pk);
-       else if(Array.isArray(pv)&&pv.every(n=>typeof n==='number')){
-         const tiers=Array.isArray(v.tirages)&&v.tirages.length===pv.length?v.tirages:(rootTirages&&rootTirages.length===pv.length?rootTirages:null);
-         if(tiers)pv.forEach((n,i)=>add((name?name+' · ':'')+pk+' · '+tiers[i]+' шт.','','',money(n),path+'.prices.'+pk));
-         else add((name?name+' · ':'')+pk,'','',formatCatalogValue(pv,'prices'),path+'.prices.'+pk);
-       }
-     }
+   if(v.prices&&typeof v.prices==='object'){
+     const tiers=Array.isArray(v.tirages)?v.tirages:rootTirages;
+     priceTree(v.prices,name?name+' · цены':'Цены',path+'.prices',tiers);
    }
+   if(v.costs&&typeof v.costs==='object')priceTree(v.costs,name?name+' · себестоимость':'Себестоимость',path+'.costs',null);
+
    for(const [k,x] of Object.entries(v)){
      if(['source_sheet','source_sheets','note','notes','warning','status','price','cost','unit_price','price_per_item','price_per_cm2','price_per_m2','price_from','price_to','total','prices','costs'].includes(k))continue;
      if(x&&typeof x==='object')walk(x,path?path+'.'+k:k);
+     else if(typeof x==='number'&&/(sale|minimum_order_rub|minimum_item_rub|price|cost)/i.test(k))add((name?name+' · ':'')+prettyKey(k),'',/cost/i.test(k)?money(x):'',/cost/i.test(k)?'':money(x),path+'.'+k);
    }
  }
  walk(sec,'');
@@ -366,7 +388,7 @@ function openCatalogSection(key,button){
  document.getElementById('priceSectionSource').textContent=Array.isArray(src)?'Источник: '+src.join(' / '):(src?'Источник: '+src:'');
  const warn=[sec.warning,sec.note,Array.isArray(sec.notes)?sec.notes.join(' · '):''].filter(Boolean).join(' ');
  document.getElementById('priceSectionWarning').innerHTML=warn?'<div class="price-warning">'+warn+'</div>':'';
- const rows=sectionTariffRows(sec);
+ const rows=sectionTariffRows(sec,key);
  document.getElementById('priceSectionRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+r.name+(r.path?'<span class="path">'+r.path+'</span>':'')+'</td><td>'+r.conditions+'</td><td class="right">'+(r.cost||'—')+'</td><td class="right"><b>'+(r.price||'—')+'</b></td></tr>').join(''):'<tr><td colspan="4" class="price-empty">В разделе нет подтверждённых числовых цен. Смотрите примечание или исходную вкладку прайса.</td></tr>';
  box.style.display='block';box.scrollIntoView({behavior:'smooth',block:'start'});
 }
