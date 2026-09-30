@@ -75,7 +75,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </section>
 
 <section class="view" id="autoView">
-<div class="head"><div><h1>Автоматический расчёт</h1><p>Пишите заказ обычным текстом. Система распознаёт материал, размер и постобработку.</p></div><span class="badge">Рулон баннера · 3 м</span></div>
+<div class="head"><div><h1>Автоматический расчёт</h1><p>Пишите заказ обычным текстом. Система распознаёт материал, размер и постобработку.</p></div><div style="text-align:right"><span class="badge">Рулон баннера · 3 м</span><small class="note" id="calcVersion" style="display:block;margin-top:6px"></small></div></div>
 <div class="two">
 <div>
 <div class="panel">
@@ -180,6 +180,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 
 <script>
 const CALC_VERSION='uv-signs-fixed-2026-09-30.28';
+document.getElementById('calcVersion').textContent='Версия '+CALC_VERSION;
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
