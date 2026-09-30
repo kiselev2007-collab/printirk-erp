@@ -289,10 +289,14 @@ const priceMenuGroups=[
 
 function renderPriceMenu(){
  const grid=document.getElementById('priceMenuGrid');if(!grid)return;
- grid.innerHTML=priceMenuGroups.map(g=>'<div class="card category"><h3>'+g.title+'</h3><ul>'+g.items.map(([k,label])=>{
-   const count=catalogData?.sections?.[k]?managerPriceRows(catalogData.sections[k],k).length:0;
-   return '<li><button class="catbtn" data-section="'+k+'" onclick="openCatalogSection(\''+k+'\',this)"><span>'+label+'</span>'+(count?'<small style="float:right;margin-right:14px;color:#a0a9b7">'+count+'</small>':'')+'</button></li>';
- }).join('')+'</ul></div>').join('');
+ grid.innerHTML=priceMenuGroups.map(g=>{
+   const items=g.items.map(([k,label])=>{
+     const count=catalogData?.sections?.[k]?managerPriceRows(catalogData.sections[k],k).length:0;
+     if(catalogData&&!count)return '';
+     return '<li><button class="catbtn" data-section="'+k+'" onclick="openCatalogSection(\''+k+'\',this)"><span>'+label+'</span>'+(count?'<small style="float:right;margin-right:14px;color:#a0a9b7">'+count+'</small>':'')+'</button></li>';
+   }).join('');
+   return items?'<div class="card category"><h3>'+g.title+'</h3><ul>'+items+'</ul></div>':'';
+ }).join('');
 }
 function prettyKey(k){
  const map={price:'Цена',prices:'Цены',cost:'Себестоимость',costs:'Себестоимость',minimum:'Минимум',minimum_order_rub:'Минимальный заказ',minimum_item_rub:'Минимум за изделие',unit:'Ед. изм.',range:'Диапазон',qty:'Тираж',tirage:'Тираж',from:'От',to:'До',one_side:'Односторонний',two_side:'Двухсторонний',simple:'Простая поверхность',complex:'Сложная поверхность',total:'Итого',canvas:'Холст',frame:'Рама',base:'Основа',pockets:'Карманы',extras:'Дополнительно'};
@@ -444,6 +448,7 @@ function managerPriceConditions(cond,path){
  return s.replace(/\s{2,}/g,' ').trim();
 }
 function managerPriceRows(sec,key){
+ if(sec?.status&&/historical|needs_price_refresh|needs_review/i.test(sec.status))return [];
  const internalPath=/custom_calculation|paper_addons|paper_cost|material_cost|raw_material|reference_cost|price_audit|technology_rules|production_rules|calculator_|calculator\.|consumables|print_cost_reference|sheet_material_reference|costs_per_m2|\.costs(?:\.|$)|supplier|source|minimum_order|minimum_item/i;
  const internalName=/себестоимость|стоимость материала|сырь|чернил|бумаг[аи]\s+(?:а3|а4).*себест/i;
  const seen=new Set(),out=[];
