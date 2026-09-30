@@ -764,31 +764,29 @@ function addDetected(i){
 
  const area=x.w*x.h*x.qty,per=2*(x.w+x.h);
  if(x.type==='banner'){
-  const d=x.density||300;
-  const tier=d>=500?'510':d>=400?'440':'300';
-  name='Баннер '+d+' гр.';
-  const bannerRates={
-    '300':{price:197,cost:85.2,special3x6:{price:2990,cost:1539.252}},
-    '440':{price:263,cost:117.2,special3x6:{price:4290,cost:2105.532}},
-    '510':{price:329,cost:148.1,special3x6:null}
-  };
-  const rate=bannerRates[tier];
+  const prod=wideProduct(x.productId||'banner_290');
+  if(!prod){alert('Материал баннера не найден в прайсе.');return}
+  name=prod.name;
+  const rate=Number(prod.prices?.[String(x.dpi)]||0),costRate=Number(prod.costs_per_m2?.[String(x.dpi)]||0);
+  if(!rate){alert('Для «'+prod.name+'» нет подтверждённой цены '+x.dpi+' dpi.');return}
   const is3x6=(Math.abs(Math.min(x.w,x.h)-3)<0.01&&Math.abs(Math.max(x.w,x.h)-6)<0.01);
-  if(is3x6&&rate.special3x6){
-    price=rate.special3x6.price*x.qty;
-    cost=rate.special3x6.cost*x.qty;
-    details.push('стандартный баннер 3×6: '+money(rate.special3x6.price)+' / шт.');
+  if(is3x6&&prod.special_3x6){
+    price=Number(prod.special_3x6.price)*x.qty;cost=Number(prod.special_3x6.cost||0)*x.qty;
+    details.push('стандартный баннер 3×6: '+money(prod.special_3x6.price)+' / шт.');
   }else{
-    cost=area*rate.cost;price=area*rate.price;details.push('печать '+area.toFixed(2)+' м² × '+money(rate.price)+'/м²');
+    price=Math.max(Number(wideFormatSection().minimums_rub?.banner||199),area*rate);cost=area*costRate;
+    details.push('печать '+area.toFixed(2)+' м² × '+money(rate)+'/м²');
   }
   const lay=bannerLayout(x.w,x.h);
-  if(!is3x6&&lay.overflow>0){cost+=lay.overflow*rate.cost*x.qty;price+=lay.overflow*rate.price*x.qty;details.push('перерасход '+lay.overflow.toFixed(2)+' м²')}
-  if(lay.seams>0){const len=lay.seams*lay.seamLength*x.qty;cost+=len*69;price+=len*76;details.push('склейка '+lay.seams+' шв. · '+len.toFixed(2)+' п.м.')}
-  if(x.grommetCount){const count=x.grommetCount*x.qty;cost+=count*17;price+=count*19;details.push('люверсы '+count+' шт. ('+x.grommetCount+' на изделие)')}
-  else if(x.grommet){const count=Math.ceil(per/(x.grommet/1000))*x.qty;cost+=count*17;price+=count*19;details.push('люверсы '+count+' шт. / '+x.grommet+' мм')}
-  if(x.wind){const pockets=Math.ceil(per/1.5)*x.qty;cost+=pockets*22;price+=pockets*24;details.push('ветровые карманы '+pockets+' шт.')}
-  if(x.reinforce){cost+=per*80*x.qty;price+=per*88*x.qty;details.push('усиление края с верёвкой '+(per*x.qty).toFixed(2)+' п.м.')}
-  if(x.edgeCut){cost+=per*20*x.qty;price+=per*22*x.qty;details.push('резка в край '+(per*x.qty).toFixed(2)+' п.м.')}
+  if(!is3x6&&lay.overflow>0){cost+=lay.overflow*costRate*x.qty;price+=lay.overflow*rate*x.qty;details.push('перерасход '+(lay.overflow*x.qty).toFixed(2)+' м²')}
+  const glue=widePost(x.reinforce?'banner_rope':'banner_gluing');
+  if(lay.seams>0){const len=lay.seams*lay.seamLength*x.qty;cost+=len*Number(glue?.cost||69);price+=len*Number(glue?.price||76);details.push((x.reinforce?'проклейка с верёвкой ':'склейка ')+len.toFixed(2)+' п.м.')}
+  const gr=widePost('grommet_10');
+  if(x.grommetCount){const count=x.grommetCount*x.qty;cost+=count*Number(gr?.cost||17);price+=count*Number(gr?.price||19);details.push('люверсы '+count+' шт. ('+x.grommetCount+' на изделие)')}
+  else if(x.grommet){const count=Math.ceil(per/(x.grommet/1000))*x.qty;cost+=count*Number(gr?.cost||17);price+=count*Number(gr?.price||19);details.push('люверсы '+count+' шт. / '+x.grommet+' мм')}
+  const wind=widePost('wind_pocket');if(x.wind){const pockets=Math.ceil(per/1.5)*x.qty;cost+=pockets*Number(wind?.cost||22);price+=pockets*Number(wind?.price||24);details.push('ветровые карманы '+pockets+' шт.')}
+  if(x.reinforce&&lay.seams===0){const rope=widePost('banner_rope');cost+=per*Number(rope?.cost||80)*x.qty;price+=per*Number(rope?.price||88)*x.qty;details.push('проклейка с верёвкой '+(per*x.qty).toFixed(2)+' п.м.')}
+  const cut=widePost('cut_edge');if(x.edgeCut){cost+=per*Number(cut?.cost||20)*x.qty;price+=per*Number(cut?.price||22)*x.qty;details.push('резка в край '+(per*x.qty).toFixed(2)+' п.м.')}
  } else {
   const prod=wideProduct(x.productId||'film_white');
   if(!prod){alert('Тип плёнки не найден в прайсе.');return}
