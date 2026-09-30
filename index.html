@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='error-modal-2026-09-30.20';
+const CALC_VERSION='error-workflow-2026-09-30.21';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -1559,7 +1559,7 @@ function renderAuto(){const disc=Math.max(0,n(document.getElementById('autoDisco
 function removeAuto(i){autoItems.splice(i,1);renderAuto()}
 let errorTarget=null,errorContext=null;
 function readErrors(){try{return JSON.parse(localStorage.getItem('printirk-calc-errors')||'[]')}catch(e){return []}}
-function renderErrors(){const list=readErrors(),box=document.getElementById('errorList'),empty=document.getElementById('errorEmpty');empty.style.display=list.length?'none':'block';box.innerHTML=list.slice().reverse().map(e=>'<div class="error-row"><div><b>'+new Date(e.date).toLocaleString('ru-RU')+'</b><small style="display:block">'+(e.manager||'Менеджер')+' · '+(e.version||'')+'</small></div><div>'+e.type+'</div><div><b>'+e.source+'</b><small style="display:block"><b>Должно быть:</b> '+(e.expected||'—')+'</small><small style="display:block">'+(e.comment||'')+'</small></div><div>'+e.item+'<small style="display:block">'+e.total+' · '+(e.sync==='google'?'Google':'локально')+'</small></div></div>').join('')}
+function renderErrors(){const list=readErrors(),box=document.getElementById('errorList'),empty=document.getElementById('errorEmpty');empty.style.display=list.length?'none':'block';box.innerHTML=list.slice().reverse().map(e=>'<div class="error-row"><div><b>'+new Date(e.date).toLocaleString('ru-RU')+'</b><small style="display:block">'+(e.manager||'Менеджер')+' · '+(e.version||'')+'</small></div><div><span class="chip '+(e.status==='Исправлена'?'auto':'warn')+'">'+(e.status||'Новая')+'</span><small style="display:block;margin-top:5px">'+e.type+'</small></div><div><b>'+e.source+'</b><small style="display:block"><b>Должно быть:</b> '+(e.expected||'—')+'</small><small style="display:block">'+(e.comment||'')+'</small></div><div>'+e.item+'<small style="display:block">'+e.total+' · '+(e.sync==='google'?'Google':'локально')+'</small></div></div>').join('')}
 function closeErrorModal(){
  const modal=document.getElementById('errorModal');
  if(!modal)return;
