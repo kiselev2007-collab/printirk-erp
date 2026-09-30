@@ -167,7 +167,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='price-audit-2026-09-30.10';
+const CALC_VERSION='parser-2026-09-30.11';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -266,12 +266,42 @@ document.getElementById('searchBtn').onclick=searchCatalog;document.getElementBy
 
 function norm(s){return String(s||'').toLowerCase().replaceAll('ё','е').replace(/\s+/g,' ').trim()}
 function meters(v,u){v=n(v);u=(u||'').toLowerCase();if(u.startsWith('мм'))return v/1000;if(u.startsWith('см'))return v/100;return v}
-function parseSize(t){const m=t.match(/(\d+(?:[.,]\d+)?)\s*(мм|см|м)?\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*(мм|см|м)?/i);if(!m)return null;let u1=m[2],u2=m[4];if(!u1&&u2)u1=u2;if(!u2&&u1)u2=u1;return {w:meters(m[1],u1),h:meters(m[3],u2),wmm:meters(m[1],u1)*1000,hmm:meters(m[3],u2)*1000}}
+function parseSize(t){
+ const m=t.match(/(\d+(?:[.,]\d+)?)\s*(мм|см|м)?\s*[xх×]\s*(\d+(?:[.,]\d+)?)\s*(мм|см|м)?/i);if(!m)return null;
+ let u1=m[2],u2=m[4];
+ if(!u1&&!u2){
+   const a=n(m[1]),b=n(m[3]);
+   // В производственных описаниях размеры вроде 1305×655 почти всегда даны в мм.
+   // Небольшие размеры вроде 2×3 без единиц оставляем в метрах.
+   if(Math.max(a,b)>20)u1=u2='мм';
+ }
+ if(!u1&&u2)u1=u2;if(!u2&&u1)u2=u1;
+ return {w:meters(m[1],u1),h:meters(m[3],u2),wmm:meters(m[1],u1)*1000,hmm:meters(m[3],u2)*1000}
+}
 const formatsMM={A3:[297,420],A4:[210,297],A5:[148,210],A6:[105,148],A7:[74,105]};
 function splitPositions(raw){
   let s=String(raw||'').replace(/\r/g,'\n');
   s=s.replace(/(?:^|\n|\s)(\d{1,2})[.)]\s+/g,'\n$1. ');
-  return s.split(/\n+|;\s*|\s+\+\s+/).map(x=>x.replace(/^\s*(?:[-•]|\d{1,2}[.)])\s*/,'').trim()).filter(Boolean);
+  const parts=s.split(/\n+|;\s*|\s+\+\s+/).map(x=>x.replace(/^\s*(?:[-•]|\d{1,2}[.)])\s*/,'').trim()).filter(Boolean);
+  const hasSize=x=>/(?:\d+(?:[.,]\d+)?\s*(?:мм|см|м)?\s*[xх×]\s*\d+(?:[.,]\d+)?|(?:а|a)\s*[3-7])/i.test(x);
+  const materialHeader=x=>/баннер|банер|пл[её]н|перф|ораджет|orajet|оракал|oracal|самокле|постер|плакат|беклит|бэклит|backlit/i.test(x);
+  const ownMaterial=x=>materialHeader(x);
+  const out=[];let context='';
+  for(let i=0;i<parts.length;i++){
+    const line=parts[i];
+    const next=parts[i+1]||'';
+    if(!hasSize(line)&&materialHeader(line)&&hasSize(next)){
+      context=line;
+      continue;
+    }
+    if(context&&hasSize(line)&&!ownMaterial(line)){
+      out.push(context+' '+line);
+      continue;
+    }
+    context='';
+    out.push(line);
+  }
+  return out;
 }
 function upOnSheet(sw,sh,w,h,format=''){
   const standard={
