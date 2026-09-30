@@ -1,0 +1,47 @@
+{
+  "date": "2026-09-30",
+  "source_spreadsheet": "ПРАЙС ОТП 2025",
+  "summary": {
+    "catalog_sections_checked": 40,
+    "status": "selling_prices_cross_checked",
+    "calculator_changes": [
+      "wide-format film prices now read from catalog_v1.json",
+      "poster prices now read from catalog_v1.json",
+      "banner prices now read from catalog_v1.json",
+      "offset ready-price matrix reads catalog_v1.json",
+      "offset custom paper costs read verified own-calculation values",
+      "quarter-calendar tiers read catalog_v1.json"
+    ]
+  },
+  "verified_examples": {
+    "film_white_720": 604,
+    "film_white_1440": 989,
+    "film_transparent_720": 681,
+    "film_transparent_1440": 1099,
+    "poster_720": 549,
+    "poster_1440": 659,
+    "lamination_wide_standard": 274,
+    "edge_cut_per_meter": 22,
+    "contour_cut_after_print_per_m2": 990,
+    "contour_cut_minimum": 399,
+    "banner_290_240": 197,
+    "banner_440_240": 263,
+    "banner_510_240": 329,
+    "banner_3x6_290": 2990,
+    "banner_3x6_440": 4290
+  },
+  "questions": [
+    {
+      "id": "perforated_film_720",
+      "question": "Во вкладке широкоформатки для перфорированной пленки указаны только Infinity 240 dpi = 538 и 360 dpi = 649. В архиве менеджеры иногда пишут «перфа 720». Какую цену считать для «перфа 720»?"
+    },
+    {
+      "id": "offset_custom_130",
+      "question": "В готовом офсетном прайсе бумага называется 130 г, а в блоке «Для своих расчетов» есть бумага 128 г = 2,59 руб/лист А3 и нет отдельной 130 г. Для собственного офсетного спуска 130 г использовать себестоимость 128 г (2,59)?"
+    },
+    {
+      "id": "lightblock_cost",
+      "question": "Продажная цена светоблокирующей пленки ясна: 1089/1429 руб за м2. Себестоимость в строке изделия в исходной таблице отображается неоднозначно. Какую себестоимость использовать для 720/1440?"
+    }
+  ]
+}
