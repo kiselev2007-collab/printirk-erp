@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='journal-sticker-separate-2026-09-30.25';
+const CALC_VERSION='digital-80-included-2026-09-30.26';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -338,7 +338,7 @@ function sectionTariffRows(sec,key=''){
        v.forEach(x=>add((path||'Тираж')+' · '+x[0]+' шт.','','',money(x[1]),path));return;
      }
      if(v.length&&v.every(x=>Array.isArray(x)&&x.length===3&&x.every(n=>typeof n==='number'))){
-       if(key==='digital_print'&&path.includes('base_90gsm')){
+       if(key==='digital_print'&&path.includes('base_80gsm')){
          v.forEach(x=>add(path.replaceAll('.',' · ')+' · '+x[0]+'–'+x[1]+' шт.','','',money(x[2]),path));return;
        }
        if(key==='business_cards'&&path.startsWith('digital')){
@@ -436,7 +436,7 @@ function managerPriceName(name,key,path,sec){
  const ctx=managerContextForPath(sec,path,key);
  const qty=(s.match(/(\d[\d\s]*)\s*шт\.?/i)||[])[0]||'';
  if(ctx&&(/tiers|prices|products\[|standard\./i.test(String(path||'')))&&( /tiers|prices|products\[|standard/i.test(s)||!s.trim()))s=ctx+(qty?' · '+qty:'');
- s=s.replace(/base_90gsm/gi,'Бумага 90 г').replace(/digital/gi,'Цифра').replace(/offset/gi,'Офсет');
+ s=s.replace(/base_80gsm/gi,'Бумага 80 г').replace(/digital/gi,'Цифра').replace(/offset/gi,'Офсет');
  s=s.replace(/\binhouse\b/gi,'Своё производство').replace(/\breseller\b/gi,'Перезаказ').replace(/\btiers\b/gi,'').replace(/\bprices?\b/gi,'');
  s=s.replace(/\[[0-9]+\]/g,'').replace(/\s+·\s+·/g,' · ').replace(/^\s*·\s*|\s*·\s*$/g,'').replace(/\s{2,}/g,' ').trim();
  if(!s)s=ctx||sectionNames[key]||'Позиция';
@@ -555,13 +555,13 @@ function upOnSheet(sw,sh,w,h,format=''){
 function digitalFallback(){
  return {
   minimum_order_rub:100,
-  base_90gsm:{
+  base_80gsm:{
    A4:{'4+0':[[1,10,39],[11,20,25],[21,100,21],[101,200,19],[201,600,17],[601,2000,13]],'4+4':[[1,10,54],[11,20,40],[21,100,34],[101,200,32],[201,600,26],[601,2000,21]]},
    A3:{'4+0':[[1,5,88],[6,10,50],[11,50,46],[51,100,35],[101,500,32],[501,1000,23]],'4+4':[[1,5,165],[6,10,95],[11,50,80],[51,100,77],[101,500,65],[501,1000,45]]}
   },
   paper_addons_irku:{
-   SRA4:{'90':{sale:0},'130':{sale:3,cost:.985},'170':{sale:4,cost:1.71},'300':{sale:6,cost:2.81}},
-   SRA3:{'90':{sale:0},'130':{sale:5,cost:1.97},'170':{sale:9,cost:3.42},'300':{sale:11,cost:5.62}}
+   SRA4:{'80':{sale:0},'90':{sale:0},'130':{sale:3,cost:.985},'170':{sale:4,cost:1.71},'300':{sale:6,cost:2.81}},
+   SRA3:{'80':{sale:0},'90':{sale:0},'130':{sale:5,cost:1.97},'170':{sale:9,cost:3.42},'300':{sale:11,cost:5.62}}
   },
   lamination:{
    packet:{
@@ -704,9 +704,10 @@ function digitalOptions(x){
  return defs.map(s=>{
    const up=upOnSheet(s.w,s.h,x.wmm,x.hmm,x.format);if(!up)return null;
    const sheets=Math.ceil(x.qty/up);
-   const unit=tierPrice(sec.base_90gsm?.[s.fmt]?.[x.color],sheets);if(unit==null)return null;
+   const baseTable=sec.base_80gsm||sec.base_80gsm||{};
+   const unit=tierPrice(baseTable?.[s.fmt]?.[x.color],sheets);if(unit==null)return null;
    const paper=sec.paper_addons_irku?.[s.name]?.[paperKey];
-   if(!paper && paperKey!=='90')return {...s,up,sheets,invalid:'Материал «'+paperKey+'» пока не заведен для '+s.name};
+   if(!paper && !['80','90'].includes(paperKey))return {...s,up,sheets,invalid:'Материал «'+paperKey+'» пока не заведен для '+s.name};
    const paperSale=(paper?.sale||0)*sheets;
    let sale=unit*sheets+paperSale;
    if(paper?.minimum_order_rub) sale=unit*sheets+Math.max(paper.minimum_order_rub,paperSale);
@@ -720,7 +721,7 @@ function bestDigitalOption(x){
  return opts.sort((a,b)=>a.sale-b.sale || a.sheets-b.sheets)[0]||null;
 }
 function bestDigitalLayout(w,h){
- const temp={wmm:w,hmm:h,qty:1,color:'4+0',density:90,lamination:'none'};
+ const temp={wmm:w,hmm:h,qty:1,color:'4+0',density:80,lamination:'none'};
  const o=bestDigitalOption(temp);return o?{name:o.name,w:o.w,h:o.h,up:o.up}:null;
 }
 function packetFormat(w,h){
@@ -744,7 +745,7 @@ function digitalPaperKeyFromText(t,density){
  if(/кальк/.test(t)&&/200/.test(t))return 'Калька A4 200';
  if(/кальк/.test(t)&&/150/.test(t))return 'Калька A4 150';
  if(/кальк/.test(t))return 'Калька A4';
- return String(density||90);
+ return String(density||80);
 }
 function digitalProductKind(t){
  const canonical=synonymCanonical(t,'digital_product');if(canonical)return canonical;
@@ -1042,7 +1043,7 @@ function parseLine(line){
    const paperKey=paperSticker?'Самоклеющаяся':digitalPaperKeyFromText(t,density||130);
    const productKind=paperSticker?'Наклейка':digitalProductKind(t);
    if(paperSticker&&/цифр/.test(t))tech='digital';
-   return {source:line,type:'poly',productKind,format,color:cm?'4+'+cm[1]:'4+0',density:density||90,paperKey,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,technologyReason:paperSticker&&tech==='digital'?'бумажная самоклейка · цифровая печать':reason,lamination:parseDigitalLamination(t),post:postFromText(t,qty||1)};
+   return {source:line,type:'poly',productKind,format,color:cm?'4+'+cm[1]:'4+0',density:density||80,paperKey,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,technologyReason:paperSticker&&tech==='digital'?'бумажная самоклейка · цифровая печать':reason,lamination:parseDigitalLamination(t),post:postFromText(t,qty||1)};
  }
  if(!size)return {source:line,type:'unknown',error:'Не найден размер'};
  if(/постер|плакат/.test(t)){
