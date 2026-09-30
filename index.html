@@ -166,7 +166,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='bso-2026-09-30.16';
+const CALC_VERSION='duplication-binding-2026-09-30.17';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -497,6 +497,44 @@ function uvSection(){return catalogData?.sections?.uv_print||{}}
 function millingSection(){return catalogData?.sections?.milling_laser?.milling||{}}
 function duplicationSection(){return catalogData?.sections?.black_white_duplication||{}}
 function selfCopySection(){return duplicationSection().self_copy_forms||{}}
+function bindingSection(){return catalogData?.sections?.binding||{}}
+function duplicationPaperName(t){
+ if(/газет/.test(t))return 'Газетная 48';
+ if(/60\s*-?\s*65|архангельск.*6[05]/.test(t))return 'Архангельск 60-65';
+ if(/160\s*(?:гр|г)|офсетн[а-яё]*\s*160/.test(t))return 'Офсетная 160';
+ if(/ватман/.test(t))return 'Ватман';
+ if(/рулон.*80|80.*рулон/.test(t))return '80 г рулон';
+ return 'Снегурочка 80';
+}
+function duplicationRate(format,sides,sheets){
+ const arr=duplicationSection()?.[format]?.[sides===2?'2_side':'1_side']||[];
+ let best=null;
+ for(const r of arr){if(sheets>=Number(r[0]))best=Number(r[1]);else break}
+ return best;
+}
+function duplicationPaperSale(format,paper){
+ return Number(duplicationSection()?.paper_cost_per_sheet?.[format]?.[paper]||0);
+}
+function bindingJournalTier(format,type,leaves){
+ const table=bindingSection()?.journal_binding?.[format]?.[type]||{};
+ const keys=Object.keys(table).map(Number).sort((a,b)=>a-b);
+ const tier=keys.find(k=>leaves<=k);
+ return tier?{tier,price:Number(table[tier])}:null;
+}
+function digitalBwRate(format,sides){
+ return Number(catalogData?.sections?.digital_print?.black_white_snegurochka?.prices?.[format]?.[sides===2?'1+1':'1+0']||0);
+}
+function credentialTier(kind,qty){
+ const sec=kind==='grade_book'?bindingSection()?.grade_books:bindingSection()?.credentials;
+ const tiers=sec?.tiers||sec?.cover_tiers||[];
+ let best=null;
+ for(const r of tiers){if(qty>=Number(r.qty))best=r;else break}
+ return best?Number(best.unit_price):null;
+}
+function journalStickerSize(t){
+ const idx=t.search(/наклейк|этикет/);if(idx<0)return null;
+ return parseSize(t.slice(idx));
+}
 function productionSpacingMm(kind,fallback){
  const v=catalogData?.production_rules?.spacing_mm?.[kind];
  return Number(v==null?fallback:v);
@@ -722,6 +760,43 @@ function parseLine(line){
  const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
  const cm=t.match(/4\s*\+\s*(0|4)/);
 
+ const isJournal=/журнал[а-яё]*/i.test(t);
+ if(isJournal){
+   const jf=(t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([34])(?=$|[^0-9a-zа-яё])/i)||[])[1];
+   const lm=t.match(/(\d+)\s*(?:лист(?:ов|а)?|л\.?)(?=$|[^а-яё])/i);
+   const leaves=Number(lm?.[1]||0);
+   const bindingType=/мягк/.test(t)?'soft':(/тв[её]рд|тверд/.test(t)?'hard':'');
+   const sides=/1\s*\+\s*0|односторон/.test(t)?1:2;
+   const numbering=/нумерац|пронумер/.test(t);
+   const stitching=/прошив/.test(t);
+   const coverSticker=/наклейк|этикет/.test(t);
+   const ss=coverSticker?journalStickerSize(t):null;
+   return {source:line,type:'journal',format:jf?'A'+jf:'A4',qty:qty||1,leaves,bindingType,sides,paper:duplicationPaperName(t),printSheet:'A3',numbering,stitching,coverSticker,stickerWmm:ss?.wmm||0,stickerHmm:ss?.hmm||0,invalidReason:!leaves?'Укажите количество листов в журнале':''};
+ }
+
+ const isBindingDoc=/удостовер|студенческ|корочк|зач[её]тк/.test(t);
+ if(isBindingDoc){
+   const kind=/зач[её]тк/.test(t)?'grade_book':'credential';
+   const im=t.match(/(\d+)\s*(?:внутренн[а-яё]*\s*)?(?:лист(?:ов|а)?|л\.?)/i);
+   const innerLeaves=Number(im?.[1]||0);
+   const innerFmt=(t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([4-7])(?=$|[^0-9a-zа-яё])/i)||[])[1];
+   const color=/цветн|4\s*\+\s*[04]/.test(t)?'color':'bw';
+   const innerSides=/1\s*\+\s*1|двухсторон/.test(t)?2:1;
+   const sm=t.match(/(\d+)\s*скоб/);
+   const staples=Number(sm?.[1]||(/скоб/.test(t)?1:0));
+   const glued=/вкле|вклей/.test(t);
+   return {source:line,type:'binding_doc',kind,qty:qty||0,innerLeaves,innerFormat:innerFmt?'A'+innerFmt:'A6',innerColor:color,innerSides,staples,glued,invalidReason:!qty?'Укажите тираж':''};
+ }
+
+ const isDuplication=/тиражирован|duplo|дупло|romayor|ромайор/.test(t);
+ if(isDuplication){
+   const df=(t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([34])(?=$|[^0-9a-zа-яё])/i)||[])[1];
+   const qm=t.match(/(\d+)\s*(?:лист(?:ов|а)?|л\.?)/i);
+   const sheets=qty||Number(qm?.[1]||0);
+   const sides=/1\s*\+\s*1|2\s*сторон|двухсторон/.test(t)?2:1;
+   return {source:line,type:'duplication',format:df?'A'+df:'',qty:sheets,sides,paper:duplicationPaperName(t),invalidReason:!df?'Укажите формат A3 или A4':(!sheets?'Укажите количество листов':'')};
+ }
+
  const isSelfCopy=/(?:^|[^а-яё])бсо(?=$|[^а-яё])|самокопир|копирк[а-яё]*/i.test(t);
  if(isSelfCopy){
    const fmt=(t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([4-7])(?=$|[^0-9a-zа-яё])/i)||[])[1];
@@ -920,7 +995,53 @@ function renderDetected(){
     return '<div class="detected-card"><div class="detected-head"><div><b>Дизайн баннера</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Вид дизайна</label><select onchange="detected['+i+'].designVariant=this.value;renderDetected()">'+opts+'</select></div></div></div>';
   }
 
- if(x.type==='self_copy_form'){
+ if(x.type==='duplication'){
+    const min=x.format==='A3'?50:100;
+    const chips='<span class="chip">'+(x.format||'формат?')+'</span><span class="chip">'+x.qty+' лист.</span><span class="chip">'+(x.sides===2?'2 стороны':'1 сторона')+'</span><span class="chip">'+x.paper+'</span>'+(x.qty<min?'<span class="chip warn">минимум '+min+' листов</span>':'');
+    const paperOpts=['Снегурочка 80','Газетная 48','Архангельск 60-65','80 г рулон','Офсетная 160','Ватман'].map(v=>'<option '+(x.paper===v?'selected':'')+'>'+v+'</option>').join('');
+    return '<div class="detected-card"><div class="detected-head"><div><b>ЧБ тиражирование</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
+      '<div class="field"><label>Формат печатного листа</label><select onchange="detected['+i+'].format=this.value;renderDetected()"><option '+(x.format==='A3'?'selected':'')+'>A3</option><option '+(x.format==='A4'?'selected':'')+'>A4</option></select></div>'+
+      '<div class="field"><label>Стороны</label><select onchange="detected['+i+'].sides=+this.value;renderDetected()"><option value="1" '+(x.sides===1?'selected':'')+'>1 сторона</option><option value="2" '+(x.sides===2?'selected':'')+'>2 стороны</option></select></div>'+
+      '<div class="field"><label>Материал</label><select onchange="detected['+i+'].paper=this.value;renderDetected()">'+paperOpts+'</select></div>'+
+      '</div></div>';
+  }
+
+  if(x.type==='journal'){
+    const papers=['Снегурочка 80','Газетная 48','Архангельск 60-65','80 г рулон','Офсетная 160','Ватман'].map(v=>'<option '+(x.paper===v?'selected':'')+'>'+v+'</option>').join('');
+    let chips='<span class="chip">'+x.format+'</span><span class="chip">'+x.leaves+' листов</span><span class="chip">'+x.qty+' шт.</span><span class="chip">'+(x.sides===2?'ЧБ 1+1':'ЧБ 1+0')+'</span>';
+    if(x.numbering)chips+='<span class="chip auto">нумерация</span>';if(x.stitching)chips+='<span class="chip auto">прошивка</span>';if(x.coverSticker)chips+='<span class="chip auto">наклейка на обложку</span>';
+    if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
+    return '<div class="detected-card"><div class="detected-head"><div><b>Журнал · тиражирование + переплёт</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
+      '<div class="field"><label>Формат журнала</label><select onchange="detected['+i+'].format=this.value;if(this.value===\'A3\')detected['+i+'].printSheet=\'A3\';renderDetected()"><option '+(x.format==='A4'?'selected':'')+'>A4</option><option '+(x.format==='A3'?'selected':'')+'>A3</option></select></div>'+
+      '<div class="field"><label>Печатный лист</label><select onchange="detected['+i+'].printSheet=this.value;renderDetected()"><option '+(x.printSheet==='A3'?'selected':'')+'>A3</option><option '+(x.printSheet==='A4'?'selected':'')+' '+(x.format==='A3'?'disabled':'')+'>A4</option></select></div>'+
+      '<div class="field"><label>Бумага</label><select onchange="detected['+i+'].paper=this.value;renderDetected()">'+papers+'</select></div>'+
+      '<div class="field"><label>Стороны печати</label><select onchange="detected['+i+'].sides=+this.value;renderDetected()"><option value="2" '+(x.sides===2?'selected':'')+'>1+1</option><option value="1" '+(x.sides===1?'selected':'')+'>1+0</option></select></div>'+
+      '<div class="field"><label>Переплёт</label><select onchange="detected['+i+'].bindingType=this.value;renderDetected()"><option value="" '+(!x.bindingType?'selected':'')+'>Выберите</option><option value="hard" '+(x.bindingType==='hard'?'selected':'')+'>Твёрдый</option><option value="soft" '+(x.bindingType==='soft'?'selected':'')+'>Мягкий</option></select></div>'+
+      '<label class="check"><input type="checkbox" '+(x.numbering?'checked':'')+' onchange="detected['+i+'].numbering=this.checked;renderDetected()"> Нумерация</label>'+
+      '<label class="check"><input type="checkbox" '+(x.stitching?'checked':'')+' onchange="detected['+i+'].stitching=this.checked;renderDetected()"> Прошивка</label>'+
+      '<label class="check"><input type="checkbox" '+(x.coverSticker?'checked':'')+' onchange="detected['+i+'].coverSticker=this.checked;renderDetected()"> Наклейка на обложку</label>'+
+      (x.coverSticker?'<div class="field"><label>Ширина наклейки, мм</label><input type="number" min="1" value="'+(x.stickerWmm||'')+'" onchange="detected['+i+'].stickerWmm=+this.value"></div><div class="field"><label>Высота наклейки, мм</label><input type="number" min="1" value="'+(x.stickerHmm||'')+'" onchange="detected['+i+'].stickerHmm=+this.value"></div>':'')+
+      '</div></div>';
+  }
+
+  if(x.type==='binding_doc'){
+    const title=x.kind==='grade_book'?'Зачётка':'Удостоверение / корочка';
+    let chips='<span class="chip">'+x.qty+' шт.</span>';
+    if(x.innerLeaves)chips+='<span class="chip">'+x.innerLeaves+' внутр. лист.</span><span class="chip">'+x.innerFormat+'</span><span class="chip">'+(x.innerColor==='bw'?'ЧБ':'цвет')+'</span>';
+    if(x.staples)chips+='<span class="chip auto">'+x.staples+' скоб.</span>';
+    if(x.glued)chips+='<span class="chip warn">вклейка: тариф не задан</span>';
+    if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
+    return '<div class="detected-card"><div class="detected-head"><div><b>'+title+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
+      '<div class="field"><label>Внутренних листов / изделие</label><input type="number" min="0" value="'+(x.innerLeaves||0)+'" onchange="detected['+i+'].innerLeaves=+this.value;renderDetected()"></div>'+
+      '<div class="field"><label>Формат внутренних листов</label><select onchange="detected['+i+'].innerFormat=this.value;renderDetected()">'+['A4','A5','A6','A7'].map(v=>'<option '+(x.innerFormat===v?'selected':'')+'>'+v+'</option>').join('')+'</select></div>'+
+      '<div class="field"><label>Печать внутренних листов</label><select onchange="detected['+i+'].innerColor=this.value;renderDetected()"><option value="bw" '+(x.innerColor==='bw'?'selected':'')+'>ЧБ</option><option value="color" '+(x.innerColor==='color'?'selected':'')+'>Цветная</option></select></div>'+
+      '<div class="field"><label>Стороны</label><select onchange="detected['+i+'].innerSides=+this.value;renderDetected()"><option value="1" '+(x.innerSides===1?'selected':'')+'>1 сторона</option><option value="2" '+(x.innerSides===2?'selected':'')+'>2 стороны</option></select></div>'+
+      '<div class="field"><label>Скоб / изделие</label><input type="number" min="0" value="'+(x.staples||0)+'" onchange="detected['+i+'].staples=+this.value;renderDetected()"></div>'+
+      '<label class="check"><input type="checkbox" '+(x.glued?'checked':'')+' onchange="detected['+i+'].glued=this.checked;renderDetected()"> Вклеенные листы</label>'+
+      '</div></div>';
+  }
+
+  if(x.type==='self_copy_form'){
     const cfg=selfCopySection().calculator_A6||{};
     let chips='<span class="chip">'+(x.format||'формат не указан')+'</span><span class="chip">'+(x.qty||0)+' комплектов</span><span class="chip">'+x.layers+' слоя</span><span class="chip">ЧБ</span>';
     if(x.glue)chips+='<span class="chip auto">склейка по '+x.blockSize+'</span>';
@@ -1041,6 +1162,82 @@ function renderDetected(){
 function addDetected(i){
  const x=detected[i];if(!x||x.error||x.type==='unknown'||x.invalidReason)return;
  const details=[];let cost=0,price=0,name='';
+
+ if(x.type==='duplication'){
+   const min=x.format==='A3'?50:100;
+   if(x.qty<min){alert('Тиражирование '+x.format+': минимум '+min+' листов.');return}
+   const rate=duplicationRate(x.format,x.sides,x.qty),paper=duplicationPaperSale(x.format,x.paper);
+   if(rate==null||!paper){alert('Не найдена ставка тиражирования или материала.');return}
+   const print=x.qty*rate,mat=x.qty*paper;price=print+mat;cost=0;
+   name='Тиражирование '+x.format+' · '+(x.sides===2?'1+1':'1+0')+' · '+x.paper;
+   details.push('печать: '+x.qty+' лист. × '+money(rate)+' — '+money(print),'материал: '+x.qty+' лист. × '+money(paper)+' — '+money(mat),'итого — '+money(price));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
+ if(x.type==='journal'){
+   if(!x.leaves){alert('Укажите количество листов в журнале.');return}
+   if(!x.bindingType){alert('Выберите твёрдый или мягкий переплёт.');return}
+   if(x.leaves>200){alert('В прайсе переплёт журналов указан до 200 листов. Свыше 200 — ручное согласование.');return}
+   if(x.format==='A3')x.printSheet='A3';
+   const up=(x.format==='A4'&&x.printSheet==='A3')?2:1;
+   const printSheets=Math.ceil(x.leaves*x.qty/up),min=x.printSheet==='A3'?50:100;
+   if(printSheets<min){alert('Для выбранного печатного листа '+x.printSheet+' минимальный тираж '+min+' листов. Сейчас '+printSheets+'.');return}
+   const rate=duplicationRate(x.printSheet,x.sides,printSheets),paper=duplicationPaperSale(x.printSheet,x.paper);
+   if(rate==null||!paper){alert('Не найдена ставка тиражирования или материала для журнала.');return}
+   const printSale=printSheets*rate,paperSale=printSheets*paper;
+   const bt=bindingJournalTier(x.format,x.bindingType,x.leaves);if(!bt){alert('Не найден тариф переплёта.');return}
+   const bindSale=bt.price*x.qty;
+   const cutSale=(x.format==='A4'&&x.printSheet==='A3')?Math.ceil(printSheets/250)*60:0;
+   const numberPages=x.leaves*x.qty*x.sides;
+   const numberingSale=x.numbering?numberPages*Number(bindingSection()?.journal_binding?.numbering_per_page||.66):0;
+   const stitchSale=x.stitching?x.qty*Number(bindingSection()?.journal_binding?.stitching_per_journal||19):0;
+   price=printSale+paperSale+bindSale+cutSale+numberingSale+stitchSale;cost=0;
+   name='Журнал '+x.format+' · '+x.leaves+' лист. · '+(x.bindingType==='hard'?'твёрдый':'мягкий');
+   details.push('тиражирование '+x.printSheet+': '+printSheets+' лист. × '+money(rate)+' — '+money(printSale));
+   details.push('бумага '+x.paper+': '+printSheets+' лист. × '+money(paper)+' — '+money(paperSale));
+   if(cutSale)details.push('резка A3 → A4: '+Math.ceil(printSheets/250)+' пакет(а) — '+money(cutSale));
+   details.push('переплёт '+x.format+' '+(x.bindingType==='hard'?'твёрдый':'мягкий')+' · тариф до '+bt.tier+' листов: '+money(bt.price)+' × '+x.qty+' — '+money(bindSale));
+   if(x.numbering)details.push('нумерация: '+numberPages+' стр. × '+money(bindingSection()?.journal_binding?.numbering_per_page||.66)+' — '+money(numberingSale));
+   if(x.stitching)details.push('прошивка: '+x.qty+' × '+money(bindingSection()?.journal_binding?.stitching_per_journal||19)+' — '+money(stitchSale));
+   if(x.coverSticker){
+     if(!x.stickerWmm||!x.stickerHmm){alert('Для наклейки на обложку укажите размер.');return}
+     const sx={format:'',color:'4+0',density:90,paperKey:'Самоклеющаяся',qty:x.qty,w:x.stickerWmm/1000,h:x.stickerHmm/1000,wmm:x.stickerWmm,hmm:x.stickerHmm,technology:'digital',lamination:'none',post:{cutPasses:1}};
+     const opt=bestDigitalOption(sx);if(!opt){alert('Не удалось рассчитать наклейку на обложку.');return}
+     const pp=digitalPostCalc(sx,opt),stick=opt.sale+pp.sale;price+=stick;
+     details.push('наклейка на обложку '+x.stickerWmm+'×'+x.stickerHmm+' мм: '+money(stick));
+   }
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
+ if(x.type==='binding_doc'){
+   if(!x.qty){alert('Укажите тираж.');return}
+   const unit=credentialTier(x.kind,x.qty);
+   if(unit==null){alert('В прайсе '+(x.kind==='grade_book'?'зачёток':'удостоверений/корочек')+' цена начинается от 50 шт.');return}
+   price=unit*x.qty;cost=0;
+   name=x.kind==='grade_book'?'Зачётка':'Удостоверение / корочка';
+   details.push('основа: '+x.qty+' шт. × '+money(unit)+' — '+money(price));
+   if(x.kind==='grade_book')details.push('в прайсе зачётки внутренний блок из Снегурочки 80 г уже включён');
+   if(x.kind!=='grade_book'&&x.innerLeaves>0){
+     const pieces=x.innerLeaves*x.qty;
+     const mm=formatsMM[x.innerFormat]||formatsMM.A6;
+     if(x.innerColor==='bw'){
+       const sheetFmt=(x.innerFormat==='A4')?'A4':'A4';
+       const up=Math.max(1,Math.floor(210/mm[0])*Math.floor(297/mm[1]),Math.floor(210/mm[1])*Math.floor(297/mm[0]));
+       const sheets=Math.ceil(pieces/up),rate=digitalBwRate(sheetFmt,x.innerSides);
+       const sale=sheets*rate;price+=sale;
+       details.push('внутренние листы ЧБ: '+pieces+' изд. · '+up+' на A4 → '+sheets+' печатн. лист. × '+money(rate)+' — '+money(sale));
+     }else{
+       const px={format:x.innerFormat,color:x.innerSides===2?'4+4':'4+0',density:90,paperKey:'90',qty:pieces,w:mm[0]/1000,h:mm[1]/1000,wmm:mm[0],hmm:mm[1],technology:'digital',lamination:'none',post:{}};
+       const opt=bestDigitalOption(px);if(!opt){alert('Не удалось рассчитать цветные внутренние листы.');return}
+       price+=opt.sale;details.push('внутренние листы цветные: '+pieces+' изд. · '+opt.name+' · '+money(opt.sale));
+     }
+   }
+   if(x.staples){
+     const s=x.staples*x.qty*2.2;price+=s;details.push('скобы: '+x.staples+' × '+x.qty+' × '+money(2.2)+' — '+money(s));
+   }
+   if(x.glued)details.push('⚠ вклейка внутренних листов не включена: в текущем прайсе нет отдельного тарифа на эту операцию');
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
 
  if(x.type==='self_copy_form'){
    if(x.invalidReason){alert(x.invalidReason);return}
