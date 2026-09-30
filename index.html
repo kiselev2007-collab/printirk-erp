@@ -1359,29 +1359,42 @@ function renderDetected(){
    autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
- if(x.type==='sign_plate'){
-    const mats=(signSection().products||[]).map(p=>'<option value="'+p.name.replace(/"/g,'&quot;')+'" '+(x.material===p.name?'selected':'')+'>'+p.name+'</option>').join('');
-    const techs=[
-      ['film_360','Плёнка · 360 dpi'],['film_720','Плёнка · 720 dpi'],['film_720_lam','Плёнка · 720 dpi + ламинация'],['film_1440','Плёнка · 1440 dpi'],
-      ['film_oracal_bg','Oracal 1 цвет · накатка фона'],['film_oracal_applique','Oracal 1 цвет · фон + аппликация'],['film_double_720_lam','Двухсторонняя · 720 dpi + ламинация'],
-      ['uv_standard','УФ · стандартная прямая печать'],['uv_white','УФ · белым W'],['uv_cmyk','УФ · CMYK'],['uv_cmykwl','УФ · CMYK+W+L']
-    ];
-    const techOpts=techs.map(z=>'<option value="'+z[0]+'" '+(x.technology===z[0]?'selected':'')+'>'+z[1]+'</option>').join('');
+  if(x.type==='sign_plate'){
+    const uv=String(x.technology||'').startsWith('uv_'),film=String(x.technology||'').startsWith('film_');
+    const allowed=signMaterialOptions(x.technology);
+    const options=allowed.map(p=>'<option value="'+p.name.replace(/"/g,'&quot;')+'" '+(x.material===p.name?'selected':'')+'>'+p.name+'</option>').join('');
+    const incompatible=x.material&&!allowed.some(p=>p.name===x.material)?'<option value="'+x.material.replace(/"/g,'&quot;')+'" selected>'+x.material+' · нет тарифа для способа печати</option>':'';
+    const mats='<option value="" '+(!x.material?'selected':'')+'>Выберите материал</option>'+incompatible+options;
+    const methods='<option value="" '+(!uv&&!film?'selected':'')+'>Выберите способ печати</option>'+
+      '<option value="uv" '+(uv?'selected':'')+'>Прямая УФ-печать</option>'+
+      '<option value="film" '+(film?'selected':'')+'>Печать на плёнке + накатка</option>';
+    const variants=uv?[
+       ['uv_standard','Стандартная УФ-печать'],['uv_white','УФ · белый W'],
+       ['uv_cmyk','УФ · CMYK'],['uv_cmykwl','УФ · CMYK+W+L']
+    ]:film?[
+       ['film_360','Плёнка · 360 dpi'],['film_720','Плёнка · 720 dpi'],
+       ['film_720_lam','Плёнка · 720 dpi + ламинация'],['film_1440','Плёнка · 1440 dpi'],
+       ['film_oracal_bg','Oracal · накатка фона'],['film_oracal_applique','Oracal · фон + аппликация'],
+       ['film_double_720_lam','Двухсторонняя · 720 dpi + ламинация']
+    ]:[];
+    const techOpts=variants.map(z=>'<option value="'+z[0]+'" '+(x.technology===z[0]?'selected':'')+'>'+z[1]+'</option>').join('');
     const mmats=(millingSection().prices_per_m||[]).map(p=>'<option value="'+p.material.replace(/"/g,'&quot;')+'" '+(x.millingMaterial===p.material?'selected':'')+'>'+p.material+' · '+money(p.price)+'/п.м.</option>').join('');
-    const uvSelected=String(x.technology||'').startsWith('uv_');
     let chips='<span class="chip">'+(x.wmm&&x.hmm?Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм':'размер не указан')+'</span><span class="chip">'+x.qty+' шт.</span>';
-    if(uvSelected)chips+='<span class="chip auto">УФ-печать</span>';
-    if(uvSelected&&x.material&&!uvProductForSign(x.material))chips+='<span class="chip warn">На выбранный материал нет УФ-тарифа: выберите материал из УФ-прайса</span>';
-    if(uvSelected&&x.wmm&&x.hmm){const max=uvSection().max_size_mm||[1200,2300];if(!((x.wmm<=max[0]&&x.hmm<=max[1])||(x.wmm<=max[1]&&x.hmm<=max[0])))chips+='<span class="chip warn">Превышен максимальный размер УФ: '+max[0]+'×'+max[1]+' мм</span>';}
-
+    if(uv)chips+='<span class="chip auto">УФ-печать</span>';
+    else if(film)chips+='<span class="chip auto">Плёнка + накатка</span>';
     if(x.material)chips+='<span class="chip">'+x.material+'</span>';
+    if(uv&&x.wmm&&x.hmm){const max=uvSection().max_size_mm||[1200,2300];if(!((x.wmm<=max[0]&&x.hmm<=max[1])||(x.wmm<=max[1]&&x.hmm<=max[0])))chips+='<span class="chip warn">Максимум УФ: '+max[0]+'×'+max[1]+' мм</span>';}
     if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
-    return '<div class="detected-card"><div class="detected-head"><div><b>Табличка</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
-      '<div class="field"><label>Материал</label><select onchange="detected['+i+'].material=this.value;detected['+i+'].millingMaterial=millingMaterialFromText(this.value,this.value);detected['+i+'].invalidReason=!detected['+i+'].wmm?\'Укажите размер таблички\':(!detected['+i+'].material?\'Укажите материал таблички\':(detected['+i+'].millingRequested&&!detected['+i+'].millingMeters?\'Укажите погонные метры фрезеровки\':\'\'));renderDetected()"><option value="">Выберите</option>'+mats+'</select></div>'+
-      '<div class="field"><label>Технология</label><select onchange="detected['+i+'].technology=this.value;renderDetected()">'+techOpts+'</select></div>'+
+    const switchMethod='detected['+i+'].technology=this.value==="uv"?"uv_standard":this.value==="film"?"film_720":"";signPlateInputChange('+i+')';
+    const switchMaterial='detected['+i+'].material=this.value;detected['+i+'].millingMaterial=millingMaterialFromText(this.value,this.value);signPlateInputChange('+i+')';
+    return '<div class="detected-card"><div class="detected-head"><div><b>Табличка · единый расчёт</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
+      '<div class="field"><label>Способ печати</label><select onchange=\''+switchMethod+'\'>'+methods+'</select></div>'+
+      (variants.length?'<div class="field"><label>Вариант печати</label><select onchange="detected['+i+'].technology=this.value;signPlateInputChange('+i+')">'+techOpts+'</select></div>':'')+
+      '<div class="field"><label>Материал</label><select onchange=\''+switchMaterial+'\'>'+mats+'</select></div>'+
+      '<div class="field"><label>Количество, шт.</label><input type="number" min="1" step="1" value="'+(x.qty||1)+'" onchange="detected['+i+'].qty=Math.max(1,Math.floor(+this.value||1));signPlateInputChange('+i+')"></div>'+
       '<div class="field"><label>Ширина, мм</label><input type="number" min="1" step="1" value="'+(x.wmm||'')+'" onchange="detected['+i+'].wmm=+this.value;signPlateInputChange('+i+')"></div>'+
       '<div class="field"><label>Высота, мм</label><input type="number" min="1" step="1" value="'+(x.hmm||'')+'" onchange="detected['+i+'].hmm=+this.value;signPlateInputChange('+i+')"></div>'+
-      '<div class="field"><label>Фрезеровка, п.м.</label><input type="number" min="0" step="0.1" value="'+(x.millingMeters||0)+'" onchange="detected['+i+'].millingMeters=+this.value;detected['+i+'].millingRequested=detected['+i+'].millingRequested||detected['+i+'].millingMeters>0;detected['+i+'].invalidReason=!detected['+i+'].wmm?\'Укажите размер таблички\':(!detected['+i+'].material?\'Укажите материал таблички\':(detected['+i+'].millingRequested&&!detected['+i+'].millingMeters?\'Укажите погонные метры фрезеровки\':\'\'));renderDetected()"></div>'+
+      '<div class="field"><label>Фрезеровка, п.м.</label><input type="number" min="0" step="0.1" value="'+(x.millingMeters||0)+'" onchange="detected['+i+'].millingMeters=+this.value;detected['+i+'].millingRequested=detected['+i+'].millingMeters>0;signPlateInputChange('+i+')"></div>'+
       '<div class="field"><label>Материал фрезеровки</label><select onchange="detected['+i+'].millingMaterial=this.value"><option value="">Авто / выбрать</option>'+mmats+'</select></div>'+
       '</div></div>';
   }
@@ -1680,6 +1693,7 @@ function addDetected(i){
  }
 
  if(x.type==='sign_plate'){
+   if(!x.technology){alert('Для таблички выберите способ печати: УФ или плёнка.');return}
    if(!x.w||!x.h||!x.material){alert('Для таблички укажите размер и материал.');return}
    const areaOne=x.w*x.h;
    const millingGap=(x.millingRequested||x.millingMeters)?productionSpacingMm('milling_between_items',5):0;
@@ -1695,7 +1709,7 @@ function addDetected(i){
      const rawPerItem=techAreaOne*rate*coeff,perItem=Math.max(Number(signSection().minimum_item_rub||249),rawPerItem);
      baseSale=Math.max(Number(signSection().minimum_order_rub||990),perItem*x.qty);
      baseLabel='табличка с плёнкой: '+totalArea.toFixed(3)+' м² × '+money(rate)+'/м²'+(coeff>1?' × коэф. '+coeff:'')+' — '+money(baseSale);
-   }else{
+   }else if(String(x.technology).startsWith('uv_')){
      const p=uvProductForSign(x.material);if(!p){alert('Для выбранного материала нет цены УФ-печати.');return}
      const max=uvSection().max_size_mm||[1200,2300],fits=(x.wmm<=max[0]&&x.hmm<=max[1])||(x.wmm<=max[1]&&x.hmm<=max[0]);
      if(!fits){alert('Максимальный размер УФ-печати '+max[0]+'×'+max[1]+' мм.');return}
@@ -1707,7 +1721,7 @@ function addDetected(i){
      if(!rate){alert('Для выбранного режима УФ-печати нет цены.');return}
      baseSale=Math.max(Number(uvSection().minimum_order_rub||1999),totalArea*rate);
      baseLabel='УФ-печать: '+totalArea.toFixed(3)+' м² × '+money(rate)+'/м² — '+money(baseSale);
-   }
+   }else{alert('Выберите способ печати таблички.');return}
    price=baseSale;cost=0;name='Табличка · '+x.material;
    details.push(baseLabel);
    if(x.millingMeters){
