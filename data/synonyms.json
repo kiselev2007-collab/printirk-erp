@@ -947,5 +947,1406 @@
       "биг посередине",
       "биговка посередине"
     ]
+  },
+  {
+    "name": "широкоформат",
+    "type": "wide_format",
+    "source": "section",
+    "synonyms": [
+      "широкоформат",
+      "широкоформатная печать",
+      "широкоформатка",
+      "ширик"
+    ]
+  },
+  {
+    "name": "цифровая печать",
+    "type": "digital_print",
+    "source": "section",
+    "synonyms": [
+      "цифровая печать",
+      "цифра",
+      "цифровуха",
+      "оперативная печать"
+    ]
+  },
+  {
+    "name": "визитка",
+    "type": "business_cards",
+    "source": "section",
+    "synonyms": [
+      "визитка",
+      "визитки",
+      "визитная карточка",
+      "визитные карточки"
+    ]
+  },
+  {
+    "name": "офсет",
+    "type": "offset_leaflets",
+    "source": "section",
+    "synonyms": [
+      "офсет",
+      "офсетная печать",
+      "офсетные листовки",
+      "сборный офсет"
+    ]
+  },
+  {
+    "name": "табличка",
+    "type": "sign_plates",
+    "source": "section",
+    "synonyms": [
+      "табличка",
+      "таблички",
+      "информационная табличка",
+      "вывеска табличка"
+    ]
+  },
+  {
+    "name": "уф печать",
+    "type": "uv_print",
+    "source": "section",
+    "synonyms": [
+      "уф печать",
+      "уф-печать",
+      "уфпечать",
+      "uv печать",
+      "uv-печать"
+    ]
+  },
+  {
+    "name": "плоттерная резка",
+    "type": "plotter_cut",
+    "source": "section",
+    "synonyms": [
+      "плоттерная резка",
+      "плоттерка",
+      "контурная резка",
+      "резка на плоттере",
+      "плоттер"
+    ]
+  },
+  {
+    "name": "план эвакуации",
+    "type": "evacuations",
+    "source": "section",
+    "synonyms": [
+      "план эвакуации",
+      "планы эвакуации",
+      "эвакуационный план",
+      "схема эвакуации"
+    ]
+  },
+  {
+    "name": "прессвол",
+    "type": "presswall",
+    "source": "section",
+    "synonyms": [
+      "прессвол",
+      "пресс волл",
+      "пресс-волл",
+      "press wall",
+      "presswall"
+    ]
+  },
+  {
+    "name": "фрезеровка",
+    "type": "milling_laser",
+    "source": "section",
+    "synonyms": [
+      "фрезеровка",
+      "фрезерная резка",
+      "фрезер",
+      "лазерная резка",
+      "лазерка"
+    ]
+  },
+  {
+    "name": "монтаж",
+    "type": "constructions_installation",
+    "source": "section",
+    "synonyms": [
+      "монтаж",
+      "монтажные работы",
+      "конструкции",
+      "каркас",
+      "рама"
+    ]
+  },
+  {
+    "name": "цифровая упаковка",
+    "type": "digital_packaging",
+    "source": "section",
+    "synonyms": [
+      "цифровая упаковка",
+      "упаковка",
+      "коробка",
+      "коробочки"
+    ]
+  },
+  {
+    "name": "бумажная этикетка",
+    "type": "paper_labels",
+    "source": "section",
+    "synonyms": [
+      "бумажная этикетка",
+      "бумажные этикетки",
+      "этикетка бумажная",
+      "этикетки бумажные"
+    ]
+  },
+  {
+    "name": "термотрансферная этикетка",
+    "type": "thermal_transfer_labels",
+    "source": "section",
+    "synonyms": [
+      "термотрансферная этикетка",
+      "термотрансферные этикетки",
+      "термоэтикетка",
+      "термо этикетка"
+    ]
+  },
+  {
+    "name": "ланъярд",
+    "type": "lanyards",
+    "source": "section",
+    "synonyms": [
+      "ланъярд",
+      "ланьярд",
+      "ланъярды",
+      "ланьярды",
+      "лента для бейджа",
+      "шнурок для бейджа"
+    ]
+  },
+  {
+    "name": "кружка",
+    "type": "mugs",
+    "source": "section",
+    "synonyms": [
+      "кружка",
+      "кружки",
+      "кружка с печатью",
+      "печать на кружке"
+    ]
+  },
+  {
+    "name": "футболка",
+    "type": "apparel",
+    "source": "section",
+    "synonyms": [
+      "футболка",
+      "футболки",
+      "печать на футболке",
+      "нанесение на футболку",
+      "текстиль"
+    ]
+  },
+  {
+    "name": "ручка",
+    "type": "pens",
+    "source": "section",
+    "synonyms": [
+      "ручка",
+      "ручки",
+      "ручка с логотипом",
+      "печать на ручке",
+      "нанесение на ручки"
+    ]
+  },
+  {
+    "name": "значок",
+    "type": "badges_round",
+    "source": "section",
+    "synonyms": [
+      "значок",
+      "значки",
+      "круглый значок",
+      "закатной значок"
+    ]
+  },
+  {
+    "name": "бейдж",
+    "type": "name_badges",
+    "source": "section",
+    "synonyms": [
+      "бейдж",
+      "бейджик",
+      "бейджи",
+      "именной бейдж"
+    ]
+  },
+  {
+    "name": "магнит",
+    "type": "magnets",
+    "source": "section",
+    "synonyms": [
+      "магнит",
+      "магниты",
+      "магнитик",
+      "магнитики"
+    ]
+  },
+  {
+    "name": "флаг",
+    "type": "flags",
+    "source": "section",
+    "synonyms": [
+      "флаг",
+      "флаги",
+      "печать флага",
+      "флаг с логотипом"
+    ]
+  },
+  {
+    "name": "квартальный календарь",
+    "type": "three_block_calendars",
+    "source": "section",
+    "synonyms": [
+      "квартальный календарь",
+      "календарь квартальный",
+      "квартальник",
+      "календарь-квартальник",
+      "трехблочный календарь",
+      "трёхблочный календарь",
+      "календарь трехблочный",
+      "календарь трёхблочный",
+      "3-блочный календарь",
+      "3 блочный календарь",
+      "календарь 3 блока",
+      "календарь на 3 блока",
+      "календарь с тремя блоками",
+      "3-х блочный календарь",
+      "квартальник 3 блока",
+      "квартальник трехблочный",
+      "квартальный 3 блока",
+      "кварт. календарь",
+      "кварт календарь",
+      "кварталный календарь",
+      "квартальный каленарь",
+      "квартальный календрь",
+      "каллендарь квартальный",
+      "каллендарь трехблочный"
+    ]
+  },
+  {
+    "name": "ежедневник",
+    "type": "diaries_engraving",
+    "source": "section",
+    "synonyms": [
+      "ежедневник",
+      "ежедневники",
+      "гравировка ежедневника",
+      "гравировка на ежедневнике"
+    ]
+  },
+  {
+    "name": "пакет пвд",
+    "type": "pvd_bags",
+    "source": "section",
+    "synonyms": [
+      "пакет пвд",
+      "пакеты пвд",
+      "пакет с логотипом",
+      "пакеты с логотипом",
+      "печать на пакете"
+    ]
+  },
+  {
+    "name": "гардеробный номерок",
+    "type": "wardrobe_tags",
+    "source": "section",
+    "synonyms": [
+      "гардеробный номерок",
+      "гардеробные номерки",
+      "номерок",
+      "номерки в гардероб"
+    ]
+  },
+  {
+    "name": "дисконтная карта",
+    "type": "discount_cards",
+    "source": "section",
+    "synonyms": [
+      "дисконтная карта",
+      "дисконтные карты",
+      "дисконтка",
+      "пластиковая дисконтная карта"
+    ]
+  },
+  {
+    "name": "папка",
+    "type": "folders",
+    "source": "section",
+    "synonyms": [
+      "папка",
+      "папки",
+      "папка а4",
+      "папка с логотипом"
+    ]
+  },
+  {
+    "name": "тиражирование",
+    "type": "black_white_duplication",
+    "source": "section",
+    "synonyms": [
+      "тиражирование",
+      "чб тиражирование",
+      "ч/б тиражирование",
+      "черно-белая печать",
+      "чёрно-белая печать"
+    ]
+  },
+  {
+    "name": "блокнот",
+    "type": "notepads",
+    "source": "section",
+    "synonyms": [
+      "блокнот",
+      "блокноты",
+      "блокнот на пружине"
+    ]
+  },
+  {
+    "name": "бланк",
+    "type": "forms_stationery",
+    "source": "section",
+    "synonyms": [
+      "бланк",
+      "бланки",
+      "бланочная продукция",
+      "бланочная печать"
+    ]
+  },
+  {
+    "name": "печать и штамп",
+    "type": "stamps_seals",
+    "source": "section",
+    "synonyms": [
+      "печать и штамп",
+      "печати и штампы",
+      "штамп",
+      "штампы",
+      "изготовление печати",
+      "изготовление штампа"
+    ]
+  },
+  {
+    "name": "переплет",
+    "type": "binding",
+    "source": "section",
+    "synonyms": [
+      "переплет",
+      "переплёт",
+      "переплетные работы",
+      "переплётные работы",
+      "брошюровка"
+    ]
+  },
+  {
+    "name": "дизайн",
+    "type": "design",
+    "source": "section",
+    "synonyms": [
+      "дизайн",
+      "макет",
+      "разработка макета",
+      "верстка",
+      "вёрстка"
+    ]
+  },
+  {
+    "name": "плакетка",
+    "type": "award_plaques",
+    "source": "section",
+    "synonyms": [
+      "плакетка",
+      "плакетки",
+      "наградная плакетка",
+      "наградные плакетки"
+    ]
+  },
+  {
+    "name": "световой короб",
+    "type": "lightboxes",
+    "source": "section",
+    "synonyms": [
+      "световой короб",
+      "световые короба",
+      "лайтбокс",
+      "лайтбоксы",
+      "свет короб",
+      "короб световой"
+    ]
+  },
+  {
+    "name": "объемные буквы",
+    "type": "volume_letters_quick",
+    "source": "section",
+    "synonyms": [
+      "объемные буквы",
+      "объёмные буквы",
+      "обьемные буквы",
+      "световые буквы",
+      "объемники",
+      "объёмники"
+    ]
+  },
+  {
+    "name": "штендер",
+    "type": "a_stands",
+    "source": "section",
+    "synonyms": [
+      "штендер",
+      "штендеры",
+      "рекламный штендер",
+      "меловой штендер"
+    ]
+  },
+  {
+    "name": "необъемные буквы",
+    "type": "flat_letters_spacers",
+    "source": "section",
+    "synonyms": [
+      "необъемные буквы",
+      "необъёмные буквы",
+      "плоские буквы",
+      "буквы на дистанционных держателях",
+      "буквы на держателях"
+    ]
+  },
+  {
+    "name": "Баннер 290 гр/м²",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "банер 290 гр/м²"
+    ]
+  },
+  {
+    "name": "Баннер 440 гр/м²",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "банер 440 гр/м²"
+    ]
+  },
+  {
+    "name": "Баннер 400 литой",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "банер 400 литой"
+    ]
+  },
+  {
+    "name": "Баннер 510 литой",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "банер 510 литой"
+    ]
+  },
+  {
+    "name": "Баннер транслюцентный литой 440 гр/м²",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "банер транслюцентный литой 440 гр/м²"
+    ]
+  },
+  {
+    "name": "Плёнка самоклеящаяся матовая/глянцевая",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "Пленка самоклеящаяся матовая/глянцевая",
+      "самоклейка матовая/глянцевая"
+    ]
+  },
+  {
+    "name": "Плёнка прозрачная матовая/глянцевая",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "Пленка прозрачная матовая/глянцевая"
+    ]
+  },
+  {
+    "name": "Плёнка транслюцентная",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "Пленка транслюцентная"
+    ]
+  },
+  {
+    "name": "Плёнка светоблокирующая",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "Пленка светоблокирующая"
+    ]
+  },
+  {
+    "name": "Постерная бумага",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "постер",
+      "постерка",
+      "плакат"
+    ]
+  },
+  {
+    "name": "Напольная ламинация",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "Напольная ламия",
+      "Напольная ламинацияия"
+    ]
+  },
+  {
+    "name": "Склейка/проклейка баннера",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "Склейка/проклейка банера"
+    ]
+  },
+  {
+    "name": "Проклейка баннера с верёвкой",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "Проклейка баннера с веревкой",
+      "Проклейка банера с верёвкой"
+    ]
+  },
+  {
+    "name": "Люверс 10 мм",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "люв",
+      "люверсы"
+    ]
+  },
+  {
+    "name": "Люверс 12 мм",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "люв",
+      "люверсы"
+    ]
+  },
+  {
+    "name": "Монтажная плёнка",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "Монтажная пленка"
+    ]
+  },
+  {
+    "name": "Защитная ламинационная плёнка",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "Защитная ламинационная пленка",
+      "Защитная ламионная плёнка",
+      "Защитная ламинацияионная плёнка"
+    ]
+  },
+  {
+    "name": "Ламинационная плёнка ORAJET",
+    "type": "wide_format",
+    "source": "catalog_item",
+    "synonyms": [
+      "Ламинационная пленка ORAJET",
+      "ламионная плёнка ORAJET",
+      "ламинацияионная плёнка ORAJET"
+    ]
+  },
+  {
+    "name": "Переплёт металлической пружиной А3",
+    "type": "digital_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет металлической пружиной А3",
+      "брошюровка металлической пружиной А3"
+    ]
+  },
+  {
+    "name": "Переплёт металлической пружиной А4",
+    "type": "digital_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет металлической пружиной А4",
+      "брошюровка металлической пружиной А4"
+    ]
+  },
+  {
+    "name": "Переплёт металлической пружиной А5",
+    "type": "digital_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет металлической пружиной А5",
+      "брошюровка металлической пружиной А5"
+    ]
+  },
+  {
+    "name": "Переплёт металлической пружиной А6",
+    "type": "digital_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет металлической пружиной А6",
+      "брошюровка металлической пружиной А6"
+    ]
+  },
+  {
+    "name": "Люверс",
+    "type": "digital_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "люв",
+      "люверсы"
+    ]
+  },
+  {
+    "name": "Скругление 4 углов",
+    "type": "digital_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "скругление",
+      "закругление углов"
+    ]
+  },
+  {
+    "name": "Фальцовка",
+    "type": "digital_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "фальц",
+      "сгиб"
+    ]
+  },
+  {
+    "name": "Твёрдая обложка на болтах A4",
+    "type": "digital_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "Твердая обложка на болтах A4"
+    ]
+  },
+  {
+    "name": "Твёрдая обложка на болтах A3",
+    "type": "digital_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "Твердая обложка на болтах A3"
+    ]
+  },
+  {
+    "name": "Soft Touch / Silk Touch 32 мкр",
+    "type": "digital_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "софт тач / Silk Touch 32 мкр",
+      "софтач / Silk Touch 32 мкр",
+      "softtouch / Silk Touch 32 мкр"
+    ]
+  },
+  {
+    "name": "Акриловое стекло 3 мм молочное",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "акрил 3 мм молочное",
+      "оргстекло 3 мм молочное"
+    ]
+  },
+  {
+    "name": "Вивак 0.5 мм",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПЭТ 0.5 мм",
+      "PET 0.5 мм"
+    ]
+  },
+  {
+    "name": "Вивак 1 мм",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПЭТ 1 мм",
+      "PET 1 мм"
+    ]
+  },
+  {
+    "name": "Пластик 1 мм",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 1 мм"
+    ]
+  },
+  {
+    "name": "Пластик 2 мм",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 2 мм"
+    ]
+  },
+  {
+    "name": "Пластик 3 мм",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 3 мм"
+    ]
+  },
+  {
+    "name": "Пластик 5 мм",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 5 мм"
+    ]
+  },
+  {
+    "name": "Пластик 8 мм",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 8 мм"
+    ]
+  },
+  {
+    "name": "Пластик 10 мм",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 10 мм"
+    ]
+  },
+  {
+    "name": "Магнитный винил",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "магнитик"
+    ]
+  },
+  {
+    "name": "Композит белый",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "АКП белый",
+      "алюкобонд белый"
+    ]
+  },
+  {
+    "name": "Ламинация таблички",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "ламия таблички",
+      "ламинацияия таблички"
+    ]
+  },
+  {
+    "name": "Усиление пластиком 5 мм",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "Усиление ПВХом 5 мм"
+    ]
+  },
+  {
+    "name": "Усиление пластиком 10 мм",
+    "type": "sign_plates",
+    "source": "catalog_item",
+    "synonyms": [
+      "Усиление ПВХом 10 мм"
+    ]
+  },
+  {
+    "name": "Акриловое стекло 3 мм молочное",
+    "type": "uv_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "акрил 3 мм молочное",
+      "оргстекло 3 мм молочное"
+    ]
+  },
+  {
+    "name": "Вивак 1 мм",
+    "type": "uv_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПЭТ 1 мм",
+      "PET 1 мм"
+    ]
+  },
+  {
+    "name": "Пластик 3 мм",
+    "type": "uv_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 3 мм"
+    ]
+  },
+  {
+    "name": "Пластик 5 мм",
+    "type": "uv_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 5 мм"
+    ]
+  },
+  {
+    "name": "Пластик 10 мм",
+    "type": "uv_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 10 мм"
+    ]
+  },
+  {
+    "name": "Композит белый",
+    "type": "uv_print",
+    "source": "catalog_item",
+    "synonyms": [
+      "АКП белый",
+      "алюкобонд белый"
+    ]
+  },
+  {
+    "name": "Полноцвет Phaeton + контурная резка",
+    "type": "plotter_cut",
+    "source": "catalog_item",
+    "synonyms": [
+      "контурка",
+      "фигурная резка",
+      "плоттерная резка"
+    ]
+  },
+  {
+    "name": "Полноцвет Phaeton + контурная резка + ламинация",
+    "type": "plotter_cut",
+    "source": "catalog_item",
+    "synonyms": [
+      "контурка",
+      "фигурная резка",
+      "плоттерная резка",
+      "Полноцвет Phaeton + контурная резка + ламия",
+      "Полноцвет Phaeton + контурная резка + ламинацияия"
+    ]
+  },
+  {
+    "name": "Контурная резка после печати",
+    "type": "plotter_cut",
+    "source": "catalog_item",
+    "synonyms": [
+      "контурка",
+      "фигурная резка",
+      "плоттерная резка"
+    ]
+  },
+  {
+    "name": "Пластик 2 мм",
+    "type": "sheet_material_reference",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 2 мм"
+    ]
+  },
+  {
+    "name": "Пластик 3 мм",
+    "type": "sheet_material_reference",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 3 мм"
+    ]
+  },
+  {
+    "name": "Пластик 5 мм",
+    "type": "sheet_material_reference",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 5 мм"
+    ]
+  },
+  {
+    "name": "Пластик 8 мм",
+    "type": "sheet_material_reference",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 8 мм"
+    ]
+  },
+  {
+    "name": "Пластик 10 мм",
+    "type": "sheet_material_reference",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХ 10 мм"
+    ]
+  },
+  {
+    "name": "Композит белый/цветной",
+    "type": "sheet_material_reference",
+    "source": "catalog_item",
+    "synonyms": [
+      "АКП белый/цветной",
+      "алюкобонд белый/цветной"
+    ]
+  },
+  {
+    "name": "Баннер 300 гр 1950×2950 с люверсами",
+    "type": "presswall",
+    "source": "catalog_item",
+    "synonyms": [
+      "банер 300 гр 1950×2950 с люверсами",
+      "люв",
+      "люверсы"
+    ]
+  },
+  {
+    "name": "Дизайн баннера",
+    "type": "presswall",
+    "source": "catalog_item",
+    "synonyms": [
+      "Дизайн банера"
+    ]
+  },
+  {
+    "name": "Сборка конструкции и монтаж баннера",
+    "type": "presswall",
+    "source": "catalog_item",
+    "synonyms": [
+      "Сборка конструкции и монтаж банера"
+    ]
+  },
+  {
+    "name": "Демонтаж баннера с каркаса/бруска/фанеры",
+    "type": "constructions_installation",
+    "source": "catalog_item",
+    "synonyms": [
+      "Демонтаж банера с каркаса/бруска/фанеры"
+    ]
+  },
+  {
+    "name": "Монтаж баннера 3×6",
+    "type": "constructions_installation",
+    "source": "catalog_item",
+    "synonyms": [
+      "Монтаж банера 3×6"
+    ]
+  },
+  {
+    "name": "Демонтаж баннера 3×6",
+    "type": "constructions_installation",
+    "source": "catalog_item",
+    "synonyms": [
+      "Демонтаж банера 3×6"
+    ]
+  },
+  {
+    "name": "Монтаж плёнки на плоскую поверхность",
+    "type": "constructions_installation",
+    "source": "catalog_item",
+    "synonyms": [
+      "Монтаж пленки на плоскую поверхность"
+    ]
+  },
+  {
+    "name": "Демонтаж плёнки + зачистка клея",
+    "type": "constructions_installation",
+    "source": "catalog_item",
+    "synonyms": [
+      "Демонтаж пленки + зачистка клея"
+    ]
+  },
+  {
+    "name": "Монтаж баннера на металлокаркас через люверсы",
+    "type": "constructions_installation",
+    "source": "catalog_item",
+    "synonyms": [
+      "Монтаж банера на металлокаркас через люверсы",
+      "люв",
+      "люверсы"
+    ]
+  },
+  {
+    "name": "Монтаж баннера на саморезы + шайба",
+    "type": "constructions_installation",
+    "source": "catalog_item",
+    "synonyms": [
+      "Монтаж банера на саморезы + шайба"
+    ]
+  },
+  {
+    "name": "Монтаж баннера на профлист",
+    "type": "constructions_installation",
+    "source": "catalog_item",
+    "synonyms": [
+      "Монтаж банера на профлист"
+    ]
+  },
+  {
+    "name": "Монтаж баннера в бетон",
+    "type": "constructions_installation",
+    "source": "catalog_item",
+    "synonyms": [
+      "Монтаж банера в бетон"
+    ]
+  },
+  {
+    "name": "Монтаж баннера на брусок/фанеру",
+    "type": "constructions_installation",
+    "source": "catalog_item",
+    "synonyms": [
+      "Монтаж банера на брусок/фанеру"
+    ]
+  },
+  {
+    "name": "Коробочка «подушка» 160×125×30",
+    "type": "digital_packaging",
+    "source": "catalog_item",
+    "synonyms": [
+      "Коробочка подушка 160×125×30"
+    ]
+  },
+  {
+    "name": "Бейсболка хлопок 175 г, металлическая застёжка",
+    "type": "apparel",
+    "source": "catalog_item",
+    "synonyms": [
+      "Бейсболка хлопок 175 г, металлическая застежка"
+    ]
+  },
+  {
+    "name": "Бейдж без окошечка, гравировка",
+    "type": "name_badges",
+    "source": "catalog_item",
+    "synonyms": [
+      "бейджик"
+    ]
+  },
+  {
+    "name": "Бейдж с окошечком, гравировка",
+    "type": "name_badges",
+    "source": "catalog_item",
+    "synonyms": [
+      "бейджик"
+    ]
+  },
+  {
+    "name": "Бейдж, сублимация",
+    "type": "name_badges",
+    "source": "catalog_item",
+    "synonyms": [
+      "бейджик"
+    ]
+  },
+  {
+    "name": "Магнитный винил + наклейка + ламинация + резка + накатка",
+    "type": "magnets",
+    "source": "catalog_item",
+    "synonyms": [
+      "Магнитный винил + наклейка + ламия + резка + накатка",
+      "Магнитный винил + наклейка + ламинацияия + резка + накатка",
+      "магнитик"
+    ]
+  },
+  {
+    "name": "Магнитный винил + Oracal 641 + нарезка/монтажка + монтаж + резка/накатка",
+    "type": "magnets",
+    "source": "catalog_item",
+    "synonyms": [
+      "магнитик"
+    ]
+  },
+  {
+    "name": "Магнитный винил + светоотражающая плёнка + нарезка/монтажка + монтаж + резка/накатка",
+    "type": "magnets",
+    "source": "catalog_item",
+    "synonyms": [
+      "Магнитный винил + светоотражающая пленка + нарезка/монтажка + монтаж + резка/накатка",
+      "магнитик"
+    ]
+  },
+  {
+    "name": "Календарь трёхблочный со стандартной сеткой",
+    "type": "three_block_calendars",
+    "source": "catalog_item",
+    "synonyms": [
+      "Календарь трехблочный со стандартной сеткой"
+    ]
+  },
+  {
+    "name": "Пластиковая карта с печатью; персонализация/нумерация/штрих-код включены",
+    "type": "discount_cards",
+    "source": "catalog_item",
+    "synonyms": [
+      "ПВХовая карта с печатью; персонализация/нумерация/штрих-код включены"
+    ]
+  },
+  {
+    "name": "Переплёт пружиной А3",
+    "type": "black_white_duplication",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет пружиной А3",
+      "брошюровка пружиной А3"
+    ]
+  },
+  {
+    "name": "Переплёт пружиной А4",
+    "type": "black_white_duplication",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет пружиной А4",
+      "брошюровка пружиной А4"
+    ]
+  },
+  {
+    "name": "Переплёт пружиной А5",
+    "type": "black_white_duplication",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет пружиной А5",
+      "брошюровка пружиной А5"
+    ]
+  },
+  {
+    "name": "Переплёт пружиной А6",
+    "type": "black_white_duplication",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет пружиной А6",
+      "брошюровка пружиной А6"
+    ]
+  },
+  {
+    "name": "Люверс",
+    "type": "black_white_duplication",
+    "source": "catalog_item",
+    "synonyms": [
+      "люв",
+      "люверсы"
+    ]
+  },
+  {
+    "name": "Фальцовка",
+    "type": "black_white_duplication",
+    "source": "catalog_item",
+    "synonyms": [
+      "фальц",
+      "сгиб"
+    ]
+  },
+  {
+    "name": "Печать 40 мм «Стандарт с гербом»",
+    "type": "stamps_seals",
+    "source": "catalog_item",
+    "synonyms": [
+      "Печать 40 мм Стандарт с гербом"
+    ]
+  },
+  {
+    "name": "Печать 42 мм металлическая, золочёная кнопка",
+    "type": "stamps_seals",
+    "source": "catalog_item",
+    "synonyms": [
+      "Печать 42 мм металлическая, золоченая кнопка"
+    ]
+  },
+  {
+    "name": "Печать 42 мм «Евро-2»",
+    "type": "stamps_seals",
+    "source": "catalog_item",
+    "synonyms": [
+      "Печать 42 мм Евро-2"
+    ]
+  },
+  {
+    "name": "Печать 42 мм «Магнетик»",
+    "type": "stamps_seals",
+    "source": "catalog_item",
+    "synonyms": [
+      "Печать 42 мм Магнетик"
+    ]
+  },
+  {
+    "name": "Переплёт журнала А4 твёрдый",
+    "type": "binding",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет журнала А4 твердый",
+      "брошюровка журнала А4 твёрдый"
+    ]
+  },
+  {
+    "name": "Переплёт журнала А4 мягкий",
+    "type": "binding",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет журнала А4 мягкий",
+      "брошюровка журнала А4 мягкий"
+    ]
+  },
+  {
+    "name": "Переплёт журнала А3 твёрдый",
+    "type": "binding",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет журнала А3 твердый",
+      "брошюровка журнала А3 твёрдый"
+    ]
+  },
+  {
+    "name": "Переплёт журнала А3 мягкий",
+    "type": "binding",
+    "source": "catalog_item",
+    "synonyms": [
+      "Переплет журнала А3 мягкий",
+      "брошюровка журнала А3 мягкий"
+    ]
+  },
+  {
+    "name": "Зачётка с внутренним блоком 80 г",
+    "type": "binding",
+    "source": "catalog_item",
+    "synonyms": [
+      "Зачетка с внутренним блоком 80 г"
+    ]
+  },
+  {
+    "name": "Дизайн кружки / футболки",
+    "type": "design",
+    "source": "catalog_item",
+    "synonyms": [
+      "кружка с нанесением",
+      "печать на кружке"
+    ]
+  },
+  {
+    "name": "Дизайн баннера: картинки + текст + лого",
+    "type": "design",
+    "source": "catalog_item",
+    "synonyms": [
+      "Дизайн банера: картинки + текст + лого"
+    ]
+  },
+  {
+    "name": "Дизайн баннера: текст / текст на авто",
+    "type": "design",
+    "source": "catalog_item",
+    "synonyms": [
+      "Дизайн банера: текст / текст на авто"
+    ]
+  },
+  {
+    "name": "Лайтбокс баннер",
+    "type": "lightboxes",
+    "source": "catalog_item",
+    "synonyms": [
+      "Лайтбокс банер"
+    ]
+  },
+  {
+    "name": "Лайтбокс с подклейкой / объёмными элементами",
+    "type": "lightboxes",
+    "source": "catalog_item",
+    "synonyms": [
+      "Лайтбокс с подклейкой / объемными элементами"
+    ]
+  },
+  {
+    "name": "Фотореле",
+    "type": "lightboxes",
+    "source": "catalog_item",
+    "synonyms": [
+      "датчик света"
+    ]
+  },
+  {
+    "name": "Фриз-подложка композит стандартных цветов",
+    "type": "volume_letters_quick",
+    "source": "catalog_item",
+    "synonyms": [
+      "Фриз-подложка АКП стандартных цветов",
+      "Фриз-подложка алюкобонд стандартных цветов"
+    ]
+  },
+  {
+    "name": "Фриз-подложка композит белый + Oracal",
+    "type": "volume_letters_quick",
+    "source": "catalog_item",
+    "synonyms": [
+      "Фриз-подложка АКП белый + Oracal",
+      "Фриз-подложка алюкобонд белый + Oracal"
+    ]
+  },
+  {
+    "name": "Фриз-подложка композит белый + интерьерная наклейка",
+    "type": "volume_letters_quick",
+    "source": "catalog_item",
+    "synonyms": [
+      "Фриз-подложка АКП белый + интерьерная наклейка",
+      "Фриз-подложка алюкобонд белый + интерьерная наклейка"
+    ]
+  },
+  {
+    "name": "Штендер рекламный металлический, 1300×670 мм",
+    "type": "a_stands",
+    "source": "catalog_item",
+    "synonyms": [
+      "рекламная раскладушка"
+    ]
+  },
+  {
+    "name": "Штендер меловой металлический, 1300×670 мм",
+    "type": "a_stands",
+    "source": "catalog_item",
+    "synonyms": [
+      "рекламная раскладушка"
+    ]
+  },
+  {
+    "name": "Штендер из бруска + баннер",
+    "type": "a_stands",
+    "source": "catalog_item",
+    "synonyms": [
+      "Штендер из бруска + банер",
+      "рекламная раскладушка"
+    ]
+  },
+  {
+    "name": "Композит 3 мм + Oracal 641",
+    "type": "flat_letters_spacers",
+    "source": "catalog_item",
+    "synonyms": [
+      "АКП 3 мм + Oracal 641",
+      "алюкобонд 3 мм + Oracal 641"
+    ]
+  },
+  {
+    "name": "Композит 3 мм + 720 dpi",
+    "type": "flat_letters_spacers",
+    "source": "catalog_item",
+    "synonyms": [
+      "АКП 3 мм + 720 dpi",
+      "алюкобонд 3 мм + 720 dpi"
+    ]
   }
 ]
