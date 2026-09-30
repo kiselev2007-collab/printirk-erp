@@ -176,7 +176,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='digital-2026-09-30.6';
+const CALC_VERSION='wide-2026-09-30.7';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -731,15 +731,31 @@ function addDetected(i){
 
  const area=x.w*x.h*x.qty,per=2*(x.w+x.h);
  if(x.type==='banner'){
-  name='Баннер '+(x.density||'')+' гр.';
-  const baseCost=x.density>=500?230:x.density>=400?205:180,basePrice=x.density>=500?980:x.density>=400?820:690;cost=area*baseCost;price=area*basePrice;details.push('печать '+area.toFixed(2)+' м²');
-  const lay=bannerLayout(x.w,x.h);if(lay.overflow>0){cost+=lay.overflow*baseCost*x.qty;price+=lay.overflow*basePrice*x.qty;details.push('перерасход '+lay.overflow.toFixed(2)+' м²')}
-  if(lay.seams>0){const len=lay.seams*lay.seamLength*x.qty;cost+=len*30;price+=len*76;details.push('склейка '+lay.seams+' шв.')}
-  if(x.grommetCount){const count=x.grommetCount*x.qty;cost+=count*7;price+=count*19;details.push('люверсы '+count+' шт. ('+x.grommetCount+' на изделие)')}
-  else if(x.grommet){const count=Math.ceil(per/(x.grommet/1000))*x.qty;cost+=count*7;price+=count*19;details.push('люверсы '+count+' шт. / '+x.grommet+' мм')}
-  if(x.wind){const pockets=Math.ceil(per/1.5)*x.qty;cost+=pockets*10;price+=pockets*24;details.push('ветровые карманы '+pockets+' шт.')}
-  if(x.reinforce){cost+=per*30*x.qty;price+=per*88*x.qty;details.push('усиление края')}
-  if(x.edgeCut){cost+=per*8*x.qty;price+=per*22*x.qty;details.push('резка в край')}
+  const d=x.density||300;
+  const tier=d>=500?'510':d>=400?'440':'300';
+  name='Баннер '+d+' гр.';
+  const bannerRates={
+    '300':{price:197,cost:85.2,special3x6:{price:2990,cost:1539.252}},
+    '440':{price:263,cost:117.2,special3x6:{price:4290,cost:2105.532}},
+    '510':{price:329,cost:148.1,special3x6:null}
+  };
+  const rate=bannerRates[tier];
+  const is3x6=(Math.abs(Math.min(x.w,x.h)-3)<0.01&&Math.abs(Math.max(x.w,x.h)-6)<0.01);
+  if(is3x6&&rate.special3x6){
+    price=rate.special3x6.price*x.qty;
+    cost=rate.special3x6.cost*x.qty;
+    details.push('стандартный баннер 3×6: '+money(rate.special3x6.price)+' / шт.');
+  }else{
+    cost=area*rate.cost;price=area*rate.price;details.push('печать '+area.toFixed(2)+' м² × '+money(rate.price)+'/м²');
+  }
+  const lay=bannerLayout(x.w,x.h);
+  if(!is3x6&&lay.overflow>0){cost+=lay.overflow*rate.cost*x.qty;price+=lay.overflow*rate.price*x.qty;details.push('перерасход '+lay.overflow.toFixed(2)+' м²')}
+  if(lay.seams>0){const len=lay.seams*lay.seamLength*x.qty;cost+=len*69;price+=len*76;details.push('склейка '+lay.seams+' шв. · '+len.toFixed(2)+' п.м.')}
+  if(x.grommetCount){const count=x.grommetCount*x.qty;cost+=count*17;price+=count*19;details.push('люверсы '+count+' шт. ('+x.grommetCount+' на изделие)')}
+  else if(x.grommet){const count=Math.ceil(per/(x.grommet/1000))*x.qty;cost+=count*17;price+=count*19;details.push('люверсы '+count+' шт. / '+x.grommet+' мм')}
+  if(x.wind){const pockets=Math.ceil(per/1.5)*x.qty;cost+=pockets*22;price+=pockets*24;details.push('ветровые карманы '+pockets+' шт.')}
+  if(x.reinforce){cost+=per*80*x.qty;price+=per*88*x.qty;details.push('усиление края с верёвкой '+(per*x.qty).toFixed(2)+' п.м.')}
+  if(x.edgeCut){cost+=per*20*x.qty;price+=per*22*x.qty;details.push('резка в край '+(per*x.qty).toFixed(2)+' п.м.')}
  } else {
   name='Плёнка '+(x.white?'белая · ':'')+x.dpi+' dpi';
   cost=area*170;price=area*(x.dpi>=720?900:720);details.push('печать '+area.toFixed(2)+' м² / '+x.dpi+' dpi');
