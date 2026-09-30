@@ -777,9 +777,9 @@ function addDetected(i){
    if(match.price==null){alert('Для ближайшего размера «'+match.row.name+'» нет готовой цены на тираж '+x.qty+' шт.');return}
    name='Наклейки '+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм · офсетная самоклейка';
    price=Math.max(Number(sec.minimum_order_rub||700),match.price);
-   cost=price/1.1;
-   details.push('ближайший прайсовый размер: '+match.row.name,'тираж '+x.qty+' шт. — '+money(price),'бумажная самоклейка · офсет');
-   autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+   cost=0;
+   details.push('ближайший прайсовый размер: '+match.row.name,'тираж '+x.qty+' шт. — '+money(price),'бумажная самоклейка · офсет','себестоимость: не задана в прайсе');
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
  if(x.type==='poly'){
@@ -888,7 +888,7 @@ function addDetected(i){
  }
  autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();
 }
-function renderAuto(){const disc=Math.max(0,n(document.getElementById('autoDiscount').value));document.getElementById('autoRows').innerHTML=autoItems.length?autoItems.map((x,i)=>'<tr><td><b>'+x.name+'</b><br><button class="flagbtn" onclick="openError('+i+')">⚑ Ошибка</button></td><td>'+x.details.join('<br>')+'</td><td class="right">'+money(x.cost)+'</td><td class="right">'+money(x.price)+'</td><td class="right"><b>'+money(x.price*(1-disc/100))+'</b></td><td><button class="btn danger" onclick="removeAuto('+i+')">×</button></td></tr>').join(''):'<tr><td colspan="6" class="note">Пока нет позиций. Введите заказ обычным текстом выше.</td></tr>';const p=autoItems.reduce((s,x)=>s+x.price,0),c=autoItems.reduce((s,x)=>s+x.cost,0),final=p*(1-disc/100);document.getElementById('autoPrice').textContent=money(p);document.getElementById('autoDiscRub').textContent=money(p-final);document.getElementById('autoCost').textContent=money(c);document.getElementById('autoMargin').textContent=money(final-c);document.getElementById('autoFinal').textContent=money(final)}
+function renderAuto(){const disc=Math.max(0,n(document.getElementById('autoDiscount').value)),allCostKnown=autoItems.every(x=>x.costKnown!==false);document.getElementById('autoRows').innerHTML=autoItems.length?autoItems.map((x,i)=>'<tr><td><b>'+x.name+'</b><br><button class="flagbtn" onclick="openError('+i+')">⚑ Ошибка</button></td><td>'+x.details.join('<br>')+'</td><td class="right">'+(x.costKnown===false?'—':money(x.cost))+'</td><td class="right">'+money(x.price)+'</td><td class="right"><b>'+money(x.price*(1-disc/100))+'</b></td><td><button class="btn danger" onclick="removeAuto('+i+')">×</button></td></tr>').join(''):'<tr><td colspan="6" class="note">Пока нет позиций. Введите заказ обычным текстом выше.</td></tr>';const p=autoItems.reduce((s,x)=>s+x.price,0),c=autoItems.reduce((s,x)=>s+(x.costKnown===false?0:x.cost),0),final=p*(1-disc/100);document.getElementById('autoPrice').textContent=money(p);document.getElementById('autoDiscRub').textContent=money(p-final);document.getElementById('autoCost').textContent=allCostKnown?money(c):'—';document.getElementById('autoMargin').textContent=allCostKnown?money(final-c):'—';document.getElementById('autoFinal').textContent=money(final)}
 function removeAuto(i){autoItems.splice(i,1);renderAuto()}
 let errorTarget=null,errorContext=null;
 function readErrors(){try{return JSON.parse(localStorage.getItem('printirk-calc-errors')||'[]')}catch(e){return []}}
