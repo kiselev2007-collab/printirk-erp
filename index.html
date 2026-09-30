@@ -176,26 +176,27 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='digital-2026-09-30.5';
+const CALC_VERSION='digital-2026-09-30.6';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
 let synonymRows=[];
-fetch('data/synonyms.json').then(r=>r.ok?r.json():[]).then(x=>synonymRows=x).catch(()=>{});
-function synonymMatch(t, kind){
-  const nt=norm(t);
-  return synonymRows.some(row=>{
-    const type=norm(row.type||'');
-    const name=norm(row.name||'');
+const synonymReady=fetch('data/synonyms.json').then(r=>r.ok?r.json():[]).then(x=>{synonymRows=x;return x}).catch(()=>[]);
+function synonymRowsFor(t,kind){
+  const nt=norm(t),nk=norm(kind);
+  return synonymRows.filter(row=>{
+    const type=norm(row.type||''),name=norm(row.name||'');
     let ok=false;
     if(kind==='film') ok=type.includes('плен')||name.includes('плен');
     else if(kind==='banner') ok=type.includes('баннер')||name.includes('баннер');
-    else ok=type===norm(kind);
+    else ok=type===nk;
     if(!ok)return false;
-    const candidates=[row.name,...(row.synonyms||[])].map(norm).filter(Boolean);
+    const candidates=[row.name,...(row.synonyms||[])].map(norm).filter(Boolean).sort((a,b)=>b.length-a.length);
     return candidates.some(s=>nt.includes(s));
   });
 }
+function synonymMatch(t,kind){return synonymRowsFor(t,kind).length>0}
+function synonymCanonical(t,kind){return synonymRowsFor(t,kind)[0]?.name||''}
 document.querySelectorAll('.nav button[data-view]').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.nav button[data-view]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(btn.dataset.view).classList.add('active');document.getElementById('topTitle').textContent=titles[btn.dataset.view]});
 
 let catalogData=null,catalogIndex=[];
@@ -366,21 +367,29 @@ function digitalPaperKeyFromText(t,density){
  if(/самокле|самоклей/.test(t))return 'Самоклеющаяся';
  if(/полилит/.test(t)&&/300/.test(t))return 'Полилит 300 мкр';
  if(/полилит/.test(t))return 'Полилит 150 мкр';
- if(/shyne|шайн|дизайнерск\w* карт/.test(t))return 'Дизайнерский картон SHYNE WHITE';
+ if(/shyne|шайн|дизайнерск[а-яё]*\s+карт|диз[.\s-]*картон/.test(t))return 'Дизайнерский картон SHYNE WHITE';
  if(/кальк/.test(t)&&/200/.test(t))return 'Калька A4 200';
  if(/кальк/.test(t)&&/150/.test(t))return 'Калька A4 150';
  if(/кальк/.test(t))return 'Калька A4';
  return String(density||90);
 }
 function digitalProductKind(t){
- if(/винн\w* карт/.test(t))return 'Винная карта';
+ const canonical=synonymCanonical(t,'digital_product');if(canonical)return canonical;
+ if(/винн[а-яё]*\s+карт/.test(t))return 'Винная карта';
+ if(/барн[а-яё]*\s+карт/.test(t))return 'Меню';
  if(/открытк/.test(t))return 'Открытка';
  if(/приглаш/.test(t))return 'Приглашение';
  if(/буклет/.test(t))return 'Буклет';
- if(/визит/.test(t))return 'Визитка';
+ if(/визит|визикт/.test(t))return 'Визитка';
  if(/флаер/.test(t))return 'Флаер';
  if(/меню/.test(t))return 'Меню';
- if(/сертификат/.test(t))return 'Сертификат';
+ if(/сертификат|серт/.test(t))return 'Сертификат';
+ if(/благодар/.test(t))return 'Благодарственное письмо';
+ if(/грамот/.test(t))return 'Грамота';
+ if(/купон/.test(t))return 'Купон';
+ if(/абонем|абоним/.test(t))return 'Абонемент';
+ if(/билет/.test(t))return 'Билет';
+ if(/вкладыш/.test(t))return 'Вкладыш';
  if(/бланк/.test(t))return 'Бланк';
  return 'Печатная продукция';
 }
@@ -404,7 +413,7 @@ function postFromText(t,qty){
   cutPasses:/резк/.test(t)?1:0,
   bigs:parseBigCount(t),
   folds:parseFoldCount(t),
-  round:/скруг|круглен/.test(t),
+  round:/скруг|круглен|закруг/.test(t),
   numbering:/нумерац|нумер/.test(t),
   staples:numAfter(/(\d+)\s*скоб/)||(/скоб/.test(t)?1:0),
   holes:numAfter(/(\d+)\s*(?:отверст|дыр)/)||(/дырокол|отверст/.test(t)?1:0),
@@ -416,12 +425,13 @@ function postFromText(t,qty){
  };
 }
 function parseDigitalLamination(t){
- if(/софт|soft\s*touch|силк/.test(t))return 'roll_soft';
+ if(/софт[\s-]*тач|софтач|soft[\s-]*touch|softtouch|силк[\s-]*тач|силктач|silk[\s-]*touch/.test(t))return 'roll_soft';
  if(/глиттер/.test(t))return 'roll_glitter';
- const packet=/пакет/.test(t),mic=(t.match(/(100|150|200)\s*(?:мк|мик)/)||[])[1];
- const matte=/матов/.test(t),gloss=/глян/.test(t);
+ const packet=/пакет|пакетк/.test(t),roll=/рулон|рулонк/.test(t),mic=(t.match(/(100|150|200)\s*(?:мк|мик)/)||[])[1];
+ const matte=/матов|мат[.\s-]*(?:лам|пакет|рулон)|матлам/.test(t);
+ const gloss=/глян|гл[.\s-]*(?:лам|пакет|рулон)/.test(t);
  if(packet||mic)return (mic||100)+'_'+(matte?'matte':'gloss');
- if(/ламинац|ламинир/.test(t))return matte?'roll_matte':'roll_gloss';
+ if(roll||/ламинац|ламинир|ламин/.test(t))return matte?'roll_matte':'roll_gloss';
  return 'none';
 }
 function digitalPostCalc(x,opt){
@@ -461,10 +471,15 @@ function digitalPostCalc(x,opt){
 }
 function parseLine(line){
  const t=norm(line);
- const qtyMatch=t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт|^(\d+)\s+(?=[a-zа-яё])/i);
+ const qtyMatch=t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт|^(\d+)\s+(?!(?:гр|г|мм|см|м|dpi|дпи|мкр)(?:\s|[.,]|$))(?=[a-zа-яё])/i);
  const qty=Number((qtyMatch||[]).slice(1).find(Boolean)||0);
  const densMatch=t.match(/\b(65|80|90|105|115|120|128|130|157|170|180|200|250|300|340|400|440|510)\s*(?:гр|г)(?=$|[^0-9a-zа-яё])/i);
- const density=Number((densMatch||[])[1]||0);
+ let density=Number((densMatch||[])[1]||0);
+ if(!density&&/баннер/.test(t)){
+   if(/китай/.test(t))density=300;
+   else if(/корея/.test(t))density=440;
+   else if(/европа/.test(t))density=510;
+ }
  const dpi=Number((t.match(/\b(240|360|720|1440)\s*(?:dpi|дпи)/)||[])[1]||240);
 
  const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
@@ -477,7 +492,7 @@ function parseLine(line){
  ){
    return {source:line,type:'quarter_calendar',qty:qty||1};
  }
- const namedPoly=/листовк|буклет|флаер|винн\w* карт|меню|визит|открытк|приглаш|сертификат|бланк/.test(t);
+ const namedPoly=/листовк|буклет|флаер|винн[а-яё]*\s+карт|барн[а-яё]*\s+карт|меню|визит|визикт|открытк|приглаш|сертификат|серт|бланк|благодар|грамот|купон|абонем|абоним|билет|вкладыш/.test(t) || synonymMatch(t,'digital_product');
  const genericPoly=!!(cm&&density&&qty&&(fm||parseSize(t)));
  const poly=namedPoly||genericPoly;
  const lamSoft=/софт|soft\s*touch|силк/.test(t);
@@ -506,9 +521,17 @@ function parseLine(line){
  if(/баннер|сетк/.test(t)||synonymMatch(t,'banner'))type='banner';
  else if(/пленк|плёнк|ораджет|orajet|оракал|oracal|самокле|наклей|винил/.test(t)||synonymMatch(t,'film'))type='film';
 
- const gm=t.match(/(?:люверс\w*|люв\.?)[^\d]{0,20}(\d{2,4})\s*мм|через\s*(\d{2,4})\s*мм/);
- const grommet=gm?Number(gm[1]||gm[2]):0;
- return {source:line,type,density,dpi,qty:qty||1,w:size.w,h:size.h,grommet,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк[^,;]*край/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов/.test(t),white:/\bбел/.test(t)};
+ const noGrommets=/без\s+люверс/.test(t);
+ const gm=t.match(/(?:люверс[а-яё]*|люв\.?)[^\d]{0,20}(\d{2,4})\s*мм|через\s*(\d{2,4})\s*мм/i);
+ const gcm=t.match(/(?:люверс[а-яё]*|люв\.?)[^\d]{0,20}(\d{1,2})\s*см|через\s*(\d{1,2})\s*см/i);
+ let grommet=noGrommets?0:(gm?Number(gm[1]||gm[2]):gcm?Number(gcm[1]||gcm[2])*10:0);
+ let grommetCount=0;
+ if(!noGrommets){
+   const gc=t.match(/(\d+)\s*люверс[а-яё]*/i);
+   if(gc)grommetCount=Number(gc[1]);
+   else if(/люверс[а-яё]*\s+по\s+углам|по\s+углам[^,;]*люверс/i.test(t))grommetCount=4;
+ }
+ return {source:line,type,density,dpi,qty:qty||1,w:size.w,h:size.h,grommet,grommetCount,noGrommets,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк|обрезк/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир|ламин/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов|матлам/.test(t),white:/(?:^|[^а-яё])бел[а-яё]*(?=$|[^а-яё])/.test(t)};
 }
 function bannerLayout(w,h){const roll=3;if(Math.min(w,h)<=roll)return {overflow:0,seams:0,seamLength:0,orientation:'без склейки'};function one(width,height){const parts=Math.ceil(width/roll),last=width-(parts-1)*roll,overflow=Math.max(0,(roll-last)*height);return {overflow,seams:parts-1,seamLength:height}}const a=one(w,h),b=one(h,w),best=b.overflow<a.overflow?b:a;best.orientation=b.overflow<a.overflow?'повёрнутая':'стандартная';return best}
 const offsetTirages=[500,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000];
@@ -537,7 +560,7 @@ function quarterCalendarTier(qty){
  return {unit:249,costUnit:226,label:'свыше 500 · ставка последней ступени'};
 }
 let detected=[],autoItems=[];
-function recognize(){const raw=document.getElementById('orderText').value;detected=splitPositions(raw).map(parseLine);renderDetected()}
+async function recognize(){await synonymReady;const raw=document.getElementById('orderText').value;detected=splitPositions(raw).map(parseLine);renderDetected()}
 function digitalPostUI(i,x){
  const p=x.post||(x.post=postFromText('',x.qty));
  const lam=[
@@ -634,6 +657,7 @@ function renderDetected(){
   let chips='<span class="chip">'+x.w.toFixed(3)+' × '+x.h.toFixed(3)+' м</span><span class="chip">'+x.qty+' шт.</span>';
   if(x.density)chips+='<span class="chip">'+x.density+' гр.</span>';if(x.dpi)chips+='<span class="chip">'+x.dpi+' dpi</span>';
   if(layout&&layout.seams)chips+='<span class="chip auto">Склейка автоматически: '+layout.seams+' шв.</span>';
+  if(x.grommetCount)chips+='<span class="chip auto">Люверсы: '+x.grommetCount+' шт./изд.</span>';
   let post='';
   if(x.type==='banner'){
    post='<div class="post"><div class="field"><label>Люверсы</label><select onchange="detected['+i+'].grommet=+this.value"><option value="0">Нет</option><option value="200" '+(x.grommet===200?'selected':'')+'>через 200 мм</option><option value="300" '+(x.grommet===300?'selected':'')+'>через 300 мм</option><option value="400" '+(x.grommet===400?'selected':'')+'>через 400 мм</option><option value="500" '+(x.grommet===500?'selected':'')+'>через 500 мм</option></select></div><label class="check"><input type="checkbox" '+(x.wind?'checked':'')+' onchange="detected['+i+'].wind=this.checked"> Ветровые карманы</label><label class="check"><input type="checkbox" '+(x.reinforce?'checked':'')+' onchange="detected['+i+'].reinforce=this.checked"> Усиление края</label><label class="check"><input type="checkbox" '+(x.edgeCut?'checked':'')+' onchange="detected['+i+'].edgeCut=this.checked"> Резка в край</label></div>';
@@ -711,7 +735,8 @@ function addDetected(i){
   const baseCost=x.density>=500?230:x.density>=400?205:180,basePrice=x.density>=500?980:x.density>=400?820:690;cost=area*baseCost;price=area*basePrice;details.push('печать '+area.toFixed(2)+' м²');
   const lay=bannerLayout(x.w,x.h);if(lay.overflow>0){cost+=lay.overflow*baseCost*x.qty;price+=lay.overflow*basePrice*x.qty;details.push('перерасход '+lay.overflow.toFixed(2)+' м²')}
   if(lay.seams>0){const len=lay.seams*lay.seamLength*x.qty;cost+=len*30;price+=len*76;details.push('склейка '+lay.seams+' шв.')}
-  if(x.grommet){const count=Math.ceil(per/(x.grommet/1000))*x.qty;cost+=count*7;price+=count*19;details.push('люверсы '+count+' шт. / '+x.grommet+' мм')}
+  if(x.grommetCount){const count=x.grommetCount*x.qty;cost+=count*7;price+=count*19;details.push('люверсы '+count+' шт. ('+x.grommetCount+' на изделие)')}
+  else if(x.grommet){const count=Math.ceil(per/(x.grommet/1000))*x.qty;cost+=count*7;price+=count*19;details.push('люверсы '+count+' шт. / '+x.grommet+' мм')}
   if(x.wind){const pockets=Math.ceil(per/1.5)*x.qty;cost+=pockets*10;price+=pockets*24;details.push('ветровые карманы '+pockets+' шт.')}
   if(x.reinforce){cost+=per*30*x.qty;price+=per*88*x.qty;details.push('усиление края')}
   if(x.edgeCut){cost+=per*8*x.qty;price+=per*22*x.qty;details.push('резка в край')}
