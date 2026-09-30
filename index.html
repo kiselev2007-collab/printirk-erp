@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='errors-fixed-2026-09-30.22';
+const CALC_VERSION='errors-duplication-2026-09-30.23';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -1090,7 +1090,20 @@ function parseLine(line){
  if(productId==='film_lightblock')invalidReason='На светоблокирующей плёнке не печатаем.';
  return {source:line,type,productId,density,dpi:effectiveDpi,qty:qty||1,w:size.w,h:size.h,grommet,grommetCount,noGrommets,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк|обрезк/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир|ламин/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов|матлам/.test(t),white:productId==='film_white',invalidReason};
 }
-function bannerLayout(w,h){const roll=3;if(Math.min(w,h)<=roll)return {overflow:0,seams:0,seamLength:0,orientation:'без склейки'};function one(width,height){const parts=Math.ceil(width/roll),last=width-(parts-1)*roll,overflow=Math.max(0,(roll-last)*height);return {overflow,seams:parts-1,seamLength:height}}const a=one(w,h),b=one(h,w),best=b.overflow<a.overflow?b:a;best.orientation=b.overflow<a.overflow?'повёрнутая':'стандартная';return best}
+function bannerLayout(w,h){
+ const roll=3;
+ // Если одна сторона помещается в рулон, печатаем без шва по этой стороне и считаем незапечатанную ширину рулона перерасходом ткани.
+ if(Math.min(w,h)<=roll){
+   const width=Math.min(w,h),height=Math.max(w,h);
+   return {overflow:Math.max(0,(roll-width)*height),seams:0,seamLength:0,orientation:'без склейки'};
+ }
+ function one(width,height){
+   const parts=Math.ceil(width/roll),last=width-(parts-1)*roll,overflow=Math.max(0,(roll-last)*height);
+   return {overflow,seams:parts-1,seamLength:height};
+ }
+ const a=one(w,h),b=one(h,w),best=(b.overflow<a.overflow||(b.overflow===a.overflow&&b.seams<a.seams))?b:a;
+ best.orientation=best===b?'повёрнутая':'стандартная';return best;
+}
 const offsetTirages=[500,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000];
 const offsetPrices={
  '4+0':{
@@ -1393,13 +1406,21 @@ function addDetected(i){
  const details=[];let cost=0,price=0,name='';
 
  if(x.type==='duplication'){
-   const min=x.format==='A3'?50:100;
-   if(x.qty<min){alert('Тиражирование '+x.format+': минимум '+min+' листов.');return}
-   const rate=duplicationRate(x.format,x.sides,x.qty),paper=duplicationPaperSale(x.format,x.paper);
+   if(x.invalidReason){alert(x.invalidReason);return}
+   const lay=duplicationLayout(x);if(!lay){alert('Не удаётся разложить готовый размер на выбранный печатный лист.');return}
+   const min=x.printSheet==='A4'?100:50;
+   if(lay.printSheets<min){alert('Тиражирование на '+x.printSheet+': минимум '+min+' печатных листов. Сейчас '+lay.printSheets+'.');return}
+   const rate=duplicationRate(x.printSheet,x.sides,lay.printSheets),paper=duplicationPaperSale(x.printSheet,x.paper);
    if(rate==null||!paper){alert('Не найдена ставка тиражирования или материала.');return}
-   const print=x.qty*rate,mat=x.qty*paper;price=print+mat;cost=0;
-   name='Тиражирование '+x.format+' · '+(x.sides===2?'1+1':'1+0')+' · '+x.paper;
-   details.push('печать: '+x.qty+' лист. × '+money(rate)+' — '+money(print),'материал: '+x.qty+' лист. × '+money(paper)+' — '+money(mat),'итого — '+money(price));
+   const print=lay.printSheets*rate,mat=lay.printSheets*paper,cut=lay.cutSale||0;
+   price=print+mat+cut;cost=0;
+   const size=duplicationFinishedSize(x);
+   name='Тиражирование '+size.label+' · '+(x.sides===2?'1+1':'1+0')+' · '+x.paper;
+   details.push('раскладка на '+x.printSheet+': '+lay.up+' шт./лист → '+lay.printSheets+' печатн. лист.');
+   details.push('печать: '+lay.printSheets+' лист. × '+money(rate)+' — '+money(print));
+   details.push('материал: '+lay.printSheets+' лист. × '+money(paper)+' — '+money(mat));
+   if(cut)details.push('резка: '+lay.cutPasses+' рез. × '+lay.cutBatches+' пакет(а) × '+money(60)+' — '+money(cut));
+   details.push('итого — '+money(price));
    autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
@@ -1492,6 +1513,43 @@ function addDetected(i){
    if(x.glue)details.push('склейка: '+blocks+' блок. × '+money(cfg.glue_per_block||60)+' — '+money(glue));
    if(x.numbering)details.push('нумерация: '+q+' × '+money(cfg.numbering_unit||0.66)+' — '+money(numbering));
    details.push('итого по калькулятору самокопирующихся бланков — '+money(price),'себестоимость отдельно не задана в этом блоке прайса');
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
+ if(x.type==='interior_flex'){
+   if(x.invalidReason){alert(x.invalidReason);return}
+   const prod=interiorProductByName(/печать на флексе/),rate=Number(prod?.price||950),area=x.w*x.h*x.qty;
+   price=area*rate;cost=0;name='Печать на флексе '+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм';
+   details.push(area.toFixed(4)+' м² × '+money(rate)+'/м² — '+money(price));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
+ if(x.type==='apparel_application'){
+   if(x.invalidReason){alert(x.invalidReason);return}
+   if(!x.method){alert('Выберите технологию нанесения на футболку.');return}
+   const fmt=apparelFormatForSize(x.wmm,x.hmm);if(!fmt){alert('Размер нанесения больше A3 — требуется ручной расчёт.');return}
+   let unit=null;
+   if(x.method==='flex')unit=apparelTierPrice(apparelSection()?.flex?.prices?.[fmt],x.qty);
+   else unit=apparelTierPrice(apparelSection()?.sublimation?.application?.[fmt],x.qty);
+   if(unit==null){alert('Для выбранного формата/тиража нет цены нанесения.');return}
+   const raw=unit*x.qty,min=Number(apparelSection()?.minimum_order_rub||0);
+   price=Math.max(min,raw);cost=0;
+   name='Нанесение на футболку · '+(x.method==='flex'?'флекс 1 цвет':'сублимация')+' · '+fmt;
+   details.push('размер '+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм → тариф '+fmt);
+   details.push(x.qty+' шт. × '+money(unit)+' — '+money(raw));
+   if(price>raw)details.push('минимальный заказ — '+money(price));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
+ if(x.type==='laser_cut'){
+   if(x.invalidReason){alert(x.invalidReason);return}
+   if(!x.meters||!x.material){alert('Для лазерной резки укажите материал и погонные метры.');return}
+   if(x.meters>100){alert('В прайсе лазерная резка указана до 100 п.м. Свыше 100 п.м. — ручное согласование.');return}
+   const r=laserRate(x.material);if(!r){alert('Не найдена ставка лазерной резки.');return}
+   const raw=x.meters*Number(r.price),sale=Math.max(Number(laserSection().minimum_order_rub||500),raw);
+   price=sale;cost=0;name='Лазерная резка · '+x.material;
+   details.push(x.meters.toFixed(2)+' п.м. × '+money(r.price)+'/п.м. — '+money(raw));
+   if(sale>raw)details.push('минимальный заказ — '+money(sale));
    autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
