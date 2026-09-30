@@ -3577,7 +3577,47 @@
           "unit": "шт",
           "price": 0.44
         }
-      ]
+      ],
+      "self_copy_forms": {
+        "source_sheet": "3.3 Тиражирование",
+        "source_block": "Калькулятор самокопирующихся бланков",
+        "aliases": [
+          "БСО",
+          "самокопирка",
+          "самокопирующиеся бланки",
+          "самокопирующийся бланк",
+          "копирка"
+        ],
+        "paper_A4_sale": {
+          "top": 4,
+          "middle": 5,
+          "bottom": 4
+        },
+        "calculator_A6": {
+          "note": "Компоненты из отдельного калькулятора самокопирующихся бланков на вкладке 3.3.",
+          "format": "A6",
+          "default_block_size_sets": 50,
+          "top_paper_unit": 2.1,
+          "middle_paper_unit": 3.8,
+          "bottom_paper_unit": 4,
+          "black_white_print_unit": 0.43,
+          "collation_unit": 0.44,
+          "cutting_passes": 6,
+          "cutting_unit": 20,
+          "glue_per_block": 60,
+          "numbering_unit": 0.66
+        },
+        "postprocessing": {
+          "collation": 1.2,
+          "glue_block": 60,
+          "numbering": 0.66,
+          "cut_up_to_250_sheets": 60
+        },
+        "notes": [
+          "Для А6 базовый автоматический расчет повторяет отдельный калькулятор самокопирующихся бланков из исходной вкладки.",
+          "Смешанная печать по слоям (например верх 1+0, низ 1+1) требует отдельного выбора и пока не должна угадываться автоматически."
+        ]
+      }
     },
     "notepads": {
       "source_sheet": "3.8 Блокноты",
