@@ -289,7 +289,10 @@ const priceMenuGroups=[
 
 function renderPriceMenu(){
  const grid=document.getElementById('priceMenuGrid');if(!grid)return;
- grid.innerHTML=priceMenuGroups.map(g=>'<div class="card category"><h3>'+g.title+'</h3><ul>'+g.items.map(([k,label])=>'<li><button class="catbtn" data-section="'+k+'" onclick="openCatalogSection(\''+k+'\',this)">'+label+'</button></li>').join('')+'</ul></div>').join('');
+ grid.innerHTML=priceMenuGroups.map(g=>'<div class="card category"><h3>'+g.title+'</h3><ul>'+g.items.map(([k,label])=>{
+   const count=catalogData?.sections?.[k]?managerPriceRows(catalogData.sections[k],k).length:0;
+   return '<li><button class="catbtn" data-section="'+k+'" onclick="openCatalogSection(\''+k+'\',this)"><span>'+label+'</span>'+(count?'<small style="float:right;margin-right:14px;color:#a0a9b7">'+count+'</small>':'')+'</button></li>';
+ }).join('')+'</ul></div>').join('');
 }
 function prettyKey(k){
  const map={price:'Цена',prices:'Цены',cost:'Себестоимость',costs:'Себестоимость',minimum:'Минимум',minimum_order_rub:'Минимальный заказ',minimum_item_rub:'Минимум за изделие',unit:'Ед. изм.',range:'Диапазон',qty:'Тираж',tirage:'Тираж',from:'От',to:'До',one_side:'Односторонний',two_side:'Двухсторонний',simple:'Простая поверхность',complex:'Сложная поверхность',total:'Итого',canvas:'Холст',frame:'Рама',base:'Основа',pockets:'Карманы',extras:'Дополнительно'};
@@ -403,29 +406,54 @@ function relatedCostForPricePath(sec,path){
  for(const p of candidates){const v=valueAtPath(sec,p);if(typeof v==='number'&&isFinite(v)&&v>0)return money(v)}
  return '';
 }
-function managerPriceName(name,key,path){
+function managerContextForPath(sec,path,key){
+ const p=String(path||'');
+ let parentPath=p;
+ parentPath=parentPath.replace(/\.prices(?:\..*)?$/,'').replace(/\.tiers(?:\..*)?$/,'').replace(/\.standard_sizes(?:\..*)?$/,'').replace(/\.examples(?:\..*)?$/,'');
+ const parent=valueAtPath(sec,parentPath);
+ if(parent&&typeof parent==='object'){
+   if(parent.name)return parent.name;
+   if(parent.product)return parent.product;
+   if(parent.product_family)return parent.product_family;
+   if(Array.isArray(parent.size_mm)&&parent.size_mm.length>=2){
+     return parent.size_mm[0]+'×'+parent.size_mm[1]+' мм'+(parent.color?' · '+parent.color:'')+(parent.print?' · '+parent.print:'');
+   }
+ }
+ if(key==='folders'){
+   if(p.startsWith('inhouse.'))return sec?.inhouse?.product||'Папка А4 · своё производство';
+   if(p.startsWith('reseller.4+0'))return 'Папка А4 · перезаказ · 4+0';
+   if(p.startsWith('reseller.4+4'))return 'Папка А4 · перезаказ · 4+4';
+ }
+ if(key==='thermal_transfer_labels'&&p.startsWith('standard.'))return 'Термотрансферная этикетка 29×19 мм · 1+0';
+ return '';
+}
+function managerPriceName(name,key,path,sec){
  let s=String(name||'').replace(/\s+·\s+цены$/i,'').replace(/^Цены\s+·\s+/i,'');
+ const ctx=managerContextForPath(sec,path,key);
+ const qty=(s.match(/(\d[\d\s]*)\s*шт\.?/i)||[])[0]||'';
+ if(ctx&&(/tiers|prices|products\[|standard\./i.test(String(path||'')))&&( /tiers|prices|products\[|standard/i.test(s)||!s.trim()))s=ctx+(qty?' · '+qty:'');
  s=s.replace(/base_90gsm/gi,'Бумага 90 г').replace(/digital/gi,'Цифра').replace(/offset/gi,'Офсет');
- s=s.replace(/prices?/gi,'').replace(/\s+·\s+·/g,' · ').replace(/^\s*·\s*|\s*·\s*$/g,'').trim();
- if(!s)s=sectionNames[key]||'Позиция';
+ s=s.replace(/\binhouse\b/gi,'Своё производство').replace(/\breseller\b/gi,'Перезаказ').replace(/\btiers\b/gi,'').replace(/\bprices?\b/gi,'');
+ s=s.replace(/\[[0-9]+\]/g,'').replace(/\s+·\s+·/g,' · ').replace(/^\s*·\s*|\s*·\s*$/g,'').replace(/\s{2,}/g,' ').trim();
+ if(!s)s=ctx||sectionNames[key]||'Позиция';
  return s;
 }
 function managerPriceConditions(cond,path){
  let s=String(cond||'').trim();
- s=s.replace(/pieces_per_SRA3/gi,'На листе SRA3').replace(/minimum/gi,'Минимум');
- return s;
+ s=s.replace(/pieces_per_SRA3/gi,'На листе SRA3').replace(/minimum/gi,'Минимум').replace(/\bunit\b/gi,'');
+ return s.replace(/\s{2,}/g,' ').trim();
 }
 function managerPriceRows(sec,key){
- const internalPath=/custom_calculation|paper_addons|paper_cost|material_cost|raw_material|reference_cost|price_audit|technology_rules|production_rules|calculator_|calculator\.|consumables|print_cost_reference|sheet_material_reference|costs_per_m2|\.costs(?:\.|$)|supplier|source/i;
+ const internalPath=/custom_calculation|paper_addons|paper_cost|material_cost|raw_material|reference_cost|price_audit|technology_rules|production_rules|calculator_|calculator\.|consumables|print_cost_reference|sheet_material_reference|costs_per_m2|\.costs(?:\.|$)|supplier|source|minimum_order|minimum_item/i;
  const internalName=/себестоимость|стоимость материала|сырь|чернил|бумаг[аи]\s+(?:а3|а4).*себест/i;
  const seen=new Set(),out=[];
  for(const r of sectionTariffRows(sec,key)){
    if(!r.price)continue;
    if(internalPath.test(r.path||''))continue;
    if(internalName.test(r.name||''))continue;
-   let name=managerPriceName(r.name,key,r.path),conditions=managerPriceConditions(r.conditions,r.path);
-   // Technical minimums belong in the section header, not as products.
-   if(/минимальн(?:ый|ая)|minimum/i.test(name)&&!/заказ|издел/i.test(name))continue;
+   // priceTree also creates technical tuple rows; keep the clean tier row produced by walk().
+   if(/prices?\[\d+\]/i.test(r.path||'')&&(String(r.price).match(/₽/g)||[]).length>1)continue;
+   let name=managerPriceName(r.name,key,r.path,sec),conditions=managerPriceConditions(r.conditions,r.path);
    let cost=r.cost||relatedCostForPricePath(sec,r.path);
    const sig=[name,conditions,r.price].join('|');if(seen.has(sig))continue;seen.add(sig);
    out.push({name,conditions,price:r.price,cost});
