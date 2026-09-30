@@ -685,7 +685,8 @@ function renderDetected(){
 
   if(x.type==='poly'){
     const tech=x.technology||'',sides=x.color==='4+4'?'двусторонняя':'односторонняя',opt=tech==='digital'?bestDigitalOption(x):null;
-    let chips='<span class="chip">'+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+'</span><span class="chip">'+x.color+' · '+sides+'</span><span class="chip">'+x.density+' гр.</span><span class="chip">'+x.qty+' шт.</span>';
+    const materialChip=/^\d+$/.test(String(x.paperKey||''))?(x.density+' гр.'):(x.paperKey||x.density+' гр.');
+    let chips='<span class="chip">'+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+'</span><span class="chip">'+x.color+' · '+sides+'</span><span class="chip">'+materialChip+'</span><span class="chip">'+x.qty+' шт.</span>';
     if(tech==='digital'&&x.technologyReason) chips+='<span class="chip auto">Автовыбор: цифра · '+x.technologyReason+'</span>';
     if(tech==='digital'){
       if(opt)chips+='<span class="chip auto">'+opt.name+': '+opt.up+' шт./лист · '+opt.sheets+' печатн. лист.</span>';
@@ -714,6 +715,15 @@ function renderDetected(){
   if(x.type==='poster'){
     let chips='<span class="chip">'+x.wmm.toFixed(0)+'×'+x.hmm.toFixed(0)+' мм</span><span class="chip">'+x.dpi+' dpi</span><span class="chip">'+x.qty+' шт.</span>';
     return '<div class="detected-card"><div class="detected-head"><div><b>Постерная бумага</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><label class="check"><input type="checkbox" '+(x.edgeCut?'checked':'')+' onchange="detected['+i+'].edgeCut=this.checked"> Резка в край</label><label class="check"><input type="checkbox" '+(x.laminate?'checked':'')+' onchange="detected['+i+'].laminate=this.checked"> Ламинация широкоформатная</label></div></div>';
+  }
+
+  if(x.type==='offset_sticker'){
+    const sec=paperStickerSection().offset||{},match=nearestOffsetStickerSize(x.wmm,x.hmm,x.qty);
+    let chips='<span class="chip">'+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм</span><span class="chip">'+x.qty+' шт.</span><span class="chip">бумажная самоклейка</span><span class="chip auto">офсет</span>';
+    if(match.row)chips+='<span class="chip '+(match.price!=null?'auto':'warn')+'">ближайший размер: '+match.row.name+'</span>';
+    if(!x.qty||x.qty<(sec.minimum_qty||500))chips+='<span class="chip warn">минимальный тираж '+(sec.minimum_qty||500)+' шт.</span>';
+    else if(match.price==null)chips+='<span class="chip warn">для этого тиража нет готовой цены</span>';
+    return '<div class="detected-card"><div class="detected-head"><div><b>Наклейки на бумажной самоклейке — офсет</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div></div>';
   }
 
   if(x.type==='offset'){
@@ -758,6 +768,20 @@ function addDetected(i){
    autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
+ if(x.type==='offset_sticker'){
+   const sec=paperStickerSection().offset||{};
+   if(!x.wmm||!x.hmm||!x.qty){alert('Для офсетных наклеек нужны размер и тираж.');return}
+   if(x.qty<(sec.minimum_qty||500)){alert('Офсетные наклейки: минимальный тираж '+(sec.minimum_qty||500)+' шт.');return}
+   const match=nearestOffsetStickerSize(x.wmm,x.hmm,x.qty);
+   if(!match.row){alert('Не найден ближайший размер наклейки в прайсе «Самоклей».');return}
+   if(match.price==null){alert('Для ближайшего размера «'+match.row.name+'» нет готовой цены на тираж '+x.qty+' шт.');return}
+   name='Наклейки '+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм · офсетная самоклейка';
+   price=Math.max(Number(sec.minimum_order_rub||700),match.price);
+   cost=price/1.1;
+   details.push('ближайший прайсовый размер: '+match.row.name,'тираж '+x.qty+' шт. — '+money(price),'бумажная самоклейка · офсет');
+   autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
  if(x.type==='poly'){
    if(!x.technology){alert('Выберите технологию: цифра или офсет.');return}
    name=(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+' '+x.color+' '+x.density+' гр.';
@@ -767,7 +791,7 @@ function addDetected(i){
        const inv=digitalOptions(x).find(o=>o.invalid);
        alert(inv?.invalid||'Не удаётся рассчитать цифровую печать: размер/тираж вне текущих таблиц SRA4/SRA3.');return;
      }
-     name=(x.productKind||'Полиграфия')+' '+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+' '+x.color+' '+x.density+' гр. · цифра';
+     name=(x.productKind||'Полиграфия')+' '+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+' '+x.color+' '+(/^\d+$/.test(String(x.paperKey||''))?(x.density+' гр.'):(x.paperKey||x.density+' гр.'))+' · цифра';
      price=opt.sale;cost=opt.cost;
      details.push('цифровая печать '+x.color+(x.color==='4+4'?' · 2 стороны':' · 1 сторона'),opt.name+': '+opt.up+' шт./лист','печатных листов: '+opt.sheets,'материал: '+(x.paperKey||x.density+' гр.'),'печать + материал: '+money(opt.sale));
      const pp=digitalPostCalc(x,opt);price+=pp.sale;cost+=pp.cost;details.push(...pp.parts);
