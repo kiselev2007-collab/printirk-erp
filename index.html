@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='errors-duplication-2026-09-30.24';
+const CALC_VERSION='journal-sticker-separate-2026-09-30.25';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -908,9 +908,8 @@ function parseLine(line){
    const sides=/1\s*\+\s*0|односторон/.test(t)?1:2;
    const numbering=/нумерац|пронумер/.test(t);
    const stitching=/прошив/.test(t);
-   const coverSticker=/наклейк|этикет/.test(t);
-   const ss=coverSticker?journalStickerSize(t):null;
-   return {source:line,type:'journal',format:jf?'A'+jf:'A4',qty:qty||1,leaves,bindingType,sides,paper:duplicationPaperName(t),printSheet:'A3',numbering,stitching,coverSticker,stickerWmm:ss?.wmm||0,stickerHmm:ss?.hmm||0,invalidReason:!leaves?'Укажите количество листов в журнале':''};
+   const coverStickerMentioned=/наклейк|этикет/.test(t);
+   return {source:line,type:'journal',format:jf?'A'+jf:'A4',qty:qty||1,leaves,bindingType,sides,paper:duplicationPaperName(t),printSheet:'A3',numbering,stitching,coverStickerMentioned,invalidReason:!leaves?'Укажите количество листов в журнале':''};
  }
 
  const isBindingDoc=/удостовер|студенческ|корочк|зач[её]тк/.test(t);
@@ -1205,7 +1204,7 @@ function renderDetected(){
   if(x.type==='journal'){
     const papers=['Снегурочка 80','Газетная 48','Архангельск 60-65','80 г рулон','Офсетная 160','Ватман'].map(v=>'<option '+(x.paper===v?'selected':'')+'>'+v+'</option>').join('');
     let chips='<span class="chip">'+x.format+'</span><span class="chip">'+x.leaves+' листов</span><span class="chip">'+x.qty+' шт.</span><span class="chip">'+(x.sides===2?'ЧБ 1+1':'ЧБ 1+0')+'</span>';
-    if(x.numbering)chips+='<span class="chip auto">нумерация</span>';if(x.stitching)chips+='<span class="chip auto">прошивка</span>';if(x.coverSticker)chips+='<span class="chip auto">наклейка на обложку</span>';
+    if(x.numbering)chips+='<span class="chip auto">нумерация</span>';if(x.stitching)chips+='<span class="chip auto">прошивка</span>';if(x.coverStickerMentioned)chips+='<span class="chip">наклейка — отдельная позиция</span>';
     if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
     return '<div class="detected-card"><div class="detected-head"><div><b>Журнал · тиражирование + переплёт</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
       '<div class="field"><label>Формат журнала</label><select onchange="detected['+i+'].format=this.value;if(this.value===\'A3\')detected['+i+'].printSheet=\'A3\';renderDetected()"><option '+(x.format==='A4'?'selected':'')+'>A4</option><option '+(x.format==='A3'?'selected':'')+'>A3</option></select></div>'+
@@ -1215,8 +1214,7 @@ function renderDetected(){
       '<div class="field"><label>Переплёт</label><select onchange="detected['+i+'].bindingType=this.value;renderDetected()"><option value="" '+(!x.bindingType?'selected':'')+'>Выберите</option><option value="hard" '+(x.bindingType==='hard'?'selected':'')+'>Твёрдый</option><option value="soft" '+(x.bindingType==='soft'?'selected':'')+'>Мягкий</option></select></div>'+
       '<label class="check"><input type="checkbox" '+(x.numbering?'checked':'')+' onchange="detected['+i+'].numbering=this.checked;renderDetected()"> Нумерация</label>'+
       '<label class="check"><input type="checkbox" '+(x.stitching?'checked':'')+' onchange="detected['+i+'].stitching=this.checked;renderDetected()"> Прошивка</label>'+
-      '<label class="check"><input type="checkbox" '+(x.coverSticker?'checked':'')+' onchange="detected['+i+'].coverSticker=this.checked;renderDetected()"> Наклейка на обложку</label>'+
-      (x.coverSticker?'<div class="field"><label>Ширина наклейки, мм</label><input type="number" min="1" value="'+(x.stickerWmm||'')+'" onchange="detected['+i+'].stickerWmm=+this.value"></div><div class="field"><label>Высота наклейки, мм</label><input type="number" min="1" value="'+(x.stickerHmm||'')+'" onchange="detected['+i+'].stickerHmm=+this.value"></div>':'')+
+      (x.coverStickerMentioned?'<div class="note" style="grid-column:1/-1">Наклейка на обложку считается отдельной позицией прайса и в стоимость журнала не входит.</div>':'')+
       '</div></div>';
   }
 
@@ -1446,13 +1444,7 @@ function addDetected(i){
    details.push('переплёт '+x.format+' '+(x.bindingType==='hard'?'твёрдый':'мягкий')+' · тариф до '+bt.tier+' листов: '+money(bt.price)+' × '+x.qty+' — '+money(bindSale));
    if(x.numbering)details.push('нумерация: '+numberPages+' стр. × '+money(bindingSection()?.journal_binding?.numbering_per_page||.66)+' — '+money(numberingSale));
    if(x.stitching)details.push('прошивка: '+x.qty+' × '+money(bindingSection()?.journal_binding?.stitching_per_journal||19)+' — '+money(stitchSale));
-   if(x.coverSticker){
-     if(!x.stickerWmm||!x.stickerHmm){alert('Для наклейки на обложку укажите размер.');return}
-     const sx={format:'',color:'4+0',density:90,paperKey:'Самоклеющаяся',qty:x.qty,w:x.stickerWmm/1000,h:x.stickerHmm/1000,wmm:x.stickerWmm,hmm:x.stickerHmm,technology:'digital',lamination:'none',post:{cutPasses:1}};
-     const opt=bestDigitalOption(sx);if(!opt){alert('Не удалось рассчитать наклейку на обложку.');return}
-     const pp=digitalPostCalc(sx,opt),stick=opt.sale+pp.sale;price+=stick;
-     details.push('наклейка на обложку '+x.stickerWmm+'×'+x.stickerHmm+' мм: '+money(stick));
-   }
+   if(x.coverStickerMentioned)details.push('наклейка на обложку — отдельная позиция прайса, в этот расчёт не включена');
    autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
