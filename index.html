@@ -15,7 +15,20 @@ main{min-width:0}.top{height:70px;background:#fff;border-bottom:1px solid var(--
 .head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}.head h1{margin:0;font-size:28px}.head p{margin:6px 0 0;color:var(--muted)}.badge{display:inline-flex;padding:7px 10px;background:#fff;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px}
 .searchbar{display:flex;gap:10px;background:#fff;border:1px solid var(--line);padding:10px;border-radius:15px;box-shadow:var(--shadow);margin-bottom:20px}.searchbar input{flex:1;border:0;outline:none;padding:8px 10px;font-size:16px}
 .btn{border:1px solid var(--line);background:#fff;padding:10px 14px;border-radius:10px;font-weight:650;color:#4c5a6e}.btn.primary{background:var(--pink);border-color:var(--pink);color:#fff}.btn.danger{color:var(--red)}
-.grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:14px}.card,.panel{background:#fff;border:1px solid var(--line);border-radius:15px;padding:16px;box-shadow:var(--shadow)}.category h3,.panel h2{margin:0 0 12px}.category h3{font-size:16px}.panel h2{font-size:17px}.category ul{list-style:none;padding:0;margin:0;display:grid;gap:7px}.category li{padding:0;border-radius:9px;color:#526177;font-size:13px}.category li:hover{background:#f7f9fc}.category .catbtn{width:100%;border:0;background:transparent;text-align:left;padding:8px 9px;border-radius:9px;color:#526177;font-size:13px}.category .catbtn:hover{background:#f7f9fc;color:#172033}.category .catbtn.active{background:var(--pink2);color:#c92c70;font-weight:800}.price-detail{margin-top:18px;scroll-margin-top:90px}.price-detail-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.price-detail h2{margin:0}.price-source{font-size:11px;color:var(--muted);margin-top:4px}.price-warning{margin:12px 0;padding:10px 12px;border-radius:10px;background:#fff5e8;color:#9a6117;font-size:12px}.price-table-wrap{overflow:auto;margin-top:12px}.price-table{min-width:760px}.price-table td:first-child{font-weight:650}.price-table .path{color:var(--muted);font-size:10px;display:block;margin-top:3px}.price-empty{padding:18px 0;color:var(--muted)}.category li.subhead{font-weight:800;color:#24334a;background:#f6f8fb;margin-top:6px}.category li.digital::after{content:"ЦИФРА";float:right;font-size:9px;background:#eaf1ff;color:#2564d8;padding:3px 6px;border-radius:999px}.category li.offset::after{content:"ОФСЕТ";float:right;font-size:9px;background:#fff2e2;color:#b56e14;padding:3px 6px;border-radius:999px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:14px}.card,.panel{background:#fff;border:1px solid var(--line);border-radius:15px;padding:16px;box-shadow:var(--shadow)}.category h3,.panel h2{margin:0 0 12px}.category h3{font-size:16px}.panel h2{font-size:17px}.category ul{list-style:none;padding:0;margin:0;display:grid;gap:7px}.category li{padding:0;border-radius:9px;color:#526177;font-size:13px}.category li:hover{background:#f7f9fc}.category .catbtn{width:100%;border:0;background:transparent;text-align:left;padding:8px 9px;border-radius:9px;color:#526177;font-size:13px}.category .catbtn:hover{background:#f7f9fc;color:#172033}.category .catbtn.active{background:var(--pink2);color:#c92c70;font-weight:800}.price-detail{margin-top:18px;scroll-margin-top:90px}.price-detail-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.price-detail h2{margin:0}.price-source{font-size:11px;color:var(--muted);margin-top:4px}.price-warning{margin:12px 0;padding:10px 12px;border-radius:10px;background:#fff5e8;color:#9a6117;font-size:12px}.price-table-wrap{overflow:auto;margin-top:12px}.price-table{min-width:760px}.price-table td:first-child{font-weight:650}.price-table .path{color:var(--muted);font-size:10px;display:block;margin-top:3px}.price-empty{padding:18px 0;color:var(--muted)}
+.price-meta{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 2px}.price-meta:empty{display:none}
+.price-pill{display:inline-flex;align-items:center;padding:6px 9px;border:1px solid var(--line);background:#f8fafc;border-radius:999px;font-size:11px;color:#647187}
+.manager-price-table{min-width:620px;border-collapse:separate;border-spacing:0}
+.manager-price-table thead th{font-size:11px;color:#8a95a7;text-transform:uppercase;letter-spacing:.03em;background:#f8fafc;border-bottom:1px solid var(--line)}
+.manager-price-table tbody tr:hover{background:#fbfcfe}
+.manager-price-table td{padding-top:13px;padding-bottom:13px;vertical-align:top}
+.manager-price-name{font-weight:750;color:#1e293b;line-height:1.3}
+.manager-price-cond{font-size:12px;color:#758196;margin-top:4px;line-height:1.4}
+.manager-price-sale{font-weight:850;font-size:15px;color:#172033;white-space:nowrap}
+.manager-price-cost{display:block;margin-top:4px;font-size:10px;font-weight:500;color:#a1a9b6;white-space:nowrap}
+.price-detail{padding:20px}.price-detail-head{padding-bottom:4px}
+.category .catbtn{transition:.15s ease}.category .catbtn:after{content:'›';float:right;color:#c8cfda;font-size:16px;line-height:14px}.category .catbtn:hover:after,.category .catbtn.active:after{color:#ef4f91}
+.category li.subhead{font-weight:800;color:#24334a;background:#f6f8fb;margin-top:6px}.category li.digital::after{content:"ЦИФРА";float:right;font-size:9px;background:#eaf1ff;color:#2564d8;padding:3px 6px;border-radius:999px}.category li.offset::after{content:"ОФСЕТ";float:right;font-size:9px;background:#fff2e2;color:#b56e14;padding:3px 6px;border-radius:999px}
 .results{display:none;margin-bottom:18px}.results.active{display:block}.result-row{display:grid;grid-template-columns:1fr 140px 140px 120px;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.result-row small{color:var(--muted)}.money{font-weight:800;text-align:right}
 .two{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);gap:16px}.formgrid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;outline:none}.field textarea{min-height:118px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{border-color:#ff99c1;box-shadow:0 0 0 3px #fff0f6}
 .recognizer{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:stretch}.recognizer textarea{min-height:110px;border:1px solid var(--line);border-radius:12px;padding:12px;resize:vertical;outline:none}.example{padding:10px 12px;background:#f8fafc;border:1px dashed #dbe2ea;border-radius:10px;color:#6b788b;font-size:12px;line-height:1.55;margin-top:10px}
@@ -47,17 +60,17 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 <div class="content">
 
 <section class="view active" id="priceView">
-<div class="head"><div><h1>Прайс</h1><p>Все категории продукции, продажные цены и себестоимость.</p></div></div>
+<div class="head"><div><h1>Прайс</h1><p>Актуальные цены по категориям продукции.</p></div></div>
 <div class="searchbar"><input id="catalogSearch" placeholder="Найти: листовки, баннер 510, ПВХ 5 мм, кружки..."><button class="btn primary" id="searchBtn">Найти</button></div>
 <div class="panel results" id="searchResults"><h2>Результаты поиска</h2><div id="resultRows"></div></div>
 <div class="grid" id="priceMenuGrid"></div>
 <div class="panel price-detail" id="priceSectionDetail" style="display:none">
   <div class="price-detail-head">
-    <div><h2 id="priceSectionTitle">Раздел прайса</h2><div class="price-source" id="priceSectionSource"></div></div>
+    <div><h2 id="priceSectionTitle">Раздел прайса</h2></div>
     <button class="btn" id="closePriceSection">Закрыть</button>
   </div>
   <div id="priceSectionWarning"></div>
-  <div class="price-table-wrap"><table class="price-table"><thead><tr><th>Позиция / тариф</th><th>Условия</th><th class="right">Себестоимость</th><th class="right">Цена</th></tr></thead><tbody id="priceSectionRows"></tbody></table></div>
+  <div id="priceSectionMeta" class="price-meta"></div><div class="price-table-wrap"><table class="price-table manager-price-table"><thead><tr><th>Позиция / условия</th><th class="right">Цена</th></tr></thead><tbody id="priceSectionRows"></tbody></table></div>
 </div>
 </section>
 
@@ -166,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='duplication-binding-2026-09-30.17';
+const CALC_VERSION='price-ui-2026-09-30.18';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -281,8 +294,7 @@ const priceMenuGroups=[
   ['three_block_calendars','Календари'],['laser_sublimation','Лазер / сублимация']
  ]},
  {title:'7. Упаковка и этикетки',items:[['digital_packaging','Цифровая упаковка'],['paper_labels','Бумажные этикетки'],['thermal_transfer_labels','Термотрансферные этикетки'],['pvd_bags','Пакеты ПВД']]},
- {title:'Сезонные предложения',items:[['seasonal_new_year','Новогоднее / выставочное КП']]},
- {title:'Материалы и себестоимость',items:[['sheet_material_reference','Листовые материалы'],['consumables_reference','Расходные материалы'],['print_cost_reference','Себестоимость печати']]}
+ {title:'Сезонные предложения',items:[['seasonal_new_year','Новогоднее / выставочное КП']]}
 ];
 
 function renderPriceMenu(){
@@ -385,16 +397,72 @@ function sectionTariffRows(sec,key=''){
  walk(sec,'');
  return rows;
 }
+
+function valueAtPath(root,path){
+ if(!path)return null;
+ const parts=String(path).replace(/\[(\d+)\]/g,'.$1').split('.').filter(Boolean);
+ let v=root;for(const p of parts){if(v==null)return null;v=v[p]}return v;
+}
+function relatedCostForPricePath(sec,path){
+ if(!path)return '';
+ const candidates=[];
+ if(path.includes('.prices.'))candidates.push(path.replace('.prices.','.costs_per_m2.'),path.replace('.prices.','.costs.'),path.replace('.prices.','.cost_prices.'));
+ if(path.endsWith('.price'))candidates.push(path.replace(/\.price$/,'.cost'));
+ if(path.includes('.price_per_m2'))candidates.push(path.replace('.price_per_m2','.cost_per_m2'));
+ if(path.includes('.unit_price'))candidates.push(path.replace('.unit_price','.unit_cost'));
+ for(const p of candidates){const v=valueAtPath(sec,p);if(typeof v==='number'&&isFinite(v)&&v>0)return money(v)}
+ return '';
+}
+function managerPriceName(name,key,path){
+ let s=String(name||'').replace(/\s+·\s+цены$/i,'').replace(/^Цены\s+·\s+/i,'');
+ s=s.replace(/base_90gsm/gi,'Бумага 90 г').replace(/digital/gi,'Цифра').replace(/offset/gi,'Офсет');
+ s=s.replace(/prices?/gi,'').replace(/\s+·\s+·/g,' · ').replace(/^\s*·\s*|\s*·\s*$/g,'').trim();
+ if(!s)s=sectionNames[key]||'Позиция';
+ return s;
+}
+function managerPriceConditions(cond,path){
+ let s=String(cond||'').trim();
+ s=s.replace(/pieces_per_SRA3/gi,'На листе SRA3').replace(/minimum/gi,'Минимум');
+ return s;
+}
+function managerPriceRows(sec,key){
+ const internalPath=/custom_calculation|paper_addons|paper_cost|material_cost|raw_material|reference_cost|price_audit|technology_rules|production_rules|calculator_|calculator\.|consumables|print_cost_reference|sheet_material_reference|costs_per_m2|\.costs(?:\.|$)|supplier|source/i;
+ const internalName=/себестоимость|стоимость материала|сырь|чернил|бумаг[аи]\s+(?:а3|а4).*себест/i;
+ const seen=new Set(),out=[];
+ for(const r of sectionTariffRows(sec,key)){
+   if(!r.price)continue;
+   if(internalPath.test(r.path||''))continue;
+   if(internalName.test(r.name||''))continue;
+   let name=managerPriceName(r.name,key,r.path),conditions=managerPriceConditions(r.conditions,r.path);
+   // Technical minimums belong in the section header, not as products.
+   if(/минимальн(?:ый|ая)|minimum/i.test(name)&&!/заказ|издел/i.test(name))continue;
+   let cost=r.cost||relatedCostForPricePath(sec,r.path);
+   const sig=[name,conditions,r.price].join('|');if(seen.has(sig))continue;seen.add(sig);
+   out.push({name,conditions,price:r.price,cost});
+ }
+ return out;
+}
+function managerSectionMeta(sec){
+ const a=[];
+ if(sec?.minimum_order_rub)a.push('Минимальный заказ: '+money(sec.minimum_order_rub));
+ if(sec?.minimum_item_rub)a.push('Минимум за изделие: '+money(sec.minimum_item_rub));
+ if(sec?.minimum_order_qty)a.push('Минимальный тираж: '+sec.minimum_order_qty+' шт.');
+ if(sec?.minimum_qty)a.push('Минимальный тираж: '+sec.minimum_qty+' шт.');
+ return [...new Set(a)];
+}
 function openCatalogSection(key,button){
  const sec=catalogData?.sections?.[key],box=document.getElementById('priceSectionDetail');if(!sec||!box)return;
  document.querySelectorAll('.catbtn').forEach(b=>b.classList.toggle('active',b===button));
  document.getElementById('priceSectionTitle').textContent=sectionNames[key]||sec.name||key;
- const src=sec.source_sheet||sec.source_sheets||'';
- document.getElementById('priceSectionSource').textContent=Array.isArray(src)?'Источник: '+src.join(' / '):(src?'Источник: '+src:'');
- const warn=[sec.warning,sec.note,Array.isArray(sec.notes)?sec.notes.join(' · '):''].filter(Boolean).join(' ');
+ const meta=managerSectionMeta(sec);
+ document.getElementById('priceSectionMeta').innerHTML=meta.map(x=>'<span class="price-pill">'+x+'</span>').join('');
+ const warn=sec.warning||((sec.status&&/historical|needs_price|inactive/i.test(sec.status))?sec.note:'')||'';
  document.getElementById('priceSectionWarning').innerHTML=warn?'<div class="price-warning">'+warn+'</div>':'';
- const rows=sectionTariffRows(sec,key);
- document.getElementById('priceSectionRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+r.name+(r.path?'<span class="path">'+r.path+'</span>':'')+'</td><td>'+r.conditions+'</td><td class="right">'+(r.cost||'—')+'</td><td class="right"><b>'+(r.price||'—')+'</b></td></tr>').join(''):'<tr><td colspan="4" class="price-empty">В разделе нет подтверждённых числовых цен. Смотрите примечание или исходную вкладку прайса.</td></tr>';
+ const rows=managerPriceRows(sec,key);
+ document.getElementById('priceSectionRows').innerHTML=rows.length?rows.map(r=>
+   '<tr><td><div class="manager-price-name">'+r.name+'</div>'+(r.conditions?'<div class="manager-price-cond">'+r.conditions+'</div>':'')+'</td>'+
+   '<td class="right"><span class="manager-price-sale">'+r.price+'</span>'+(r.cost?'<small class="manager-price-cost">себестоимость '+r.cost+'</small>':'')+'</td></tr>'
+ ).join(''):'<tr><td colspan="2" class="price-empty">В этом разделе нет отдельной фиксированной цены для просмотра. Позиция рассчитывается по параметрам в автоматическом расчёте.</td></tr>';
  box.style.display='block';box.scrollIntoView({behavior:'smooth',block:'start'});
 }
 document.getElementById('closePriceSection').onclick=()=>{document.getElementById('priceSectionDetail').style.display='none';document.querySelectorAll('.catbtn').forEach(b=>b.classList.remove('active'))};
