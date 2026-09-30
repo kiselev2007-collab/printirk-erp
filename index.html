@@ -203,11 +203,18 @@ const sectionNames={
  sign_plates:'Таблички',uv_print:'УФ-печать',plotter_cut:'Плоттерная резка',evacuations:'Планы эвакуации',presswall:'Прессволы',
  milling_laser:'Фрезеровка / лазер',constructions_installation:'Конструкции / монтаж',digital_packaging:'Цифровая упаковка',
  paper_labels:'Бумажные этикетки',thermal_transfer_labels:'Термотрансферные этикетки',lanyards:'Ланъярды',mugs:'Кружки',
- apparel:'Футболки / текстиль',pens:'Ручки',badges_round:'Значки',name_badges:'Бейджи',magnets:'Магниты',
+ apparel:'Футболки / текстиль',pens:'Ручки',badges_round:'Значки',name_badges:'Бейджи',magnets:'Магниты',flags:'Флаги',
  three_block_calendars:'Календари трёхблочные',diaries_engraving:'Ежедневники',pvd_bags:'Пакеты ПВД',wardrobe_tags:'Гардеробные номерки',
  discount_cards:'Дисконтные карты',folders:'Папки',black_white_duplication:'Тиражирование',notepads:'Блокноты',forms_stationery:'Бланочная продукция',
  stamps_seals:'Печати и штампы',binding:'Переплётные работы',design:'Дизайн',award_plaques:'Плакетки',
- lightboxes:'Световые короба',volume_letters_quick:'Объёмные буквы · быстрый расчёт',a_stands:'Штендеры',flat_letters_spacers:'Необъёмные буквы'
+ lightboxes:'Световые короба',volume_letters_quick:'Объёмные буквы · быстрый расчёт',a_stands:'Штендеры',flat_letters_spacers:'Необъёмные буквы',
+ paper_stickers:'Наклейки на бумажной самоклейке',sheet_material_reference:'Листовые материалы',
+ pharmacy_crosses:'Аптечные кресты',vehicle_graphics:'Наклейки / оклейка авто',nonstandard_structures:'Нестандартные конструкции',
+ canvas_frames:'Холсты и рамы',neon_signs:'Неоновые вывески',stands_examples:'Стенды',chalk_price_tags:'Меловые ценники',
+ placemats:'Плейсметы',foil_stamping:'Тиснение фольгой',doorhangers:'Дорхенгеры',shelf_talkers:'Шелфтокеры / ценникодержатели',
+ wobblers:'Воблеры',acrylic_displays:'Тейбл-тенты / визитницы',uv_dtf:'УФ-ДТФ',interior_print:'Интерьерная печать',
+ laser_sublimation:'Лазерная гравировка / сублимация',seasonal_new_year:'Новогоднее / выставочное КП',
+ consumables_reference:'Расходные материалы',print_cost_reference:'Себестоимость печати'
 };
 function collectPrices(v,out=[]){
  if(v==null)return out;
@@ -252,7 +259,121 @@ function buildCatalogIndex(data){
    walk(sec);
  });
 }
-const catalogReady=fetch('data/catalog_v1.json').then(r=>r.json()).then(data=>{catalogData=data;buildCatalogIndex(data);const b=document.querySelector('.top .badge');if(b)b.textContent='Прайс · '+catalogIndex.length+' позиций в поиске';return data}).catch(()=>null);
+
+const priceMenuGroups=[
+ {title:'1. Наружная реклама',items:[
+  ['wide_format','Баннеры / наклейки / постеры'],['lightboxes','Световые короба'],['volume_letters_quick','Объёмные буквы'],['pharmacy_crosses','Аптечные кресты'],
+  ['sign_plates','Таблички'],['evacuations','Планы эвакуации'],['vehicle_graphics','Наклейки на авто'],['a_stands','Штендеры'],['nonstandard_structures','Нестандартные конструкции'],
+  ['flat_letters_spacers','Необъёмные буквы на держателях'],['milling_laser','Фрезеровка / лазер'],['canvas_frames','Холсты и рамы'],['constructions_installation','Конструкции / монтажи'],
+  ['neon_signs','Неоновые вывески'],['uv_print','УФ-печать'],['uv_dtf','УФ-ДТФ']
+ ]},
+ {title:'2. Интерьерная реклама',items:[['presswall','Press-wall'],['stands_examples','Стенды'],['plotter_cut','Плоттерная нарезка'],['chalk_price_tags','Меловые ценники'],['interior_print','Интерьерная печать']]},
+ {title:'3. Полиграфия',items:[
+  ['digital_print','Цифровая печать / услуги копицентра'],['business_cards','Визитки'],['offset_leaflets','Офсетные листовки / буклеты'],['black_white_duplication','Тиражирование / БСО'],
+  ['placemats','Плейсметы'],['folders','Папки'],['notepads','Блокноты'],['forms_stationery','Бланочная продукция'],['binding','Переплётные работы'],['foil_stamping','Тиснение фольгой'],
+  ['design','Дизайн'],['paper_stickers','Наклейки на бумажной самоклейке'],['doorhangers','Дорхенгеры']
+ ]},
+ {title:'4. Оргстекло / ПЭТ / POS',items:[['shelf_talkers','Шелфтокеры / ценникодержатели'],['wobblers','Воблеры'],['acrylic_displays','Визитницы / тейбл-тенты']]},
+ {title:'5. Печати и штампы',items:[['stamps_seals','Печати / штампы / оснастки']]},
+ {title:'6. Сувенирная продукция',items:[
+  ['apparel','Футболки / текстиль'],['mugs','Кружки'],['pens','Ручки'],['badges_round','Значки'],['award_plaques','Кубки / плакетки'],['magnets','Магниты'],['flags','Флаги'],
+  ['diaries_engraving','Ежедневники'],['lanyards','Ланъярды'],['name_badges','Бейджи'],['wardrobe_tags','Гардеробные номерки'],['discount_cards','Дисконтные карты'],
+  ['three_block_calendars','Календари'],['laser_sublimation','Лазер / сублимация']
+ ]},
+ {title:'7. Упаковка и этикетки',items:[['digital_packaging','Цифровая упаковка'],['paper_labels','Бумажные этикетки'],['thermal_transfer_labels','Термотрансферные этикетки'],['pvd_bags','Пакеты ПВД']]},
+ {title:'Сезонные предложения',items:[['seasonal_new_year','Новогоднее / выставочное КП']]},
+ {title:'Материалы и себестоимость',items:[['sheet_material_reference','Листовые материалы'],['consumables_reference','Расходные материалы'],['print_cost_reference','Себестоимость печати']]}
+];
+
+function renderPriceMenu(){
+ const grid=document.getElementById('priceMenuGrid');if(!grid)return;
+ grid.innerHTML=priceMenuGroups.map(g=>'<div class="card category"><h3>'+g.title+'</h3><ul>'+g.items.map(([k,label])=>'<li><button class="catbtn" data-section="'+k+'" onclick="openCatalogSection(\''+k+'\',this)">'+label+'</button></li>').join('')+'</ul></div>').join('');
+}
+function prettyKey(k){
+ const map={price:'Цена',prices:'Цены',cost:'Себестоимость',costs:'Себестоимость',minimum:'Минимум',minimum_order_rub:'Минимальный заказ',minimum_item_rub:'Минимум за изделие',unit:'Ед. изм.',range:'Диапазон',qty:'Тираж',tirage:'Тираж',from:'От',to:'До',one_side:'Односторонний',two_side:'Двухсторонний',simple:'Простая поверхность',complex:'Сложная поверхность',total:'Итого',canvas:'Холст',frame:'Рама',base:'Основа',pockets:'Карманы',extras:'Дополнительно'};
+ return map[k]||String(k).replaceAll('_',' ');
+}
+function formatCatalogValue(v,key=''){
+ if(v==null||v==='')return '';
+ if(typeof v==='number'){
+   if(/percent/i.test(key))return v+'%';
+   if(/coefficient/i.test(key))return '×'+v;
+   if(/price|cost|rub|total|minimum|base|pockets|canvas|frame|sale/i.test(key))return money(v);
+   return String(v).replace('.',',');
+ }
+ if(typeof v==='boolean')return v?'Да':'Нет';
+ if(Array.isArray(v))return v.map(x=>typeof x==='number'?money(x):String(x)).join(' · ');
+ return String(v);
+}
+function sectionTariffRows(sec){
+ const rows=[],seen=new Set(),rootTirages=Array.isArray(sec?.tirages)?sec.tirages:null;
+ const add=(name,conditions,cost,price,path)=>{const sig=[name,conditions,cost,price,path].join('|');if(seen.has(sig))return;seen.add(sig);rows.push({name,conditions:conditions||'',cost:cost||'',price:price||'',path:path||''})};
+ function walk(v,path=''){
+   if(v==null)return;
+   if(Array.isArray(v)){
+     if(v.length&&v.every(x=>Array.isArray(x)&&x.length>=2&&typeof x[0]==='number'&&typeof x[1]==='number')){v.forEach(x=>add((path||'Тираж')+' · '+x[0]+' шт.','','',money(x[1]),path));return}
+     v.forEach((x,i)=>walk(x,path+'['+i+']'));return;
+   }
+   if(typeof v!=='object')return;
+   const name=v.name||v.product||v.product_family||v.material||v.range||v.label||'';
+   const unit=v.unit?String(v.unit):'',conditions=[];
+   let price='',cost='';
+   if(v.price_from!=null&&v.price_to!=null)price='от '+money(v.price_from)+' до '+money(v.price_to);
+   else if(v.price!=null)price=money(v.price);
+   else if(v.unit_price!=null)price=money(v.unit_price);
+   else if(v.price_per_item!=null)price=money(v.price_per_item);
+   else if(v.price_per_cm2!=null)price=money(v.price_per_cm2);
+   else if(v.price_per_m2!=null)price=money(v.price_per_m2);
+   else if(v.total!=null&&typeof v.total==='number')price=money(v.total);
+   if(v.cost!=null)cost=money(v.cost);
+   else if(v.unit_cost!=null)cost=money(v.unit_cost);
+   else if(v.cost_per_m2!=null)cost=money(v.cost_per_m2);
+   else if(v.material_cost_per_m2!=null)cost=money(v.material_cost_per_m2);
+   ['qty','range','from','to','format','size','year','pieces_per_SRA3','minimum','percent','coefficient'].forEach(k=>{if(v[k]!=null)conditions.push(prettyKey(k)+': '+formatCatalogValue(v[k],k))});
+   if(unit)conditions.push(unit);
+   if(name&&(price||cost||conditions.length))add(name,conditions.join(' · '),cost,price,path);
+
+   for(const [k,x] of Object.entries(v)){
+     if(Array.isArray(x)&&x.length&&x.every(n=>typeof n==='number')&&/(price|cost|total|simple|complex)/i.test(k)){
+       const tiers=Array.isArray(v.tirages)&&v.tirages.length===x.length?v.tirages:(rootTirages&&rootTirages.length===x.length?rootTirages:null);
+       if(tiers)x.forEach((n,i)=>add((name?name+' · ':'')+prettyKey(k)+' · '+tiers[i]+' шт.','','',/cost/i.test(k)?money(n):'',/cost/i.test(k)?'':money(n),path+'.'+k));
+       else add((name?name+' · ':'')+prettyKey(k),'','',formatCatalogValue(x,k),path+'.'+k);
+     }
+   }
+   if(v.prices&&typeof v.prices==='object'&&!Array.isArray(v.prices)){
+     for(const [pk,pv] of Object.entries(v.prices)){
+       if(typeof pv==='number')add((name?name+' · ':'')+pk,'','',money(pv),path+'.prices.'+pk);
+       else if(Array.isArray(pv)&&pv.every(n=>typeof n==='number')){
+         const tiers=Array.isArray(v.tirages)&&v.tirages.length===pv.length?v.tirages:(rootTirages&&rootTirages.length===pv.length?rootTirages:null);
+         if(tiers)pv.forEach((n,i)=>add((name?name+' · ':'')+pk+' · '+tiers[i]+' шт.','','',money(n),path+'.prices.'+pk));
+         else add((name?name+' · ':'')+pk,'','',formatCatalogValue(pv,'prices'),path+'.prices.'+pk);
+       }
+     }
+   }
+   for(const [k,x] of Object.entries(v)){
+     if(['source_sheet','source_sheets','note','notes','warning','status','price','cost','unit_price','price_per_item','price_per_cm2','price_per_m2','price_from','price_to','total','prices','costs'].includes(k))continue;
+     if(x&&typeof x==='object')walk(x,path?path+'.'+k:k);
+   }
+ }
+ walk(sec,'');
+ return rows;
+}
+function openCatalogSection(key,button){
+ const sec=catalogData?.sections?.[key],box=document.getElementById('priceSectionDetail');if(!sec||!box)return;
+ document.querySelectorAll('.catbtn').forEach(b=>b.classList.toggle('active',b===button));
+ document.getElementById('priceSectionTitle').textContent=sectionNames[key]||sec.name||key;
+ const src=sec.source_sheet||sec.source_sheets||'';
+ document.getElementById('priceSectionSource').textContent=Array.isArray(src)?'Источник: '+src.join(' / '):(src?'Источник: '+src:'');
+ const warn=[sec.warning,sec.note,Array.isArray(sec.notes)?sec.notes.join(' · '):''].filter(Boolean).join(' ');
+ document.getElementById('priceSectionWarning').innerHTML=warn?'<div class="price-warning">'+warn+'</div>':'';
+ const rows=sectionTariffRows(sec);
+ document.getElementById('priceSectionRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+r.name+(r.path?'<span class="path">'+r.path+'</span>':'')+'</td><td>'+r.conditions+'</td><td class="right">'+(r.cost||'—')+'</td><td class="right"><b>'+(r.price||'—')+'</b></td></tr>').join(''):'<tr><td colspan="4" class="price-empty">В разделе нет подтверждённых числовых цен. Смотрите примечание или исходную вкладку прайса.</td></tr>';
+ box.style.display='block';box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+document.getElementById('closePriceSection').onclick=()=>{document.getElementById('priceSectionDetail').style.display='none';document.querySelectorAll('.catbtn').forEach(b=>b.classList.remove('active'))};
+renderPriceMenu();
+
+const catalogReady=fetch('data/catalog_v1.json').then(r=>r.json()).then(data=>{catalogData=data;buildCatalogIndex(data);renderPriceMenu();const b=document.querySelector('.top .badge');if(b)b.textContent='Прайс · '+catalogIndex.length+' позиций в поиске';return data}).catch(()=>null);
 function searchCatalog(){
  const q=norm(document.getElementById('catalogSearch').value),box=document.getElementById('searchResults'),rows=document.getElementById('resultRows');
  if(!q){box.classList.remove('active');return}
