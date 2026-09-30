@@ -283,7 +283,7 @@ function splitPositions(raw){
   let s=String(raw||'').replace(/\r/g,'\n');
   s=s.replace(/(?:^|\n|\s)(\d{1,2})[.)]\s+/g,'\n$1. ');
   const parts=s.split(/\n+|;\s*|\s+\+\s+/).map(x=>x.replace(/^\s*(?:[-•]|\d{1,2}[.)])\s*/,'').trim()).filter(Boolean);
-  const hasSize=x=>/(?:\d+(?:[.,]\d+)?\s*(?:мм|см|м)?\s*[xх×]\s*\d+(?:[.,]\d+)?|(?:а|a)\s*[3-7])/i.test(x);
+  const hasSize=x=>/\d+(?:[.,]\d+)?\s*(?:мм|см|м)?\s*[xх×]\s*\d+(?:[.,]\d+)?/i.test(x)||/(?:^|[^0-9a-zа-яё])(?:а|a)\s*[3-7](?=$|[^0-9a-zа-яё])/i.test(x);
   const materialHeader=x=>/баннер|банер|пл[её]н|перф|ораджет|orajet|оракал|oracal|самокле|постер|плакат|беклит|бэклит|backlit/i.test(x);
   const ownMaterial=x=>materialHeader(x);
   const out=[];let context='';
