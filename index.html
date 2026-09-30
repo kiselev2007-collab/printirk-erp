@@ -933,11 +933,19 @@ function parseLine(line){
 
  const isDuplication=/тиражирован|duplo|дупло|romayor|ромайор/.test(t);
  if(isDuplication){
-   const df=(t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([34])(?=$|[^0-9a-zа-яё])/i)||[])[1];
+   const explicitPrintA4=/(?:печат\w*\s+(?:на\s+)?а\s*4|на\s+а\s*4\s+лист|печатн\w*\s+лист\w*\s+а\s*4)/i.test(t);
+   const explicitPrintA3=/(?:печат\w*\s+(?:на\s+)?а\s*3|на\s+а\s*3\s+лист|печатн\w*\s+лист\w*\s+а\s*3)/i.test(t);
+   const printSheet=explicitPrintA4?'A4':'A3';
+   const cleaned=t.replace(/(?:печат\w*\s+(?:на\s+)?а\s*[34]|на\s+а\s*[34]\s+лист\w*|печатн\w*\s+лист\w*\s+а\s*[34])/gi,' ');
+   const df=(cleaned.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i)||[])[1];
+   const custom=parseSize(t);
    const qm=t.match(/(\d+)\s*(?:лист(?:ов|а)?|л\.?)/i);
-   const sheets=qty||Number(qm?.[1]||0);
+   const pieces=qty||Number(qm?.[1]||0);
    const sides=/1\s*\+\s*1|2\s*сторон|двухсторон/.test(t)?2:1;
-   return {source:line,type:'duplication',format:df?'A'+df:'',qty:sheets,sides,paper:duplicationPaperName(t),invalidReason:!df?'Укажите формат A3 или A4':(!sheets?'Укажите количество листов':'')};
+   const finishedFormat=df?'A'+df:'';
+   const z=finishedFormat&&formatsMM[finishedFormat]?formatsMM[finishedFormat]:null;
+   const wmm=custom?.wmm||(z?.[0]||0),hmm=custom?.hmm||(z?.[1]||0);
+   return {source:line,type:'duplication',finishedFormat:custom?'':finishedFormat,wmm,hmm,w:wmm/1000,h:hmm/1000,qty:pieces,sides,paper:duplicationPaperName(t),printSheet:(finishedFormat==='A3'?'A3':printSheet),invalidReason:(!wmm||!hmm)?'Укажите готовый формат или размер':(!pieces?'Укажите тираж':'')};
  }
 
  const isSelfCopy=/(?:^|[^а-яё])бсо(?=$|[^а-яё])|самокопир|копирк[а-яё]*/i.test(t);
@@ -952,6 +960,19 @@ function parseLine(line){
    return {source:line,type:'self_copy_form',format:fmt?'A'+fmt:'',qty:qty||0,layers,glue,blockSize:Number(blockM?.[1]||50),numbering,mixedSides,invalidReason:!fmt?'Укажите формат БСО':(!qty?'Укажите тираж БСО':(layers!==2?'Автоматический расчёт сейчас подтверждён только для 2 слоёв':(mixedSides?'Разная печать по слоям требует отдельного расчёта':'')))};
  }
 
+ const interiorFlex=/печать\s+на\s+флекс|флекс\s*[- ]?печать/.test(t);
+ if(interiorFlex){
+   const sz=parseSize(t);
+   return {source:line,type:'interior_flex',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,invalidReason:!sz?'Укажите размер печати на флексе':''};
+ }
+
+ const apparelApply=/нанесен[а-яё]*\s+на\s+футболк|печать\s+на\s+футболк/.test(t);
+ if(apparelApply){
+   const sz=parseSize(t);
+   const method=/сублим/.test(t)?'sublimation':(/флекс|термофлекс/.test(t)?'flex':'');
+   return {source:line,type:'apparel_application',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,method,invalidReason:!sz?'Укажите размер нанесения':''};
+ }
+
  const noPrintMaterial=/без\s+печати|без\s+нанесения|только\s+материал/.test(t);
  const rawMaterialName=noPrintMaterial?signMaterialFromText(t):'';
  if(noPrintMaterial&&rawMaterialName){
@@ -961,9 +982,11 @@ function parseLine(line){
  }
 
  const isSign=/таблич|табл\.?(?:\s|$)|шильд/.test(t);
- const hasMilling=/фрезеров|фрезерн|фрезеровк/.test(t);
+ const hasLaser=/лазер|лазерн[а-яё]*\s+резк/.test(t);
+ const cutMaterialMention=/акрил|пвх|пластик|пэт|pet|вивак|композит|акп|мдф|фанер/.test(t);
+ const hasMilling=/фрезеров|фрезерн|раскрой/.test(t)||(/(?:^|\s)резк[а-яё]*\s+/.test(t)&&cutMaterialMention&&!hasLaser);
  if(isSign){
-   const signSize=parseSize(t),material=signMaterialFromText(t),millingMeters=hasMilling?parseLinearMeters(t):0;
+   const signSize=parseSize(t),material=signMaterialFromText(t),millingMeters=hasMilling?(parseLinearMeters(t)||rectPerimeterM(signSize,qty||1)):0;
    let technology='film_720';
    if(/уф|uv/.test(t))technology='uv_standard';
    else if(/1440\s*(?:dpi|дпи)/.test(t))technology='film_1440';
@@ -974,12 +997,17 @@ function parseLine(line){
    else if(/двухсторон|2х\s*сторон|2-х\s*сторон/.test(t))technology='film_double_720_lam';
    return {source:line,type:'sign_plate',qty:qty||1,material,w:signSize?.w||0,h:signSize?.h||0,wmm:signSize?.wmm||0,hmm:signSize?.hmm||0,technology,millingRequested:hasMilling,millingMeters,millingMaterial:millingMaterialFromText(t,material),invalidReason:!signSize?'Укажите размер таблички':(!material?'Укажите материал таблички':(hasMilling&&!millingMeters?'Укажите погонные метры фрезеровки':''))};
  }
+ if(hasLaser){
+   const sz=parseSize(t),material=laserMaterialFromText(t),meters=parseLinearMeters(t)||rectPerimeterM(sz,qty||1);
+   const needsThickness=/акрил/.test(t)&&!parseThicknessMm(t);
+   return {source:line,type:'laser_cut',qty:qty||1,meters,material,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,invalidReason:needsThickness?'Укажите толщину акрила':(!meters?'Укажите размер или погонные метры лазерной резки':(!material?'Укажите материал для лазерной резки':''))};
+ }
  if(hasMilling){
-   const meters=parseLinearMeters(t),material=millingMaterialFromText(t,'');
-   return {source:line,type:'milling',qty:1,meters,material,invalidReason:!meters?'Укажите количество погонных метров фрезеровки':(!material?'Укажите материал для фрезеровки':'')};
+   const sz=parseSize(t),meters=parseLinearMeters(t)||rectPerimeterM(sz,qty||1),material=millingMaterialFromText(t,'');
+   return {source:line,type:'milling',qty:qty||1,meters,material,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,invalidReason:!meters?'Укажите размер или количество погонных метров фрезеровки':(!material?'Укажите материал для фрезеровки':'')};
  }
 
- if(/(?:дизайн|макет|разработк[а-яё]*)[^\n]*баннер|баннер[^\n]*(?:дизайн|макет)/i.test(t)){
+  if(/(?:дизайн|макет|разработк[а-яё]*)[^\n]*баннер|баннер[^\n]*(?:дизайн|макет)/i.test(t)){
    let designVariant='';
    if(/только\s+текст|текст\s+на\s+авто|без\s+(?:картин|фото|лого)/i.test(t))designVariant='text';
    else if(/картин|фото|изображ|лого|логотип/i.test(t))designVariant='full';
