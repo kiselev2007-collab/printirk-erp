@@ -1276,7 +1276,8 @@
             "oracal_bg": 6287,
             "oracal_bg_applique": 9428,
             "double_720_lam": 2475
-          }
+          },
+          "material_cost_per_m2": 361
         },
         {
           "name": "Пластик 2 мм",
@@ -1289,7 +1290,8 @@
             "oracal_bg": 6801,
             "oracal_bg_applique": 9942,
             "double_720_lam": 2989
-          }
+          },
+          "material_cost_per_m2": 548
         },
         {
           "name": "Пластик 3 мм",
@@ -1302,7 +1304,8 @@
             "oracal_bg": 7524,
             "oracal_bg_applique": 10665,
             "double_720_lam": 3712
-          }
+          },
+          "material_cost_per_m2": 811
         },
         {
           "name": "Пластик 5 мм",
@@ -1315,7 +1318,8 @@
             "oracal_bg": 8810,
             "oracal_bg_applique": 11951,
             "double_720_lam": 4998
-          }
+          },
+          "material_cost_per_m2": 1279
         },
         {
           "name": "Пластик 8 мм",
@@ -1328,7 +1332,8 @@
             "oracal_bg": 10861,
             "oracal_bg_applique": 14002,
             "double_720_lam": 7049
-          }
+          },
+          "material_cost_per_m2": 2024
         },
         {
           "name": "Пластик 10 мм",
@@ -1341,7 +1346,8 @@
             "oracal_bg": 12082,
             "oracal_bg_applique": 15223,
             "double_720_lam": 8270
-          }
+          },
+          "material_cost_per_m2": 2468
         },
         {
           "name": "Магнитный винил",
@@ -1437,7 +1443,12 @@
           "unit": "п.м.",
           "price": 22
         }
-      ]
+      ],
+      "raw_material_sale_rule": {
+        "multiplier": 2.2,
+        "rule": "Материал без печати: продажная цена = актуальная себестоимость материала за м² × 2,2.",
+        "rounding": "Вверх до целого рубля."
+      }
     },
     "uv_print": {
       "source_sheet": "УФ печать",
