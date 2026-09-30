@@ -295,7 +295,8 @@
           "allowed": [
             "film",
             "poster"
-          ]
+          ],
+          "cost": 54.78
         },
         {
           "id": "wide_lamination_orajet",
@@ -324,6 +325,14 @@
           "minimum_order_rub": 897,
           "cost_per_m2": 366
         }
+      },
+      "price_audit": {
+        "checked_against_source_sheet": "2026-09-30",
+        "verified_sales": true,
+        "notes": [
+          "Плёнка перфорированная имеет в исходном прайсе только 240/360 dpi.",
+          "Себестоимость светоблокирующей плёнки требует подтверждения."
+        ]
       }
     },
     "digital_print": {
