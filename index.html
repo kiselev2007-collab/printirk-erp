@@ -1175,11 +1175,18 @@ function renderDetected(){
   }
 
  if(x.type==='duplication'){
-    const min=x.format==='A3'?50:100;
-    const chips='<span class="chip">'+(x.format||'формат?')+'</span><span class="chip">'+x.qty+' лист.</span><span class="chip">'+(x.sides===2?'2 стороны':'1 сторона')+'</span><span class="chip">'+x.paper+'</span>'+(x.qty<min?'<span class="chip warn">минимум '+min+' листов</span>':'');
+    const lay=duplicationLayout(x),min=x.printSheet==='A4'?100:50;
+    const finished=duplicationFinishedSize(x);
+    let chips='<span class="chip">'+(finished?.label||'размер?')+'</span><span class="chip">'+x.qty+' шт.</span><span class="chip">'+(x.sides===2?'2 стороны':'1 сторона')+'</span><span class="chip">'+x.paper+'</span><span class="chip auto">печать на '+x.printSheet+'</span>';
+    if(lay)chips+='<span class="chip auto">'+lay.up+' шт./лист · '+lay.printSheets+' печатн. лист.</span>'+(lay.cutPasses?'<span class="chip">резка: '+lay.cutPasses+' рез.</span>':'');
+    if(lay&&lay.printSheets<min)chips+='<span class="chip warn">минимум '+min+' печатных листов '+x.printSheet+'</span>';
+    if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
     const paperOpts=['Снегурочка 80','Газетная 48','Архангельск 60-65','80 г рулон','Офсетная 160','Ватман'].map(v=>'<option '+(x.paper===v?'selected':'')+'>'+v+'</option>').join('');
+    const fmtOpts=['A3','A4','A5','A6','A7'].map(v=>'<option value="'+v+'" '+(x.finishedFormat===v?'selected':'')+'>'+v+'</option>').join('')+'<option value="" '+(!x.finishedFormat?'selected':'')+'>Свой размер</option>';
     return '<div class="detected-card"><div class="detected-head"><div><b>ЧБ тиражирование</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
-      '<div class="field"><label>Формат печатного листа</label><select onchange="detected['+i+'].format=this.value;renderDetected()"><option '+(x.format==='A3'?'selected':'')+'>A3</option><option '+(x.format==='A4'?'selected':'')+'>A4</option></select></div>'+
+      '<div class="field"><label>Готовый формат</label><select onchange="detected['+i+'].finishedFormat=this.value;if(this.value&&formatsMM[this.value]){detected['+i+'].wmm=formatsMM[this.value][0];detected['+i+'].hmm=formatsMM[this.value][1];detected['+i+'].w=detected['+i+'].wmm/1000;detected['+i+'].h=detected['+i+'].hmm/1000}renderDetected()">'+fmtOpts+'</select></div>'+
+      (!x.finishedFormat?'<div class="field"><label>Ширина, мм</label><input type="number" min="1" value="'+(x.wmm||'')+'" onchange="detected['+i+'].wmm=+this.value;detected['+i+'].w=+this.value/1000;renderDetected()"></div><div class="field"><label>Высота, мм</label><input type="number" min="1" value="'+(x.hmm||'')+'" onchange="detected['+i+'].hmm=+this.value;detected['+i+'].h=+this.value/1000;renderDetected()"></div>':'')+
+      '<div class="field"><label>Печатный лист</label><select onchange="detected['+i+'].printSheet=this.value;renderDetected()"><option value="A3" '+(x.printSheet==='A3'?'selected':'')+'>A3 · обычно</option><option value="A4" '+(x.printSheet==='A4'?'selected':'')+'>A4</option></select></div>'+
       '<div class="field"><label>Стороны</label><select onchange="detected['+i+'].sides=+this.value;renderDetected()"><option value="1" '+(x.sides===1?'selected':'')+'>1 сторона</option><option value="2" '+(x.sides===2?'selected':'')+'>2 стороны</option></select></div>'+
       '<div class="field"><label>Материал</label><select onchange="detected['+i+'].paper=this.value;renderDetected()">'+paperOpts+'</select></div>'+
       '</div></div>';
@@ -1274,6 +1281,27 @@ function renderDetected(){
       '<div class="field"><label>Фрезеровка, п.м.</label><input type="number" min="0" step="0.1" value="'+(x.millingMeters||0)+'" onchange="detected['+i+'].millingMeters=+this.value;detected['+i+'].millingRequested=detected['+i+'].millingRequested||detected['+i+'].millingMeters>0;detected['+i+'].invalidReason=!detected['+i+'].wmm?\'Укажите размер таблички\':(!detected['+i+'].material?\'Укажите материал таблички\':(detected['+i+'].millingRequested&&!detected['+i+'].millingMeters?\'Укажите погонные метры фрезеровки\':\'\'));renderDetected()"></div>'+
       '<div class="field"><label>Материал фрезеровки</label><select onchange="detected['+i+'].millingMaterial=this.value"><option value="">Авто / выбрать</option>'+mmats+'</select></div>'+
       '</div></div>';
+  }
+
+  if(x.type==='interior_flex'){
+    const prod=interiorProductByName(/печать на флексе/),area=x.w*x.h*x.qty,rate=Number(prod?.price||950);
+    const chips='<span class="chip">'+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм</span><span class="chip">'+x.qty+' шт.</span><span class="chip auto">'+area.toFixed(4)+' м² × '+money(rate)+'/м²</span>'+(x.invalidReason?'<span class="chip warn">'+x.invalidReason+'</span>':'');
+    return '<div class="detected-card"><div class="detected-head"><div><b>Печать на флексе</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div></div>';
+  }
+
+  if(x.type==='apparel_application'){
+    const fmt=apparelFormatForSize(x.wmm,x.hmm),methods=[['','Выберите технологию'],['flex','Флекс · 1 цвет'],['sublimation','Сублимация']];
+    const opts=methods.map(z=>'<option value="'+z[0]+'" '+(x.method===z[0]?'selected':'')+'>'+z[1]+'</option>').join('');
+    let chips='<span class="chip">'+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм</span><span class="chip">'+x.qty+' шт.</span>'+(fmt?'<span class="chip auto">тарифный формат '+fmt+'</span>':'<span class="chip warn">размер больше A3</span>');
+    if(!x.method)chips+='<span class="chip warn">выберите технологию</span>';
+    if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
+    return '<div class="detected-card"><div class="detected-head"><div><b>Нанесение на футболку</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Технология</label><select onchange="detected['+i+'].method=this.value;renderDetected()">'+opts+'</select></div></div></div>';
+  }
+
+  if(x.type==='laser_cut'){
+    const mats=(laserSection().prices_per_m||[]).map(p=>'<option value="'+p.material.replace(/"/g,'&quot;')+'" '+(x.material===p.material?'selected':'')+'>'+p.material+' · '+money(p.price)+'/п.м.</option>').join('');
+    let chips='<span class="chip">'+(x.meters?x.meters.toFixed(2)+' п.м.':'метраж не указан')+'</span>'+(x.material?'<span class="chip">'+x.material+'</span>':'')+(x.invalidReason?'<span class="chip warn">'+x.invalidReason+'</span>':'');
+    return '<div class="detected-card"><div class="detected-head"><div><b>Лазерная резка</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Погонные метры</label><input type="number" min="0" step="0.01" value="'+(x.meters||0)+'" onchange="detected['+i+'].meters=+this.value;renderDetected()"></div><div class="field"><label>Материал / толщина</label><select onchange="detected['+i+'].material=this.value;detected['+i+'].invalidReason=this.value?\'\':\'Укажите материал для лазерной резки\';renderDetected()"><option value="">Выберите</option>'+mats+'</select></div></div></div>';
   }
 
   if(x.type==='milling'){
