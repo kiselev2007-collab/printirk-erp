@@ -262,7 +262,7 @@ function buildCatalogIndex(data){
    walk(sec);
  });
 }
-fetch('data/catalog_v1.json').then(r=>r.json()).then(data=>{catalogData=data;buildCatalogIndex(data);const b=document.querySelector('.top .badge');if(b)b.textContent='Прайс · '+catalogIndex.length+' позиций в поиске'}).catch(()=>{});
+const catalogReady=fetch('data/catalog_v1.json').then(r=>r.json()).then(data=>{catalogData=data;buildCatalogIndex(data);const b=document.querySelector('.top .badge');if(b)b.textContent='Прайс · '+catalogIndex.length+' позиций в поиске';return data}).catch(()=>null);
 function searchCatalog(){
  const q=norm(document.getElementById('catalogSearch').value),box=document.getElementById('searchResults'),rows=document.getElementById('resultRows');
  if(!q){box.classList.remove('active');return}
@@ -317,6 +317,11 @@ function digitalFallback(){
  };
 }
 function digitalSection(){return catalogData?.sections?.digital_print||digitalFallback()}
+function wideFormatSection(){return catalogData?.sections?.wide_format||{}}
+function wideProduct(id){return (wideFormatSection().products||[]).find(x=>x.id===id)||null}
+function widePost(id){return (wideFormatSection().postprocessing||[]).find(x=>x.id===id)||null}
+function offsetSection(){return catalogData?.sections?.offset_leaflets||{}}
+function quarterCalendarSection(){return catalogData?.sections?.three_block_calendars||{}}
 function tierPrice(tiers,count){
  for(const r of (tiers||[])) if(count>=+r[0]&&count<=+r[1]) return +r[2];
  return null;
@@ -480,7 +485,8 @@ function parseLine(line){
    else if(/корея/.test(t))density=440;
    else if(/европа/.test(t))density=510;
  }
- const dpi=Number((t.match(/\b(240|360|720|1440)\s*(?:dpi|дпи)/)||[])[1]||240);
+ const dpiExplicit=Number((t.match(/\b(240|360|720|1440)\s*(?:dpi|дпи)/)||[])[1]||0);
+ const dpi=dpiExplicit||240;
 
  const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
  const cm=t.match(/4\s*\+\s*(0|4)/);
@@ -519,7 +525,25 @@ function parseLine(line){
  }
  let type='unknown';
  if(/баннер|сетк/.test(t)||synonymMatch(t,'banner'))type='banner';
- else if(/пленк|плёнк|ораджет|orajet|оракал|oracal|самокле|наклей|винил/.test(t)||synonymMatch(t,'film'))type='film';
+ else if(/пленк|плёнк|ораджет|orajet|оракал|oracal|самокле|наклей|винил|беклит|бэклит|backlit/.test(t)||synonymMatch(t,'film'))type='film';
+ let productId='',effectiveDpi=dpiExplicit||240;
+ if(type==='banner'){
+  if(/баннерн[а-яё]*\s+сетк|сетк/.test(t))productId='banner_mesh';
+  else if(/транслюц|светопропуск/.test(t))productId='banner_translucent_440';
+  else if(density>=500||/510|европа/.test(t))productId='banner_510_cast';
+  else if(density===400||/400[а-яё\s]*лит/.test(t))productId='banner_400_cast';
+  else if(density>=400||/корея/.test(t))productId='banner_440';
+  else productId='banner_290';
+  effectiveDpi=dpiExplicit||240;
+ } else if(type==='film'){
+  if(/перф/.test(t))productId='film_perforated';
+  else if(/беклит|бэклит|backlit/.test(t))productId='backlit';
+  else if(/светоблок|черн[а-яё]*\s+кле/.test(t))productId='film_lightblock';
+  else if(/транслюц/.test(t))productId='film_translucent';
+  else if(/прозрач/.test(t))productId='film_transparent';
+  else productId='film_white';
+  effectiveDpi=dpiExplicit||720;
+ }
 
  const noGrommets=/без\s+люверс/.test(t);
  const gm=t.match(/(?:люверс[а-яё]*|люв\.?)[^\d]{0,20}(\d{2,4})\s*мм|через\s*(\d{2,4})\s*мм/i);
@@ -531,7 +555,7 @@ function parseLine(line){
    if(gc)grommetCount=Number(gc[1]);
    else if(/люверс[а-яё]*\s+по\s+углам|по\s+углам[^,;]*люверс/i.test(t))grommetCount=4;
  }
- return {source:line,type,density,dpi,qty:qty||1,w:size.w,h:size.h,grommet,grommetCount,noGrommets,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк|обрезк/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир|ламин/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов|матлам/.test(t),white:/(?:^|[^а-яё])бел[а-яё]*(?=$|[^а-яё])/.test(t)};
+ return {source:line,type,productId,density,dpi:effectiveDpi,qty:qty||1,w:size.w,h:size.h,grommet,grommetCount,noGrommets,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк|обрезк/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир|ламин/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов|матлам/.test(t),white:productId==='film_white'};
 }
 function bannerLayout(w,h){const roll=3;if(Math.min(w,h)<=roll)return {overflow:0,seams:0,seamLength:0,orientation:'без склейки'};function one(width,height){const parts=Math.ceil(width/roll),last=width-(parts-1)*roll,overflow=Math.max(0,(roll-last)*height);return {overflow,seams:parts-1,seamLength:height}}const a=one(w,h),b=one(h,w),best=b.overflow<a.overflow?b:a;best.orientation=b.overflow<a.overflow?'повёрнутая':'стандартная';return best}
 const offsetTirages=[500,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000];
@@ -560,7 +584,7 @@ function quarterCalendarTier(qty){
  return {unit:249,costUnit:226,label:'свыше 500 · ставка последней ступени'};
 }
 let detected=[],autoItems=[];
-async function recognize(){await synonymReady;const raw=document.getElementById('orderText').value;detected=splitPositions(raw).map(parseLine);renderDetected()}
+async function recognize(){await Promise.all([synonymReady,catalogReady]);const raw=document.getElementById('orderText').value;detected=splitPositions(raw).map(parseLine);renderDetected()}
 function digitalPostUI(i,x){
  const p=x.post||(x.post=postFromText('',x.qty));
  const lam=[
