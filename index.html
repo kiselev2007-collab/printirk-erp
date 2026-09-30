@@ -167,7 +167,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='parser-2026-09-30.11';
+const CALC_VERSION='stickers-2026-09-30.12';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -343,6 +343,18 @@ function wideProduct(id){return (wideFormatSection().products||[]).find(x=>x.id=
 function widePost(id){return (wideFormatSection().postprocessing||[]).find(x=>x.id===id)||null}
 function offsetSection(){return catalogData?.sections?.offset_leaflets||{}}
 function quarterCalendarSection(){return catalogData?.sections?.three_block_calendars||{}}
+function paperStickerSection(){return catalogData?.sections?.paper_stickers||{}}
+function nearestOffsetStickerSize(wmm,hmm,qty){
+ const sec=paperStickerSection().offset||{},rows=sec.rectangles||[],tir=sec.tirages||[],detail=sec.detailed_tirages||[];
+ const fits=r=>((wmm<=r.w&&hmm<=r.h)||(wmm<=r.h&&hmm<=r.w));
+ const candidates=rows.filter(fits).sort((a,b)=>(a.w*a.h)-(b.w*b.h));
+ for(const r of candidates){
+   const useTir=r.prices.length===detail.length?detail:tir;
+   const idx=useTir.indexOf(qty);
+   if(idx>=0&&r.prices[idx]!=null)return {row:r,price:Number(r.prices[idx]),tirages:useTir};
+ }
+ return {row:candidates[0]||null,price:null,tirages:(candidates[0]?.prices?.length===detail.length?detail:tir)};
+}
 function tierPrice(tiers,count){
  for(const r of (tiers||[])) if(count>=+r[0]&&count<=+r[1]) return +r[2];
  return null;
@@ -415,6 +427,7 @@ function digitalProductKind(t){
  if(/купон/.test(t))return 'Купон';
  if(/абонем|абоним/.test(t))return 'Абонемент';
  if(/билет/.test(t))return 'Билет';
+ if(/наклейк|этикет/.test(t))return 'Наклейка';
  if(/вкладыш/.test(t))return 'Вкладыш';
  if(/бланк/.test(t))return 'Бланк';
  return 'Печатная продукция';
@@ -519,10 +532,15 @@ function parseLine(line){
  ){
    return {source:line,type:'quarter_calendar',qty:qty||1};
  }
+ const paperSticker=/наклейк|этикет/.test(t) && (/цифр/.test(t)||/офсет/.test(t)||/бумажн[а-яё]*\s+самокле|самокле[а-яё]*\s+бумаж/.test(t));
  const namedPoly=/листовк|буклет|флаер|винн[а-яё]*\s+карт|барн[а-яё]*\s+карт|меню|визит|визикт|открытк|приглаш|сертификат|серт|бланк|благодар|грамот|купон|абонем|абоним|билет|вкладыш/.test(t) || synonymMatch(t,'digital_product');
  const genericPoly=!!(cm&&density&&qty&&(fm||parseSize(t)));
- const poly=namedPoly||genericPoly;
+ const poly=namedPoly||genericPoly||paperSticker;
  const lamSoft=/софт|soft\s*touch|силк/.test(t);
+ if(paperSticker && /офсет/.test(t)){
+   const ps=parseSize(t);
+   return {source:line,type:'offset_sticker',qty:qty||0,w:ps?.w||0,h:ps?.h||0,wmm:ps?.wmm||0,hmm:ps?.hmm||0,color:'4+0'};
+ }
  if(poly && /офсет/.test(t) && !lamSoft){
    return {source:line,type:'offset',format:fm?'A'+fm[1]:'',color:cm?'4+'+cm[1]:'4+0',density:density||130,qty};
  }
@@ -537,8 +555,10 @@ function parseLine(line){
    if(lamSoft) tech='digital';
    else if(!tech && qty && qty<=500 && format!=='A3' && !isA3) tech='digital';
    const reason=lamSoft?'Soft Touch доступен только в цифре':(!/цифр/.test(t)&&tech==='digital'?'тираж до 500 экз.':'явно указана цифра');
-   const paperKey=digitalPaperKeyFromText(t,density||130);
-   return {source:line,type:'poly',productKind:digitalProductKind(t),format,color:cm?'4+'+cm[1]:'4+0',density:density||130,paperKey,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,technologyReason:reason,lamination:parseDigitalLamination(t),post:postFromText(t,qty||1)};
+   const paperKey=paperSticker?'Самоклеющаяся':digitalPaperKeyFromText(t,density||130);
+   const productKind=paperSticker?'Наклейка':digitalProductKind(t);
+   if(paperSticker&&/цифр/.test(t))tech='digital';
+   return {source:line,type:'poly',productKind,format,color:cm?'4+'+cm[1]:'4+0',density:density||90,paperKey,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,technologyReason:paperSticker&&tech==='digital'?'бумажная самоклейка · цифровая печать':reason,lamination:parseDigitalLamination(t),post:postFromText(t,qty||1)};
  }
  if(!size)return {source:line,type:'unknown',error:'Не найден размер'};
  if(/постер|плакат/.test(t)){
@@ -546,7 +566,7 @@ function parseLine(line){
  }
  let type='unknown';
  if(/баннер|сетк/.test(t)||synonymMatch(t,'banner'))type='banner';
- else if(/пленк|плёнк|ораджет|orajet|оракал|oracal|самокле|наклей|винил|беклит|бэклит|backlit/.test(t)||synonymMatch(t,'film'))type='film';
+ else if((/пленк|плёнк|ораджет|orajet|оракал|oracal|самокле|наклей|винил|беклит|бэклит|backlit/.test(t)||synonymMatch(t,'film'))&&!paperSticker)type='film';
  let productId='',effectiveDpi=dpiExplicit||240;
  if(type==='banner'){
   if(/баннерн[а-яё]*\s+сетк|сетк/.test(t))productId='banner_mesh';
