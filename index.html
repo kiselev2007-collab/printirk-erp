@@ -704,7 +704,7 @@ function digitalOptions(x){
  return defs.map(s=>{
    const up=upOnSheet(s.w,s.h,x.wmm,x.hmm,x.format);if(!up)return null;
    const sheets=Math.ceil(x.qty/up);
-   const baseTable=sec.base_80gsm||sec.base_80gsm||{};
+   const baseTable=sec.base_80gsm||sec.base_90gsm||{};
    const unit=tierPrice(baseTable?.[s.fmt]?.[x.color],sheets);if(unit==null)return null;
    const paper=sec.paper_addons_irku?.[s.name]?.[paperKey];
    if(!paper && !['80','90'].includes(paperKey))return {...s,up,sheets,invalid:'Материал «'+paperKey+'» пока не заведен для '+s.name};
