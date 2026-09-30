@@ -176,7 +176,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='price-audit-2026-09-30.8';
+const CALC_VERSION='price-audit-2026-09-30.9';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -542,7 +542,7 @@ function parseLine(line){
   else if(/транслюц/.test(t))productId='film_translucent';
   else if(/прозрач/.test(t))productId='film_transparent';
   else productId='film_white';
-  effectiveDpi=dpiExplicit||720;
+  effectiveDpi=productId==='film_perforated'?(dpiExplicit||240):(dpiExplicit||720);
  }
 
  const noGrommets=/без\s+люверс/.test(t);
@@ -555,7 +555,10 @@ function parseLine(line){
    if(gc)grommetCount=Number(gc[1]);
    else if(/люверс[а-яё]*\s+по\s+углам|по\s+углам[^,;]*люверс/i.test(t))grommetCount=4;
  }
- return {source:line,type,productId,density,dpi:effectiveDpi,qty:qty||1,w:size.w,h:size.h,grommet,grommetCount,noGrommets,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк|обрезк/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир|ламин/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов|матлам/.test(t),white:productId==='film_white'};
+ let invalidReason='';
+ if(productId==='film_perforated'&&![240,360].includes(effectiveDpi))invalidReason='Перфорированная плёнка печатается только 240 или 360 dpi. '+effectiveDpi+' dpi — ошибка ввода.';
+ if(productId==='film_lightblock')invalidReason='На светоблокирующей плёнке не печатаем.';
+ return {source:line,type,productId,density,dpi:effectiveDpi,qty:qty||1,w:size.w,h:size.h,grommet,grommetCount,noGrommets,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк|обрезк/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир|ламин/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов|матлам/.test(t),white:productId==='film_white',invalidReason};
 }
 function bannerLayout(w,h){const roll=3;if(Math.min(w,h)<=roll)return {overflow:0,seams:0,seamLength:0,orientation:'без склейки'};function one(width,height){const parts=Math.ceil(width/roll),last=width-(parts-1)*roll,overflow=Math.max(0,(roll-last)*height);return {overflow,seams:parts-1,seamLength:height}}const a=one(w,h),b=one(h,w),best=b.overflow<a.overflow?b:a;best.orientation=b.overflow<a.overflow?'повёрнутая':'стандартная';return best}
 const offsetTirages=[500,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000];
@@ -683,7 +686,9 @@ function renderDetected(){
     return '<div class="detected-card"><div class="detected-head"><div><b>Листовка — офсет</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Формат</label><select onchange="detected['+i+'].format=this.value">'+fmtOpts+'</select></div><div class="field"><label>Красочность</label><select onchange="detected['+i+'].color=this.value"><option '+(x.color==='4+0'?'selected':'')+'>4+0</option><option '+(x.color==='4+4'?'selected':'')+'>4+4</option></select></div><div class="field"><label>Бумага</label><select onchange="detected['+i+'].density=+this.value;renderDetected()">'+paperOpts+'</select></div><div class="field"><label>Тираж</label><select onchange="detected['+i+'].qty=+this.value">'+tirageOpts+'</select></div></div></div>';
   }
 
-  const name=x.type==='banner'?'Баннер '+(x.density||'')+' гр.':'Плёнка '+(x.white?'белая · ':'')+(x.dpi||'')+' dpi';
+  const prodLabel=x.type==='film'?(wideProduct(x.productId)?.name||'Плёнка'):'';
+  const name=x.type==='banner'?'Баннер '+(x.density||'')+' гр.':prodLabel+' · '+(x.dpi||'')+' dpi';
+  if(x.invalidReason)return '<div class="detected-card"><div class="detected-head"><div><b>'+name+'</b><small style="display:block">Распознано из: '+x.source+'</small><div class="chips"><span class="chip warn">'+x.invalidReason+'</span></div></div><button class="flagbtn" onclick="openDetectedError('+i+')">⚑ Сообщить об ошибке</button></div></div>';
   const layout=x.type==='banner'?bannerLayout(x.w,x.h):null;
   let chips='<span class="chip">'+x.w.toFixed(3)+' × '+x.h.toFixed(3)+' м</span><span class="chip">'+x.qty+' шт.</span>';
   if(x.density)chips+='<span class="chip">'+x.density+' гр.</span>';if(x.dpi)chips+='<span class="chip">'+x.dpi+' dpi</span>';
@@ -700,7 +705,7 @@ function renderDetected(){
  }).join('');
 }
 function addDetected(i){
- const x=detected[i];if(!x||x.error||x.type==='unknown')return;
+ const x=detected[i];if(!x||x.error||x.type==='unknown'||x.invalidReason)return;
  const details=[];let cost=0,price=0,name='';
 
  if(x.type==='quarter_calendar'){
@@ -828,7 +833,7 @@ function openError(i){
 function openDetectedError(i){
  const x=detected[i];if(!x)return;
  errorTarget=null;
- errorContext={name:'Не распознано',price:0,cost:0,details:[x.error||'Не удалось распознать позицию'],source:x.source||'',parsed:JSON.stringify(x)};
+ errorContext={name:x.invalidReason?(wideProduct(x.productId)?.name||'Ошибка параметров'):'Не распознано',price:0,cost:0,details:[x.invalidReason||x.error||'Не удалось распознать позицию'],source:x.source||'',parsed:JSON.stringify(x)};
  document.getElementById('errorType').value='Неправильно распознана продукция';
  prepareErrorModal();
 }
