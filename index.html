@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='new-errors-fixed-2026-09-30.27';
+const CALC_VERSION='uv-signs-fixed-2026-09-30.28';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -865,6 +865,15 @@ function parseThicknessMm(t){
  const m=t.match(/(?:пвх|пластик|акрил|вивак)[^\d]{0,12}(\d+(?:[.,]\d+)?)\s*мм/i);
  return m?n(m[1]):0;
 }
+function hasUv(t){
+ return /(?:^|[^0-9a-zа-яё])(?:уф|uv)(?=$|[^0-9a-zа-яё])|(?:уф[\s-]*печать|uv[\s-]*print)/i.test(t);
+}
+function signPlateInputChange(i){
+ const x=detected[i];if(!x)return;
+ x.w=(Number(x.wmm)||0)/1000;x.h=(Number(x.hmm)||0)/1000;
+ x.invalidReason=(!x.wmm||!x.hmm)?'Укажите ширину и высоту таблички':(!x.material?'Укажите материал таблички':(x.millingRequested&&!x.millingMeters?'Укажите погонные метры фрезеровки':''));
+ renderDetected();
+}
 function signMaterialFromText(t){
  const th=parseThicknessMm(t);
  if(/пвх|пластик/.test(t)){const v=th||3;return 'Пластик '+String(v).replace('.',',')+' мм'}
@@ -995,8 +1004,9 @@ function parseLine(line){
    const sz=parseSize(t),area=sz?sz.w*sz.h:0;
    return {source:line,type:'frame_mount',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,area,invalidReason:!sz?'Укажите размер рамной конструкции':''};
  }
- const directUv=/\b(?:уф|uv)\b/.test(t),directUvMaterial=directUv?signMaterialFromText(t):'';
- if(directUv&&directUvMaterial){
+ const directUv=hasUv(t),directUvMaterial=directUv?signMaterialFromText(t):'';
+ const isSignMention=/таблич|табл\.?(?:\s|$)|шильд/.test(t);
+ if(directUv&&directUvMaterial&&!isSignMention){
    const sz=parseSize(t);
    return {source:line,type:'sign_plate',qty:qty||1,material:directUvMaterial,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,technology:'uv_standard',millingRequested:false,millingMeters:0,millingMaterial:'',invalidReason:!sz?'Укажите размер УФ-печати':''};
  }
@@ -1009,14 +1019,14 @@ function parseLine(line){
    return {source:line,type:'raw_sign_material',material:rawMaterialName,qty:qty||1,w:rs?.w||0,h:rs?.h||0,wmm:rs?.wmm||0,hmm:rs?.hmm||0,materialCost,perM2:!rs,invalidReason:!materialCost?'Не задана актуальная себестоимость материала':''};
  }
 
- const isSign=/таблич|табл\.?(?:\s|$)|шильд/.test(t);
+ const isSign=isSignMention;
  const hasLaser=/лазер|лазерн[а-яё]*\s+резк/.test(t);
  const cutMaterialMention=/акрил|пвх|пластик|пэт|pet|вивак|композит|акп|мдф|фанер/.test(t);
  const hasMilling=/фрезеров|фрезерн|раскрой/.test(t)||(/(?:^|\s)резк[а-яё]*\s+/.test(t)&&cutMaterialMention&&!hasLaser);
  if(isSign){
    const signSize=parseSize(t),material=signMaterialFromText(t),millingMeters=hasMilling?(parseLinearMeters(t)||rectPerimeterM(signSize,qty||1)):0;
    let technology='film_720';
-   if(/уф|uv/.test(t))technology='uv_standard';
+   if(hasUv(t))technology='uv_standard';
    else if(/1440\s*(?:dpi|дпи)/.test(t))technology='film_1440';
    else if(/360\s*(?:dpi|дпи)/.test(t))technology='film_360';
    else if(/720\s*(?:dpi|дпи)/.test(t)&&/лам/.test(t))technology='film_720_lam';
@@ -1117,7 +1127,7 @@ function parseLine(line){
  let invalidReason='';
  if(productId==='film_perforated'&&![240,360].includes(effectiveDpi))invalidReason='Перфорированная плёнка печатается только 240 или 360 dpi. '+effectiveDpi+' dpi — ошибка ввода.';
  if(productId==='film_lightblock')invalidReason='На светоблокирующей плёнке не печатаем.';
- return {source:line,type,productId,density,dpi:effectiveDpi,qty:qty||1,w:size.w,h:size.h,grommet,grommetCount,noGrommets,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк|обрезк/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир|ламин/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов|матлам/.test(t),white:productId==='film_white',uv:/\b(?:уф|uv)\b/.test(t),invalidReason};
+ return {source:line,type,productId,density,dpi:effectiveDpi,qty:qty||1,w:size.w,h:size.h,grommet,grommetCount,noGrommets,wind:/карман|ветров/.test(t),reinforce:/усилен|верев/.test(t),edgeCut:/резк|обрезк/.test(t),contour:/контур|плоттер|фигур/.test(t),laminate:/ламинац|ламинир|ламин/.test(t),lamGloss:/глян/.test(t),lamMatte:/матов|матлам/.test(t),white:productId==='film_white',uv:hasUv(t),invalidReason};
 }
 function bannerLayout(w,h){
  const roll=3;
@@ -1335,12 +1345,19 @@ function renderDetected(){
     ];
     const techOpts=techs.map(z=>'<option value="'+z[0]+'" '+(x.technology===z[0]?'selected':'')+'>'+z[1]+'</option>').join('');
     const mmats=(millingSection().prices_per_m||[]).map(p=>'<option value="'+p.material.replace(/"/g,'&quot;')+'" '+(x.millingMaterial===p.material?'selected':'')+'>'+p.material+' · '+money(p.price)+'/п.м.</option>').join('');
-    let chips='<span class="chip">'+(x.wmm?Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм':'размер не указан')+'</span><span class="chip">'+x.qty+' шт.</span>';
+    const uvSelected=String(x.technology||'').startsWith('uv_');
+    let chips='<span class="chip">'+(x.wmm&&x.hmm?Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм':'размер не указан')+'</span><span class="chip">'+x.qty+' шт.</span>';
+    if(uvSelected)chips+='<span class="chip auto">УФ-печать</span>';
+    if(uvSelected&&x.material&&!uvProductForSign(x.material))chips+='<span class="chip warn">На выбранный материал нет УФ-тарифа: выберите материал из УФ-прайса</span>';
+    if(uvSelected&&x.wmm&&x.hmm){const max=uvSection().max_size_mm||[1200,2300];if(!((x.wmm<=max[0]&&x.hmm<=max[1])||(x.wmm<=max[1]&&x.hmm<=max[0])))chips+='<span class="chip warn">Превышен максимальный размер УФ: '+max[0]+'×'+max[1]+' мм</span>';}
+
     if(x.material)chips+='<span class="chip">'+x.material+'</span>';
     if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
     return '<div class="detected-card"><div class="detected-head"><div><b>Табличка</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
       '<div class="field"><label>Материал</label><select onchange="detected['+i+'].material=this.value;detected['+i+'].millingMaterial=millingMaterialFromText(this.value,this.value);detected['+i+'].invalidReason=!detected['+i+'].wmm?\'Укажите размер таблички\':(!detected['+i+'].material?\'Укажите материал таблички\':(detected['+i+'].millingRequested&&!detected['+i+'].millingMeters?\'Укажите погонные метры фрезеровки\':\'\'));renderDetected()"><option value="">Выберите</option>'+mats+'</select></div>'+
       '<div class="field"><label>Технология</label><select onchange="detected['+i+'].technology=this.value;renderDetected()">'+techOpts+'</select></div>'+
+      '<div class="field"><label>Ширина, мм</label><input type="number" min="1" step="1" value="'+(x.wmm||'')+'" onchange="detected['+i+'].wmm=+this.value;signPlateInputChange('+i+')"></div>'+
+      '<div class="field"><label>Высота, мм</label><input type="number" min="1" step="1" value="'+(x.hmm||'')+'" onchange="detected['+i+'].hmm=+this.value;signPlateInputChange('+i+')"></div>'+
       '<div class="field"><label>Фрезеровка, п.м.</label><input type="number" min="0" step="0.1" value="'+(x.millingMeters||0)+'" onchange="detected['+i+'].millingMeters=+this.value;detected['+i+'].millingRequested=detected['+i+'].millingRequested||detected['+i+'].millingMeters>0;detected['+i+'].invalidReason=!detected['+i+'].wmm?\'Укажите размер таблички\':(!detected['+i+'].material?\'Укажите материал таблички\':(detected['+i+'].millingRequested&&!detected['+i+'].millingMeters?\'Укажите погонные метры фрезеровки\':\'\'));renderDetected()"></div>'+
       '<div class="field"><label>Материал фрезеровки</label><select onchange="detected['+i+'].millingMaterial=this.value"><option value="">Авто / выбрать</option>'+mmats+'</select></div>'+
       '</div></div>';
@@ -1434,11 +1451,11 @@ function renderDetected(){
   }
 
   const prodLabel=x.type==='film'?(wideProduct(x.productId)?.name||'Плёнка'):'';
-  const name=x.type==='banner'?'Баннер '+(x.density||'')+' гр.':prodLabel+' · '+(x.dpi||'')+' dpi';
+  const name=x.type==='banner'?'Баннер '+(x.density||'')+' гр.':prodLabel+' · '+(x.uv?'УФ CMYK':(x.dpi||'')+' dpi');
   if(x.invalidReason)return '<div class="detected-card"><div class="detected-head"><div><b>'+name+'</b><small style="display:block">Распознано из: '+x.source+'</small><div class="chips"><span class="chip warn">'+x.invalidReason+'</span></div></div><button class="flagbtn" onclick="openDetectedError('+i+')">⚑ Сообщить об ошибке</button></div></div>';
   const layout=x.type==='banner'?bannerLayout(x.w,x.h):null;
   let chips='<span class="chip">'+x.w.toFixed(3)+' × '+x.h.toFixed(3)+' м</span><span class="chip">'+x.qty+' шт.</span>';
-  if(x.density)chips+='<span class="chip">'+x.density+' гр.</span>';if(x.dpi)chips+='<span class="chip">'+x.dpi+' dpi</span>';
+  if(x.density)chips+='<span class="chip">'+x.density+' гр.</span>';if(x.uv)chips+='<span class="chip auto">УФ CMYK</span>';else if(x.dpi)chips+='<span class="chip">'+x.dpi+' dpi</span>';
   if(layout&&layout.seams)chips+='<span class="chip auto">Склейка автоматически: '+layout.seams+' шв.</span>';
   if(x.grommetCount)chips+='<span class="chip auto">Люверсы: '+x.grommetCount+' шт./изд.</span>';
   let post='';
