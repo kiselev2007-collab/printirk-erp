@@ -167,7 +167,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='price-audit-2026-09-30.9';
+const CALC_VERSION='price-audit-2026-09-30.10';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -775,7 +775,13 @@ function addDetected(i){
     details.push('печать '+area.toFixed(2)+' м² × '+money(rate)+'/м² — '+money(printSale));
   }
   const lay=bannerLayout(x.w,x.h);
-  if(!is3x6&&lay.overflow>0){cost+=lay.overflow*costRate*x.qty;price+=lay.overflow*rate*x.qty;details.push('перерасход '+(lay.overflow*x.qty).toFixed(2)+' м² × '+money(rate)+'/м² — '+money(lay.overflow*rate*x.qty))}
+  if(!is3x6&&lay.overflow>0){
+    const wasteArea=lay.overflow*x.qty,materialCost=Number(prod.material_cost_per_m2||0);
+    if(!materialCost){alert('Для «'+prod.name+'» не подтверждена себестоимость баннерной ткани для расчёта перерасхода.');return}
+    const wasteCost=wasteArea*materialCost;
+    cost+=wasteCost;price+=wasteCost;
+    details.push('перерасход '+wasteArea.toFixed(2)+' м² × '+money(materialCost)+'/м² себестоимости ткани — '+money(wasteCost));
+  }
   const glue=widePost(x.reinforce?'banner_rope':'banner_gluing');
   if(lay.seams>0){const len=lay.seams*lay.seamLength*x.qty;cost+=len*Number(glue?.cost||69);price+=len*Number(glue?.price||76);details.push((x.reinforce?'проклейка с верёвкой ':'склейка ')+len.toFixed(2)+' п.м. × '+money(Number(glue?.price||76))+' — '+money(len*Number(glue?.price||76)))}
   const gr=widePost('grommet_10');
