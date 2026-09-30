@@ -176,7 +176,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='wide-2026-09-30.7';
+const CALC_VERSION='price-audit-2026-09-30.8';
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
 const titles={priceView:'Прайс',autoView:'Автоматический расчёт',signView:'Расчёт вывесок',errorView:'Ошибки расчёта'};
@@ -790,10 +790,24 @@ function addDetected(i){
   if(x.reinforce){cost+=per*80*x.qty;price+=per*88*x.qty;details.push('усиление края с верёвкой '+(per*x.qty).toFixed(2)+' п.м.')}
   if(x.edgeCut){cost+=per*20*x.qty;price+=per*22*x.qty;details.push('резка в край '+(per*x.qty).toFixed(2)+' п.м.')}
  } else {
-  name='Плёнка '+(x.white?'белая · ':'')+x.dpi+' dpi';
-  cost=area*170;price=area*(x.dpi>=720?900:720);details.push('печать '+area.toFixed(2)+' м² / '+x.dpi+' dpi');
-  const lam=x.lamination||(x.laminate?(x.lamMatte?'matte':'gloss'):'none');if(lam!=='none'){cost+=area*120;price+=area*274;details.push('ламинация '+(lam==='matte'?'матовая':'глянец'))}
-  if(x.contour){cost+=area*170;price+=area*439;details.push('контурная резка')}else if(x.edgeCut){cost+=per*8*x.qty;price+=per*22*x.qty;details.push('резка в край')}
+  const prod=wideProduct(x.productId||'film_white');
+  if(!prod){alert('Тип плёнки не найден в прайсе.');return}
+  name=prod.name+' · '+x.dpi+' dpi';
+  const rate=Number(prod.prices?.[String(x.dpi)]||0),costRate=Number(prod.costs_per_m2?.[String(x.dpi)]||0);
+  if(!rate){alert('Для «'+prod.name+'» нет подтверждённой цены '+x.dpi+' dpi.');return}
+  const lam=x.lamination||(x.laminate?(x.lamMatte?'matte':'gloss'):'none'),combo=wideFormatSection().standard_combos||{};
+  if((x.productId||'film_white')==='film_white'&&x.dpi===720&&x.contour){
+    const cfg=lam!=='none'?combo.white_film_720_contour_lamination:combo.white_film_720_contour;
+    price=Math.max(Number(cfg?.minimum_order_rub||0),area*Number(cfg?.price_per_m2||rate));
+    cost=area*Number(cfg?.cost_per_m2||costRate);
+    details.push('печать'+(lam!=='none'?' + ламинация':'')+' + контурная резка',area.toFixed(2)+' м² × '+money(cfg?.price_per_m2||rate)+'/м²');
+  }else{
+    price=Math.max(Number(wideFormatSection().minimums_rub?.film||299),area*rate);cost=area*costRate;
+    details.push('печать '+area.toFixed(2)+' м² × '+money(rate)+'/м²');
+    if(lam!=='none'){const lp=widePost('wide_lamination_standard'),ls=Math.max(Number(wideFormatSection().minimums_rub?.wide_lamination||199),area*Number(lp?.price||274));price+=ls;cost+=area*Number(lp?.cost||54.78);details.push('ламинация '+area.toFixed(2)+' м² · '+money(ls))}
+    if(x.contour){const plot=catalogData?.sections?.plotter_cut,work=(plot?.work||[]).find(z=>/Контурная резка наклеек/.test(z.name||''));const cs=Math.max(Number(work?.minimum||399),area*Number(work?.price||990));price+=cs;details.push('контурная резка '+area.toFixed(2)+' м² · '+money(cs))}
+    else if(x.edgeCut){const cut=widePost('cut_edge');price+=per*Number(cut?.price||22)*x.qty;cost+=per*Number(cut?.cost||20)*x.qty;details.push('резка в край '+(per*x.qty).toFixed(2)+' п.м.')}
+  }
  }
  autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();
 }
