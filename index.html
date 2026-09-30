@@ -741,10 +741,12 @@ function addDetected(i){
  }
 
  if(x.type==='poster'){
-   const area=x.w*x.h*x.qty,per=2*(x.w+x.h);name='Постер '+x.dpi+' dpi';cost=area*103;price=area*(x.dpi>=1440?659:549);details.push('печать '+area.toFixed(2)+' м²');
-   if(x.edgeCut){cost+=per*8*x.qty;price+=per*22*x.qty;details.push('резка в край')}
-   if(x.laminate){cost+=area*120;price+=area*274;details.push('ламинация широкоформатная')}
-   price=Math.max(price,149);autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+   const area=x.w*x.h*x.qty,per=2*(x.w+x.h),prod=wideProduct('poster'),rate=Number(prod?.prices?.[String(x.dpi)]||0),costRate=Number(prod?.costs_per_m2?.[String(x.dpi)]||0);
+   if(!rate){alert('Для постера '+x.dpi+' dpi нет подтверждённой цены в прайсе.');return}
+   name='Постер '+x.dpi+' dpi';price=Math.max(Number(wideFormatSection().minimums_rub?.poster||149),area*rate);cost=area*costRate;details.push('печать '+area.toFixed(2)+' м² × '+money(rate)+'/м²');
+   const cut=widePost('cut_edge');if(x.edgeCut){cost+=per*Number(cut?.cost||20)*x.qty;price+=per*Number(cut?.price||22)*x.qty;details.push('резка в край '+(per*x.qty).toFixed(2)+' п.м.')}
+   if(x.laminate){const lam=widePost('wide_lamination_standard'),ls=Math.max(Number(wideFormatSection().minimums_rub?.wide_lamination||199),area*Number(lam?.price||274));price+=ls;cost+=area*Number(lam?.cost||54.78);details.push('ламинация '+area.toFixed(2)+' м² · '+money(ls))}
+   autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
  if(x.type==='offset'){
