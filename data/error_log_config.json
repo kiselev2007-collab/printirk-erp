@@ -1,6 +1,6 @@
 {
   "spreadsheetId": "1eH9XpecSVk6CPuVfohbncgvx39JIzUHOdoXVAyGubhg",
   "sheetName": "Журнал ошибок",
-  "endpoint": "",
-  "enabled": false
+  "endpoint": "https://script.google.com/macros/s/AKfycbxJ2wn2J4nKywEemMBtxjymzTkv7k8tmgXWJBKoWfmXJjFSLDiZDz0Pd93OUhAuCvUV/exec",
+  "enabled": true
 }
