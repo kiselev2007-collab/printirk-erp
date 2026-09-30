@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='uv-signs-fixed-2026-09-30.28';
+const CALC_VERSION='unified-signs-flexions-2026-09-30.29';
 document.getElementById('calcVersion').textContent='Версия '+CALC_VERSION;
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
@@ -523,7 +523,7 @@ function splitPositions(raw){
   s=s.replace(/(?:^|\n|\s)(\d{1,2})[.)]\s+/g,'\n$1. ');
   const parts=s.split(/\n+|;\s*|\s+\+\s+/).map(x=>x.replace(/^\s*(?:[-•]|\d{1,2}[.)])\s*/,'').trim()).filter(Boolean);
   const hasSize=x=>/\d+(?:[.,]\d+)?\s*(?:мм|см|м)?\s*[xх×]\s*\d+(?:[.,]\d+)?/i.test(x)||/(?:^|[^0-9a-zа-яё])(?:а|a)\s*[3-7](?=$|[^0-9a-zа-яё])/i.test(x);
-  const materialHeader=x=>/баннер|банер|пл[её]н|перф|ораджет|orajet|оракал|oracal|самокле|постер|плакат|беклит|бэклит|backlit/i.test(x);
+  const materialHeader=x=>/банн?ер|пл[её]н|перф|ораджет|orajet|оракал|oracal|самокле|постер|плакат|беклит|бэклит|backlit/i.test(x);
   const ownMaterial=x=>materialHeader(x);
   const out=[];let context='';
   for(let i=0;i<parts.length;i++){
@@ -764,7 +764,7 @@ function digitalProductKind(t){
  const canonical=synonymCanonical(t,'digital_product');if(canonical)return canonical;
  if(/винн[а-яё]*\s+карт/.test(t))return 'Винная карта';
  if(/барн[а-яё]*\s+карт/.test(t))return 'Меню';
- if(/открытк/.test(t))return 'Открытка';
+ if(/открыт(?:к|ок)/.test(t))return 'Открытка';
  if(/приглаш/.test(t))return 'Приглашение';
  if(/буклет/.test(t))return 'Буклет';
  if(/визит|визикт/.test(t))return 'Визитка';
@@ -776,7 +776,7 @@ function digitalProductKind(t){
  if(/купон/.test(t))return 'Купон';
  if(/абонем|абоним/.test(t))return 'Абонемент';
  if(/билет/.test(t))return 'Билет';
- if(/наклейк|этикет/.test(t))return 'Наклейка';
+ if(/накле(?:йк|ек)|этикет/.test(t))return 'Наклейка';
  if(/вкладыш/.test(t))return 'Вкладыш';
  if(/бланк/.test(t))return 'Бланк';
  return 'Печатная продукция';
@@ -866,13 +866,46 @@ function parseThicknessMm(t){
  const m=t.match(/(?:пвх|пластик|акрил|вивак)[^\d]{0,12}(\d+(?:[.,]\d+)?)\s*мм/i);
  return m?n(m[1]):0;
 }
+function parseProductQuantity(t){
+ const explicit=t.match(/(?:тираж|кол-?во|количество)\s*[:=—–-]?\s*(\d+)(?!\d)/i);
+ if(explicit)return Number(explicit[1]);
+ const unit=t.match(/(?:^|[^0-9])(\d+)\s*(?:шт\.?|штук(?:и|а)?|экз\.?|экземпляр(?:а|ов)?|компл(?:ект(?:ы|а|ов)?)?\.?|издели(?:й|я|е)|ед\.?)(?=$|[^а-яёa-z0-9])/i);
+ if(unit)return Number(unit[1]);
+ const leading=t.match(/^\s*(\d+)(?!\d)\s*[-–—:]?\s*(?!(?:мм|см|м|гр|г|мкр|dpi|дпи)(?=$|[^а-яёa-z]))(?=[а-яёa-z])/i);
+ if(leading)return Number(leading[1]);
+ const products='(?:круж(?:к|ек|ечк)|знач(?:к|ок|ков)|визит(?:к|ок|н)|таблич(?:к|ек)|шильд|накле(?:йк|ек)|этикет|листов(?:к|ок)|открыт(?:к|ок)|футбол(?:к|ок)|банн?ер|плакат|постер|пл[её]н|самокле|буклет|флаер|журнал|блокнот|календар|сертификат|грамот|приглаш|удостовер|зачет(?:к|ок)|бланк|купон|абонемент|билет|вкладыш|плейсмет|дорхенгер|магнит|флаг|руч(?:к|ек)|пакет)';
+ const after=new RegExp('(?:^|[^а-яёa-z])'+products+'[а-яё]*[\\s\\-—–:,]+(\\d+)(?!\\d)(?!\\s*[xх×+])(?!\\s*(?:мм|см|м|гр|г|мкр|dpi|дпи)(?=$|[^а-яёa-z]))','i').exec(t);
+ return Number(after?.[1]||0);
+}
+function signTechnologyFromText(t){
+ if(hasUv(t))return 'uv_standard';
+ if(/1440\s*(?:dpi|дпи)/.test(t))return 'film_1440';
+ if(/360\s*(?:dpi|дпи)/.test(t))return 'film_360';
+ if(/720\s*(?:dpi|дпи)/.test(t)&&/ламин|лам\.?/.test(t))return 'film_720_lam';
+ if(/оракал|oracal/.test(t)&&/аппликац|апликац/.test(t))return 'film_oracal_applique';
+ if(/оракал|oracal/.test(t))return 'film_oracal_bg';
+ if(/двухсторон|2х\s*сторон|2-х\s*сторон/.test(t))return 'film_double_720_lam';
+ if(/пл[её]н|самокле|накатк|(?:^|[^а-яё])720\s*(?:dpi|дпи)/.test(t))return 'film_720';
+ return '';
+}
+function signMaterialOptions(technology){
+ if(String(technology).startsWith('uv_'))return uvSection().products||[];
+ if(String(technology).startsWith('film_'))return signSection().products||[];
+ const both=[...(signSection().products||[]),...(uvSection().products||[])],seen=new Set();
+ return both.filter(p=>{const key=norm(p.name);if(seen.has(key))return false;seen.add(key);return true});
+}
 function hasUv(t){
  return /(?:^|[^0-9a-zа-яё])(?:уф|uv)(?=$|[^0-9a-zа-яё])|(?:уф[\s-]*печать|uv[\s-]*print)/i.test(t);
 }
 function signPlateInputChange(i){
  const x=detected[i];if(!x)return;
  x.w=(Number(x.wmm)||0)/1000;x.h=(Number(x.hmm)||0)/1000;
- x.invalidReason=(!x.wmm||!x.hmm)?'Укажите ширину и высоту таблички':(!x.material?'Укажите материал таблички':(x.millingRequested&&!x.millingMeters?'Укажите погонные метры фрезеровки':''));
+ x.invalidReason=(!x.wmm||!x.hmm)?'Укажите ширину и высоту таблички':
+   (!x.technology?'Выберите способ печати':
+   (!x.material?'Укажите материал таблички':
+   (String(x.technology).startsWith('uv_')&&!uvProductForSign(x.material)?'Для этого материала нет УФ-тарифа — выберите доступный':
+   (String(x.technology).startsWith('film_')&&!signProduct(x.material)?'Для этого материала нет тарифа таблички с плёнкой':
+   (x.millingRequested&&!x.millingMeters?'Укажите погонные метры фрезеровки':'')))));
  renderDetected();
 }
 function signMaterialFromText(t){
@@ -887,10 +920,7 @@ function signMaterialFromText(t){
  return '';
 }
 function signProduct(name){return (signSection().products||[]).find(x=>norm(x.name)===norm(name))||null}
-function uvProductForSign(name){
- const map={'Пластик 3 мм':'Пластик 3 мм','Пластик 5 мм':'Пластик 5 мм','Пластик 10 мм':'Пластик 10 мм','Акриловое стекло 3 мм молочное':'Акриловое стекло 3 мм молочное','Акрил прозрачный 3 мм':'Акрил прозрачный 3 мм','Вивак 1 мм':'Вивак 1 мм','Композит белый':'Композит белый'};
- const target=map[name];return target?(uvSection().products||[]).find(x=>norm(x.name)===norm(target))||null:null;
-}
+function uvProductForSign(name){return (uvSection().products||[]).find(x=>norm(x.name)===norm(name))||null;}
 function millingMaterialFromText(t,signMaterial=''){
  const th=parseThicknessMm(t),s=norm(signMaterial);
  if(/пвх|пластик/.test(t)||s.includes('пластик')){const v=th||Number((s.match(/(\d+(?:[.,]\d+)?)\s*мм/)||[])[1]?.replace(',','.')||3);if(v<=5)return 'ПВХ 1–5 мм';if(v<=10)return 'ПВХ 6–10 мм';return 'ПВХ до 20 мм'}
@@ -907,8 +937,7 @@ function parseLinearMeters(t){
 }
 function parseLine(line){
  const t=norm(line);
- const qtyMatch=t.match(/(?:тираж|кол-?во|количество)\s*(\d+)|(\d+)\s*шт|^(\d+)\s+(?!(?:гр|г|мм|см|м|dpi|дпи|мкр)(?:\s|[.,]|$))(?=[a-zа-яё])/i);
- const qty=Number((qtyMatch||[]).slice(1).find(Boolean)||0);
+ const qty=parseProductQuantity(t);
  const densMatch=t.match(/\b(65|80|90|105|115|120|128|130|157|170|180|200|250|300|340|400|440|510)\s*(?:гр|г)(?=$|[^0-9a-zа-яё])/i);
  let density=Number((densMatch||[])[1]||0);
  if(!density&&/баннер/.test(t)){
@@ -935,9 +964,9 @@ function parseLine(line){
    return {source:line,type:'journal',format:jf?'A'+jf:'A4',qty:qty||1,leaves,bindingType,sides,paper:duplicationPaperName(t),printSheet:'A3',numbering,stitching,coverStickerMentioned,invalidReason:!leaves?'Укажите количество листов в журнале':''};
  }
 
- const isBindingDoc=/удостовер|студенческ|корочк|зач[её]тк/.test(t);
+ const isBindingDoc=/удостовер|студенческ|корочк|зачет(?:к|ок)/.test(t);
  if(isBindingDoc){
-   const kind=/зач[её]тк/.test(t)?'grade_book':'credential';
+   const kind=/зачет(?:к|ок)/.test(t)?'grade_book':'credential';
    const im=t.match(/(\d+)\s*(?:внутренн[а-яё]*\s*)?(?:лист(?:ов|а)?|л\.?)/i);
    const innerLeaves=Number(im?.[1]||0);
    const innerFmt=(t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([4-7])(?=$|[^0-9a-zа-яё])/i)||[])[1];
@@ -984,7 +1013,7 @@ function parseLine(line){
    return {source:line,type:'interior_flex',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,invalidReason:!sz?'Укажите размер печати на флексе':''};
  }
 
- const apparelApply=/нанесен[а-яё]*\s+на\s+футболк|печать\s+на\s+футболк/.test(t);
+ const apparelApply=/нанесен[а-яё]*\s+на\s+футбол(?:к|ок)|печать\s+на\s+футбол(?:к|ок)/.test(t);
  if(apparelApply){
    const sz=parseSize(t);
    const method=/сублим/.test(t)?'sublimation':(/флекс|термофлекс/.test(t)?'flex':'');
@@ -998,8 +1027,8 @@ function parseLine(line){
    const mode=(qty===1000&&!/цифр/.test(t))?'offset':'digital';
    return {source:line,type:'business_card',qty:qty||1000,color,cardSize,mode,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0};
  }
- if(/кружк/.test(t))return {source:line,type:'mug',qty:qty||1};
- if(/значк/.test(t))return {source:line,type:'badge_round',qty:qty||1};
+ if(/круж(?:к|ек|ечк)/.test(t))return {source:line,type:'mug',qty:qty||1};
+ if(/знач(?:к|ок|ков)/.test(t))return {source:line,type:'badge_round',qty:qty||1};
  const installFrame=/монтаж[^\n]*(?:рам|каркас)|(?:рам|каркас)[^\n]*монтаж/.test(t);
  if(installFrame){
    const sz=parseSize(t),area=sz?sz.w*sz.h:0;
@@ -1007,9 +1036,9 @@ function parseLine(line){
  }
  const directUv=hasUv(t),directUvMaterial=directUv?signMaterialFromText(t):'';
  const isSignMention=/таблич|табл\.?(?:\s|$)|шильд/.test(t);
- if(directUv&&directUvMaterial&&!isSignMention){
+ if(directUv&&!isSignMention&&!/пл[её]н|накле|этикет/.test(t)&&(directUvMaterial||/печать|печат/.test(t))){
    const sz=parseSize(t);
-   return {source:line,type:'sign_plate',qty:qty||1,material:directUvMaterial,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,technology:'uv_standard',millingRequested:false,millingMeters:0,millingMaterial:'',invalidReason:!sz?'Укажите размер УФ-печати':''};
+   return {source:line,type:'sign_plate',qty:qty||1,material:directUvMaterial,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,technology:'uv_standard',millingRequested:false,millingMeters:0,millingMaterial:'',invalidReason:!sz?'Укажите размер УФ-печати':(!directUvMaterial?'Укажите материал таблички':'')};
  }
 
  const noPrintMaterial=/без\s+печати|без\s+нанесения|только\s+материал/.test(t);
@@ -1026,15 +1055,8 @@ function parseLine(line){
  const hasMilling=/фрезеров|фрезерн|раскрой/.test(t)||(/(?:^|\s)резк[а-яё]*\s+/.test(t)&&cutMaterialMention&&!hasLaser);
  if(isSign){
    const signSize=parseSize(t),material=signMaterialFromText(t),millingMeters=hasMilling?(parseLinearMeters(t)||rectPerimeterM(signSize,qty||1)):0;
-   let technology='film_720';
-   if(hasUv(t))technology='uv_standard';
-   else if(/1440\s*(?:dpi|дпи)/.test(t))technology='film_1440';
-   else if(/360\s*(?:dpi|дпи)/.test(t))technology='film_360';
-   else if(/720\s*(?:dpi|дпи)/.test(t)&&/лам/.test(t))technology='film_720_lam';
-   else if(/оракал|oracal/.test(t)&&/аппликац|апликац/.test(t))technology='film_oracal_applique';
-   else if(/оракал|oracal/.test(t))technology='film_oracal_bg';
-   else if(/двухсторон|2х\s*сторон|2-х\s*сторон/.test(t))technology='film_double_720_lam';
-   return {source:line,type:'sign_plate',qty:qty||1,material,w:signSize?.w||0,h:signSize?.h||0,wmm:signSize?.wmm||0,hmm:signSize?.hmm||0,technology,millingRequested:hasMilling,millingMeters,millingMaterial:millingMaterialFromText(t,material),invalidReason:!signSize?'Укажите размер таблички':(!material?'Укажите материал таблички':(hasMilling&&!millingMeters?'Укажите погонные метры фрезеровки':''))};
+   const technology=signTechnologyFromText(t);
+   return {source:line,type:'sign_plate',qty:qty||1,material,w:signSize?.w||0,h:signSize?.h||0,wmm:signSize?.wmm||0,hmm:signSize?.hmm||0,technology,millingRequested:hasMilling,millingMeters,millingMaterial:millingMaterialFromText(t,material),invalidReason:!signSize?'Укажите размер таблички':(!technology?'Выберите способ печати':(!material?'Укажите материал таблички':(String(technology).startsWith('uv_')&&!uvProductForSign(material)?'Для этого материала нет УФ-тарифа — выберите доступный':(hasMilling&&!millingMeters?'Укажите погонные метры фрезеровки':''))))};
  }
  if(hasLaser){
    const sz=parseSize(t),material=laserMaterialFromText(t),meters=parseLinearMeters(t)||rectPerimeterM(sz,qty||1);
@@ -1060,8 +1082,8 @@ function parseLine(line){
  ){
    return {source:line,type:'quarter_calendar',qty:qty||1};
  }
- const paperSticker=/наклейк|этикет/.test(t) && (/цифр/.test(t)||/офсет/.test(t)||/бумажн[а-яё]*\s+самокле|самокле[а-яё]*\s+бумаж/.test(t));
- const namedPoly=/листовк|буклет|флаер|винн[а-яё]*\s+карт|барн[а-яё]*\s+карт|меню|визит|визикт|открытк|приглаш|сертификат|серт|бланк|благодар|грамот|купон|абонем|абоним|билет|вкладыш/.test(t) || synonymMatch(t,'digital_product');
+ const paperSticker=/накле(?:йк|ек)|этикет/.test(t) && (/цифр/.test(t)||/офсет/.test(t)||/бумажн[а-яё]*\s+самокле|самокле[а-яё]*\s+бумаж/.test(t));
+ const namedPoly=/листов(?:к|ок)|буклет|флаер|винн[а-яё]*\s+карт|барн[а-яё]*\s+карт|меню|визит|визикт|открыт(?:к|ок)|приглаш|сертификат|серт|бланк|благодар|грамот|купон|абонем|абоним|билет|вкладыш/.test(t) || synonymMatch(t,'digital_product');
  const genericPoly=!!(cm&&density&&qty&&(fm||parseSize(t)));
  const poly=namedPoly||genericPoly||paperSticker;
  const lamSoft=/софт|soft\s*touch|силк/.test(t);
@@ -1093,8 +1115,8 @@ function parseLine(line){
    return {source:line,type:'poster',density:density||0,dpi,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,edgeCut:/резк[^,;]*край/.test(t),laminate:/ламинац|ламинир/.test(t)};
  }
  let type='unknown';
- if(/баннер|сетк/.test(t)||synonymMatch(t,'banner'))type='banner';
- else if((/пленк|плёнк|ораджет|orajet|оракал|oracal|самокле|наклей|винил|беклит|бэклит|backlit/.test(t)||synonymMatch(t,'film'))&&!paperSticker)type='film';
+ if(/банн?ер|сетк/.test(t)||synonymMatch(t,'banner'))type='banner';
+ else if((/пл[её]н|ораджет|orajet|оракал|oracal|самокле|накле(?:йк|ек)|винил|беклит|бэклит|backlit/.test(t)||synonymMatch(t,'film'))&&!paperSticker)type='film';
  let productId='',effectiveDpi=dpiExplicit||240;
  if(type==='banner'){
   if(/баннерн[а-яё]*\s+сетк|сетк/.test(t))productId='banner_mesh';
