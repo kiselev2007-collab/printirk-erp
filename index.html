@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='journal-fixes-2026-10-02.30';
+const CALC_VERSION='journal-pages-2026-10-02.31';
 document.getElementById('calcVersion').textContent='Версия '+CALC_VERSION;
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
@@ -973,14 +973,17 @@ function parseLine(line){
  const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
  const cm=t.match(/4\s*\+\s*(0|4)/);
 
- const isBrochure=/каталог|брошюр/.test(t);
+ const stapledJournal=/журнал/.test(t)&&/(?:стр\.?|страниц|скоб)/.test(t)&&!/(?:тв[её]рд|тверд|мягк|перепл[её]т|прошив)/.test(t);
+ const isBrochure=/каталог|брошюр/.test(t)||stapledJournal;
  if(isBrochure){
    const pages=Number((t.match(/(\d+)\s*(?:стр\.?|страниц[а-яё]*)/i)||[])[1]||0);
    const format=fm?'A'+fm[1]:'A4',color=cm?'4+'+cm[1]:'4+4',perA3=brochurePagesPerA3(format);
    const staplesPerItem=/без\s+скоб/.test(t)?0:Number((t.match(/(\d+)\s*скоб/i)||[])[1]||2);
-   return {source:line,type:'brochure',qty:qty||1,pages,format,color,density:density||80,paperKey:digitalPaperKeyFromText(t,density||80),staplesPerItem,
-     pageWarning:(pages&&pages%perA3!==0)?'Количество страниц не кратно '+perA3+' для '+format+' на A3 — листы округлены вверх':'',
-     invalidReason:!pages?'Укажите количество страниц каталога/брошюры':''};
+   const productKind=/журнал/.test(t)?'Журнал':(/каталог/.test(t)?'Каталог':'Брошюра');
+   const pageInvalid=(format==='A4'&&pages&&pages%4!==0)?'Для журнала/брошюры A4 количество страниц должно быть кратно 4':'';
+   return {source:line,type:'brochure',productKind,qty:qty||1,pages,format,color,density:density||80,paperKey:digitalPaperKeyFromText(t,density||80),staplesPerItem,
+     pagesPerA3:perA3,printSheetsPerItem:pages?Math.ceil(pages/perA3):0,pageWarning:'',
+     invalidReason:!pages?'Укажите количество страниц журнала/брошюры':pageInvalid};
  }
 
  const isJournal=/журнал[а-яё]*/i.test(t);
@@ -1306,10 +1309,12 @@ function renderDetected(){
   }
   if(x.type==='brochure'){
     const calc=brochureDigitalCalc(x),papers=[80,90,130,170,300].map(p=>'<option value="'+p+'" '+(Number(x.density)===p?'selected':'')+'>'+p+' г/м²</option>').join('');
+    const perItem=x.printSheetsPerItem||Math.ceil((x.pages||0)/brochurePagesPerA3(x.format));
     let chips='<span class="chip">'+x.qty+' шт.</span><span class="chip">'+x.format+'</span><span class="chip">'+x.pages+' стр.</span><span class="chip">'+x.color+'</span>';
-    if(!calc.error)chips+='<span class="chip auto">'+calc.sheets+' печатных листов A3</span><span class="chip auto">'+money(calc.sale)+'</span>';
-    if(x.pageWarning)chips+='<span class="chip warn">'+x.pageWarning+'</span>';
-    return '<div class="detected-card"><div class="detected-head"><div><b>Каталог / брошюра на скобах</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Страниц</label><input type="number" min="4" step="4" value="'+x.pages+'" onchange="detected['+i+'].pages=+this.value;renderDetected()"></div><div class="field"><label>Бумага</label><select onchange="detected['+i+'].density=+this.value;detected['+i+'].paperKey=this.value;renderDetected()">'+papers+'</select></div><div class="field"><label>Скоб / изделие</label><input type="number" min="0" value="'+x.staplesPerItem+'" onchange="detected['+i+'].staplesPerItem=+this.value;renderDetected()"></div></div></div>';
+    if(!calc.error)chips+='<span class="chip auto">'+perItem+' листа A3 / экз.</span>'+(x.qty>1?'<span class="chip auto">'+calc.sheets+' листов A3 всего</span>':'')+'<span class="chip auto">'+money(calc.sale)+'</span>';
+    if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
+    const title=(x.productKind||'Каталог / брошюра')+' на скобах';
+    return '<div class="detected-card"><div class="detected-head"><div><b>'+title+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Страниц</label><input type="number" min="4" step="4" value="'+x.pages+'" onchange="detected['+i+'].pages=+this.value;detected['+i+'].printSheetsPerItem=Math.ceil(+this.value/brochurePagesPerA3(detected['+i+'].format));detected['+i+'].invalidReason=(detected['+i+'].format===\'A4\'&&+this.value%4!==0)?\'Количество страниц должно быть кратно 4\':\'\';renderDetected()"></div><div class="field"><label>Бумага</label><select onchange="detected['+i+'].density=+this.value;detected['+i+'].paperKey=this.value;renderDetected()">'+papers+'</select></div><div class="field"><label>Скоб / изделие</label><input type="number" min="0" value="'+x.staplesPerItem+'" onchange="detected['+i+'].staplesPerItem=+this.value;renderDetected()"></div></div></div>';
   }
 
  if(x.type==='business_card'){
@@ -1596,9 +1601,11 @@ function addDetected(i){
    autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
  if(x.type==='brochure'){
+   if(x.invalidReason){alert(x.invalidReason);return}
    const calc=brochureDigitalCalc(x);if(calc.error){alert(calc.error);return}
-   price=calc.sale;cost=calc.cost;name='Каталог / брошюра '+x.format+' · '+x.pages+' стр. · '+x.qty+' шт.';
-   details.push('готовый '+x.format+': '+brochurePagesPerA3(x.format)+' стр. = 1 лист A3','печатных листов A3: '+calc.sheets,'печать '+x.color+': '+calc.sheets+' × '+money(calc.unit)+' — '+money(calc.unit*calc.sheets),'бумага '+calc.paperKey+' г/м² — '+money(calc.printSale-calc.unit*calc.sheets),'фальцовка: '+calc.folds+' × '+money(0.33)+' — '+money(calc.foldSale),'скобы: '+calc.staples+' × '+money(2.2)+' — '+money(calc.stapleSale));addMinimumRecommendation(details,'цифрового заказа',digitalSection().minimum_order_rub||100,price);
+   price=calc.sale;cost=calc.cost;name=(x.productKind||'Каталог / брошюра')+' '+x.format+' · '+x.pages+' стр. · '+x.qty+' шт.';
+   const perItem=x.printSheetsPerItem||Math.ceil(x.pages/brochurePagesPerA3(x.format));
+   details.push('готовый '+x.format+': '+brochurePagesPerA3(x.format)+' стр. = 1 лист A3','на 1 экземпляр: '+x.pages+' стр. → '+perItem+' листа A3','печатных листов A3 всего: '+calc.sheets,'печать '+x.color+': '+calc.sheets+' × '+money(calc.unit)+' — '+money(calc.unit*calc.sheets),'бумага '+calc.paperKey+' г/м² — '+money(calc.printSale-calc.unit*calc.sheets),'фальцовка: '+calc.folds+' × '+money(0.33)+' — '+money(calc.foldSale),'скобы: '+calc.staples+' × '+money(2.2)+' — '+money(calc.stapleSale));addMinimumRecommendation(details,'цифрового заказа',digitalSection().minimum_order_rub||100,price);
    autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
