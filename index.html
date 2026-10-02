@@ -183,7 +183,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='summary-full-description-2026-10-02.33';
+const CALC_VERSION='summary-natural-description-2026-10-02.34';
 document.getElementById('calcVersion').textContent='Версия '+CALC_VERSION;
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
@@ -2016,13 +2016,13 @@ function autoSummaryLabel(item){
    let label='Баннер'+(density?' '+density+' гр.':'')+(summarySize(x)?' '+summarySize(x):'');
    if(Number(x.qty||1)>1)label+=' · '+x.qty+' шт.';
    const post=[];
-   if(x.grommetCount)post.push('люверсы '+x.grommetCount+' шт.');
-   else if(x.grommet)post.push('люверсы через '+x.grommet+' мм');
-   if(x.wind)post.push('ветровые карманы');
-   if(x.reinforce)post.push('усиление края');
-   if(x.edgeCut)post.push('резка в край');
+   if(x.grommetCount)post.push('люверсами '+x.grommetCount+' шт.');
+   else if(x.grommet)post.push('люверсами через '+x.grommet+' мм');
+   if(x.wind)post.push('ветровыми карманами');
+   if(x.reinforce)post.push('усилением края');
+   if(x.edgeCut)post.push('резкой в край');
    const lay=(x.w&&x.h)?bannerLayout(x.w,x.h):null;
-   if(lay?.seams)post.push('склейка '+lay.seams+' шв.');
+   if(lay?.seams)post.push('склейкой · '+lay.seams+' шв.');
    if(post.length)label+=' с '+post.join(', ');
    return label;
  }
