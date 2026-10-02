@@ -88,21 +88,15 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 <div class="panel" style="margin-top:16px">
 <h2>Позиции расчёта</h2>
-<table><thead><tr><th>Позиция</th><th>Что учтено</th><th class="right">Себестоимость</th><th class="right">Прайс</th><th class="right">После скидки</th><th></th></tr></thead><tbody id="autoRows"></tbody></table>
+<table><thead><tr><th>Позиция</th><th>Что учтено</th><th class="right">Себестоимость</th><th class="right">Прайс</th><th></th></tr></thead><tbody id="autoRows"></tbody></table>
 </div>
 </div>
 <div class="panel">
-<h2>Итого</h2>
-<div class="summaryline"><span>Цена по прайсу</span><strong id="autoPrice">0 ₽</strong></div>
-<div class="field" style="margin:12px 0"><label>Скидка менеджера, %</label><input id="autoDiscount" type="number" min="0" max="100" step=".1" value="0"></div>
-<div class="summaryline"><span>Скидка</span><strong id="autoDiscRub">0 ₽</strong></div>
-<div class="summaryline"><span>Себестоимость</span><strong id="autoCost">0 ₽</strong></div>
-<div class="summaryline"><span>Маржа после скидки</span><strong id="autoMargin">0 ₽</strong></div>
-<div class="total"><span>К оплате</span><strong id="autoFinal">0 ₽</strong></div>
-<div class="summary-items">
-  <div class="summary-items-title" id="autoItemsTitle">Состав заказа</div>
+<h2>Состав заказа</h2>
+<div class="summary-items" style="margin-top:0;padding-top:0;border-top:0">
   <div id="autoSummaryItems"><div class="summary-items-empty">Позиции появятся после добавления в расчёт.</div></div>
 </div>
+<div class="total" style="margin-top:16px"><span>Итого</span><strong id="autoFinal">0 ₽</strong></div>
 <p class="note">После распознавания менеджер проверяет параметры. Для каждого материала показываются только допустимые операции.</p>
 </div>
 </div>
@@ -183,7 +177,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='summary-natural-description-2026-10-02.34';
+const CALC_VERSION='summary-simple-total-2026-10-02.35';
 document.getElementById('calcVersion').textContent='Версия '+CALC_VERSION;
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
@@ -2069,15 +2063,13 @@ function autoSummaryLabel(item){
  return String(item.source||item.name||'Позиция').replace(/\s+/g,' ').trim();
 }
 function renderAuto(){
- const disc=Math.max(0,n(document.getElementById('autoDiscount').value)),factor=1-disc/100,allCostKnown=autoItems.every(x=>x.costKnown!==false);
- document.getElementById('autoRows').innerHTML=autoItems.length?autoItems.map((x,i)=>'<tr><td><b>'+x.name+'</b><br><button class="flagbtn" onclick="openError('+i+')">⚑ Ошибка</button></td><td>'+x.details.join('<br>')+'</td><td class="right">'+(x.costKnown===false?'—':money(x.cost))+'</td><td class="right">'+money(x.price)+'</td><td class="right"><b>'+money(x.price*factor)+'</b></td><td><button class="btn danger" onclick="removeAuto('+i+')">×</button></td></tr>').join(''):'<tr><td colspan="6" class="note">Пока нет позиций. Введите заказ обычным текстом выше.</td></tr>';
- const summary=document.getElementById('autoSummaryItems'),summaryTitle=document.getElementById('autoItemsTitle');
+ document.getElementById('autoRows').innerHTML=autoItems.length?autoItems.map((x,i)=>'<tr><td><b>'+x.name+'</b><br><button class="flagbtn" onclick="openError('+i+')">⚑ Ошибка</button></td><td>'+x.details.join('<br>')+'</td><td class="right">'+(x.costKnown===false?'—':money(x.cost))+'</td><td class="right">'+money(x.price)+'</td><td><button class="btn danger" onclick="removeAuto('+i+')">×</button></td></tr>').join(''):'<tr><td colspan="5" class="note">Пока нет позиций. Введите заказ обычным текстом выше.</td></tr>';
+ const summary=document.getElementById('autoSummaryItems');
  if(summary){
-   summary.innerHTML=autoItems.length?autoItems.map(x=>'<div class="summary-item"><span class="summary-item-name">'+autoSummaryLabel(x)+'</span><span class="summary-item-price">— '+money(x.price*factor)+'</span></div>').join(''):'<div class="summary-items-empty">Позиции появятся после добавления в расчёт.</div>';
+   summary.innerHTML=autoItems.length?autoItems.map(x=>'<div class="summary-item"><span class="summary-item-name">'+autoSummaryLabel(x)+'</span><span class="summary-item-price">— '+money(x.price)+'</span></div>').join(''):'<div class="summary-items-empty">Позиции появятся после добавления в расчёт.</div>';
  }
- if(summaryTitle)summaryTitle.textContent=disc>0?'Состав заказа · после скидки':'Состав заказа';
- const p=autoItems.reduce((s,x)=>s+x.price,0),c=autoItems.reduce((s,x)=>s+(x.costKnown===false?0:x.cost),0),final=p*factor;
- document.getElementById('autoPrice').textContent=money(p);document.getElementById('autoDiscRub').textContent=money(p-final);document.getElementById('autoCost').textContent=allCostKnown?money(c):'—';document.getElementById('autoMargin').textContent=allCostKnown?money(final-c):'—';document.getElementById('autoFinal').textContent=money(final)
+ const total=autoItems.reduce((sum,x)=>sum+x.price,0);
+ document.getElementById('autoFinal').textContent=money(total)
 }
 function removeAuto(i){autoItems.splice(i,1);renderAuto()}
 let errorTarget=null,errorContext=null;
@@ -2166,7 +2158,7 @@ document.getElementById('saveError').onclick=async()=>{
 }
 document.getElementById('exportErrors').onclick=()=>{const rows=readErrors(),headers=['date','version','status','manager','office','type','source','item','price','cost','total','expected','comment','details','parsed','sync'];const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';const csv='\ufeff'+headers.join(';')+'\n'+rows.map(r=>headers.map(h=>esc(r[h])).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='printirk_calc_errors.csv';a.click();URL.revokeObjectURL(a.href)}
 renderErrors();
-document.getElementById('recognizeBtn').onclick=recognize;document.getElementById('autoDiscount').oninput=renderAuto;renderAuto();
+document.getElementById('recognizeBtn').onclick=recognize;renderAuto();
 
 const signConfigs={
 'Буквы на раме':[
