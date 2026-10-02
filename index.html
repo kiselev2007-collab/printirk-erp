@@ -891,7 +891,7 @@ function parseProductQuantity(t){
  const leading=t.match(/^\s*(\d+)(?!\d)\s*[-–—:]?\s*(?!(?:мм|см|м|гр|г|мкр|dpi|дпи)(?=$|[^а-яёa-z]))(?=[а-яёa-z])/i);
  if(leading)return Number(leading[1]);
  const products='(?:круж(?:к|ек|ечк)|знач(?:к|ок|ков)|визит(?:к|ок|н)|таблич(?:к|ек)|шильд|накле(?:йк|ек)|этикет|листов(?:к|ок)|открыт(?:к|ок)|футбол(?:к|ок)|банн?ер|плакат|постер|пл[её]н|самокле|буклет|флаер|журнал|блокнот|календар|сертификат|грамот|приглаш|удостовер|зачет(?:к|ок)|бланк|купон|абонемент|билет|вкладыш|плейсмет|дорхенгер|магнит|флаг|руч(?:к|ек)|пакет|каталог|брошюр)';
- const after=new RegExp('(?:^|[^а-яёa-z])'+products+'[а-яё]*[\\s\\-—–:,]+(\\d+)(?!\\d)(?!\\s*[xх×+])(?!\\s*(?:мм|см|м|гр|г|мкр|dpi|дпи)(?=$|[^а-яёa-z]))','i').exec(t);
+ const after=new RegExp('(?:^|[^а-яёa-z])'+products+'[а-яё]*[\\s\\-—–:,]+(\\d+)(?!\\d)(?!\\s*[xх×*+])(?!\\s*(?:мм|см|м|гр|г|мкр|dpi|дпи)(?=$|[^а-яёa-z]))','i').exec(t);
  return Number(after?.[1]||0);
 }
 function signTechnologyFromText(t){
@@ -1307,29 +1307,6 @@ function renderDetected(){
     return '<div class="detected-card"><div class="detected-head"><div><b>Каталог / брошюра на скобах</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Страниц</label><input type="number" min="4" step="4" value="'+x.pages+'" onchange="detected['+i+'].pages=+this.value;renderDetected()"></div><div class="field"><label>Бумага</label><select onchange="detected['+i+'].density=+this.value;detected['+i+'].paperKey=this.value;renderDetected()">'+papers+'</select></div><div class="field"><label>Скоб / изделие</label><input type="number" min="0" value="'+x.staplesPerItem+'" onchange="detected['+i+'].staplesPerItem=+this.value;renderDetected()"></div></div></div>';
   }
 
-  if(x.type==='frame_make'){
-   const frame=frameTariff(x.frameName);if(!frame){alert('Не найден тариф изготовления рамы.');return}
-   const perimeter=2*(x.w+x.h)*x.qty;price=perimeter*Number(frame.price||0);cost=0;name=x.frameName+' · '+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм';
-   details.push(perimeter.toFixed(2)+' п.м. × '+money(frame.price)+'/п.м. — '+money(price));if(frame.minimum&&price<frame.minimum)details.push('Рекомендуемый минимум изготовления рамы: '+money(frame.minimum)+' · автоматически не применяется');
-   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
- }
- if(x.type==='banner_on_timber'){
-   const prod=wideProduct(x.productId),frame=frameTariff(x.frameName),tension=bannerTensionTariff();if(!prod||!frame||!tension){alert('Не найдены тарифы баннера, бруска или натяжки.');return}
-   const bannerArea=x.bannerW*x.bannerH*x.qty,rate=Number(prod.prices?.[String(x.dpi)]||0),costRate=Number(prod.costs_per_m2?.[String(x.dpi)]||0);if(!rate){alert('Нет тарифа печати выбранного баннера.');return}
-   const printSale=bannerArea*rate;let printCost=bannerArea*costRate;const lay=bannerLayout(x.bannerW,x.bannerH);
-   if(lay.overflow>0){const wasteArea=lay.overflow*x.qty,materialCost=Number(prod.material_cost_per_m2||0),wasteCost=wasteArea*materialCost;printCost+=wasteCost;details.push('перерасход ткани: '+wasteArea.toFixed(2)+' м² × '+money(materialCost)+' — '+money(wasteCost))}
-   const perimeter=2*(x.frameW+x.frameH)*x.qty,frameSale=perimeter*Number(frame.price||0),tensionSale=perimeter*Number(tension.price||0);
-   price=printSale+frameSale+tensionSale;cost=printCost;name='Баннер на бруске · '+prod.name+' · '+Math.round(x.frameWmm)+'×'+Math.round(x.frameHmm)+' мм';
-   details.unshift('баннер: '+Math.round(x.bannerWmm)+'×'+Math.round(x.bannerHmm)+' мм · на 50 мм больше с каждой стороны','печать '+bannerArea.toFixed(2)+' м² × '+money(rate)+'/м² — '+money(printSale),x.frameName+': '+perimeter.toFixed(2)+' п.м. × '+money(frame.price)+' — '+money(frameSale),'натяжка баннера: '+perimeter.toFixed(2)+' п.м. × '+money(tension.price)+' — '+money(tensionSale));
-   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
- }
- if(x.type==='brochure'){
-   const calc=brochureDigitalCalc(x);if(calc.error){alert(calc.error);return}
-   price=calc.sale;cost=calc.cost;name='Каталог / брошюра '+x.format+' · '+x.pages+' стр. · '+x.qty+' шт.';
-   details.push('готовый '+x.format+': '+brochurePagesPerA3(x.format)+' стр. = 1 лист A3','печатных листов A3: '+calc.sheets,'печать '+x.color+': '+calc.sheets+' × '+money(calc.unit)+' — '+money(calc.unit*calc.sheets),'бумага '+calc.paperKey+' г/м² — '+money(calc.printSale-calc.unit*calc.sheets),'фальцовка: '+calc.folds+' × '+money(0.33)+' — '+money(calc.foldSale),'скобы: '+calc.staples+' × '+money(2.2)+' — '+money(calc.stapleSale));
-   autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
- }
-
  if(x.type==='business_card'){
     const digital=businessCardDigitalTotal(x.color,x.qty);
     let chips='<span class="chip">'+x.qty+' шт.</span><span class="chip">'+x.color+'</span><span class="chip">'+x.cardSize+'</span><span class="chip auto">'+(x.mode==='offset'?'сборный спуск':'цифровая печать')+'</span>';
@@ -1596,6 +1573,30 @@ function renderDetected(){
 function addDetected(i){
  const x=detected[i];if(!x||x.error||x.type==='unknown'||x.invalidReason)return;
  const details=[];let cost=0,price=0,name='';
+
+  if(x.type==='frame_make'){
+   const frame=frameTariff(x.frameName);if(!frame){alert('Не найден тариф изготовления рамы.');return}
+   const perimeter=2*(x.w+x.h)*x.qty;price=perimeter*Number(frame.price||0);cost=0;name=x.frameName+' · '+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм';
+   details.push(perimeter.toFixed(2)+' п.м. × '+money(frame.price)+'/п.м. — '+money(price));if(frame.minimum&&price<frame.minimum)details.push('Рекомендуемый минимум изготовления рамы: '+money(frame.minimum)+' · автоматически не применяется');
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+ if(x.type==='banner_on_timber'){
+   const prod=wideProduct(x.productId),frame=frameTariff(x.frameName),tension=bannerTensionTariff();if(!prod||!frame||!tension){alert('Не найдены тарифы баннера, бруска или натяжки.');return}
+   const bannerArea=x.bannerW*x.bannerH*x.qty,rate=Number(prod.prices?.[String(x.dpi)]||0),costRate=Number(prod.costs_per_m2?.[String(x.dpi)]||0);if(!rate){alert('Нет тарифа печати выбранного баннера.');return}
+   const printSale=bannerArea*rate;let printCost=bannerArea*costRate;const lay=bannerLayout(x.bannerW,x.bannerH);
+   if(lay.overflow>0){const wasteArea=lay.overflow*x.qty,materialCost=Number(prod.material_cost_per_m2||0),wasteCost=wasteArea*materialCost;printCost+=wasteCost;details.push('перерасход ткани: '+wasteArea.toFixed(2)+' м² × '+money(materialCost)+' — '+money(wasteCost))}
+   const perimeter=2*(x.frameW+x.frameH)*x.qty,frameSale=perimeter*Number(frame.price||0),tensionSale=perimeter*Number(tension.price||0);
+   price=printSale+frameSale+tensionSale;cost=printCost;name='Баннер на бруске · '+prod.name+' · '+Math.round(x.frameWmm)+'×'+Math.round(x.frameHmm)+' мм';
+   details.unshift('баннер: '+Math.round(x.bannerWmm)+'×'+Math.round(x.bannerHmm)+' мм · на 50 мм больше с каждой стороны','печать '+bannerArea.toFixed(2)+' м² × '+money(rate)+'/м² — '+money(printSale),x.frameName+': '+perimeter.toFixed(2)+' п.м. × '+money(frame.price)+' — '+money(frameSale),'натяжка баннера: '+perimeter.toFixed(2)+' п.м. × '+money(tension.price)+' — '+money(tensionSale));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+ if(x.type==='brochure'){
+   const calc=brochureDigitalCalc(x);if(calc.error){alert(calc.error);return}
+   price=calc.sale;cost=calc.cost;name='Каталог / брошюра '+x.format+' · '+x.pages+' стр. · '+x.qty+' шт.';
+   details.push('готовый '+x.format+': '+brochurePagesPerA3(x.format)+' стр. = 1 лист A3','печатных листов A3: '+calc.sheets,'печать '+x.color+': '+calc.sheets+' × '+money(calc.unit)+' — '+money(calc.unit*calc.sheets),'бумага '+calc.paperKey+' г/м² — '+money(calc.printSale-calc.unit*calc.sheets),'фальцовка: '+calc.folds+' × '+money(0.33)+' — '+money(calc.foldSale),'скобы: '+calc.staples+' × '+money(2.2)+' — '+money(calc.stapleSale));
+   autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+
 
  if(x.type==='business_card'){
    if(x.mode==='offset'){
