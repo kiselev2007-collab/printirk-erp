@@ -183,7 +183,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='summary-items-2026-10-02.32';
+const CALC_VERSION='summary-full-description-2026-10-02.33';
 document.getElementById('calcVersion').textContent='Версия '+CALC_VERSION;
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
@@ -1997,12 +1997,83 @@ function addDetected(i){
  }
  autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();
 }
+function summaryNumber(v,digits=2){
+ const x=Number(v||0);if(!Number.isFinite(x))return '';
+ return x.toLocaleString('ru-RU',{maximumFractionDigits:digits});
+}
+function summarySize(x){
+ if(!x)return '';
+ const w=Number(x.w||0),h=Number(x.h||0),wmm=Number(x.wmm||w*1000),hmm=Number(x.hmm||h*1000);
+ if(!w&&!h&&!wmm&&!hmm)return '';
+ if(w>=1&&h>=1)return summaryNumber(w)+'×'+summaryNumber(h)+' м';
+ return Math.round(wmm)+'×'+Math.round(hmm)+' мм';
+}
+function autoSummaryLabel(item){
+ let x=null;try{x=JSON.parse(item.parsed||'null')}catch(e){}
+ if(!x)return item.source||item.name||'Позиция';
+ if(x.type==='banner'){
+   const density=Number(x.density||0)||Number((wideProduct(x.productId)?.name?.match(/(\d+)/)||[])[1]||0);
+   let label='Баннер'+(density?' '+density+' гр.':'')+(summarySize(x)?' '+summarySize(x):'');
+   if(Number(x.qty||1)>1)label+=' · '+x.qty+' шт.';
+   const post=[];
+   if(x.grommetCount)post.push('люверсы '+x.grommetCount+' шт.');
+   else if(x.grommet)post.push('люверсы через '+x.grommet+' мм');
+   if(x.wind)post.push('ветровые карманы');
+   if(x.reinforce)post.push('усиление края');
+   if(x.edgeCut)post.push('резка в край');
+   const lay=(x.w&&x.h)?bannerLayout(x.w,x.h):null;
+   if(lay?.seams)post.push('склейка '+lay.seams+' шв.');
+   if(post.length)label+=' с '+post.join(', ');
+   return label;
+ }
+ if(x.type==='film'){
+   const product=wideProduct(x.productId)?.name||'Плёнка';
+   let label=product+(summarySize(x)?' '+summarySize(x):'');
+   if(Number(x.qty||1)>1)label+=' · '+x.qty+' шт.';
+   const post=[];
+   const lam=x.lamination||(x.laminate?(x.lamMatte?'matовая ламинация':x.lamGloss?'глянцевая ламинация':'ламинация'):'');
+   if(lam&&lam!=='none')post.push(lam==='gloss'?'глянцевая ламинация':lam==='matte'?'матовая ламинация':String(lam).includes('ламинац')?lam:'ламинация');
+   if(x.contour)post.push('контурная резка');
+   else if(x.edgeCut)post.push('резка в край');
+   if(x.uv)post.push('УФ-печать');
+   if(post.length)label+=' · '+post.join(', ');
+   return label;
+ }
+ if(x.type==='poster'){
+   let label='Постер'+(summarySize(x)?' '+summarySize(x):'')+(x.dpi?' · '+x.dpi+' dpi':'');
+   const post=[];if(x.laminate)post.push('ламинация');if(x.edgeCut)post.push('резка в край');
+   if(post.length)label+=' · '+post.join(', ');
+   return label;
+ }
+ if(x.type==='brochure'){
+   let label=(x.productKind||'Брошюра')+' '+(x.format||'')+(x.density?' '+x.density+' гр.':'')+(x.pages?' · '+x.pages+' стр.':'');
+   if(Number(x.qty||1)>1)label+=' · '+x.qty+' шт.';
+   if(Number(x.staplesPerItem||0)>0)label+=' · '+x.staplesPerItem+' скоб'+(x.staplesPerItem===1?'а':'ы');
+   return label;
+ }
+ if(x.type==='sign_plate'){
+   let label='Табличка'+(x.material?' '+x.material:'')+(summarySize(x)?' '+summarySize(x):'');
+   if(Number(x.qty||1)>1)label+=' · '+x.qty+' шт.';
+   if(String(x.technology||'').startsWith('uv_'))label+=' · УФ-печать';
+   else if(String(x.technology||'').startsWith('film_'))label+=' · плёнка + накатка';
+   if(x.millingMeters)label+=' · фрезеровка '+summaryNumber(x.millingMeters)+' п.м.';
+   return label;
+ }
+ if(x.type==='banner_on_timber'){
+   let label='Баннер '+(x.density?x.density+' гр. ':'')+Math.round(x.bannerWmm)+'×'+Math.round(x.bannerHmm)+' мм';
+   label+=' на раме '+Math.round(x.frameWmm)+'×'+Math.round(x.frameHmm)+' мм, '+String(x.frameName||'').replace(/^Рама\s+/i,'');
+   label+=' · натяжка на раму';
+   return label;
+ }
+ if(x.type==='frame_make')return (x.frameName||'Рама')+(summarySize(x)?' '+summarySize(x):'')+(Number(x.qty||1)>1?' · '+x.qty+' шт.':'');
+ return String(item.source||item.name||'Позиция').replace(/\s+/g,' ').trim();
+}
 function renderAuto(){
  const disc=Math.max(0,n(document.getElementById('autoDiscount').value)),factor=1-disc/100,allCostKnown=autoItems.every(x=>x.costKnown!==false);
  document.getElementById('autoRows').innerHTML=autoItems.length?autoItems.map((x,i)=>'<tr><td><b>'+x.name+'</b><br><button class="flagbtn" onclick="openError('+i+')">⚑ Ошибка</button></td><td>'+x.details.join('<br>')+'</td><td class="right">'+(x.costKnown===false?'—':money(x.cost))+'</td><td class="right">'+money(x.price)+'</td><td class="right"><b>'+money(x.price*factor)+'</b></td><td><button class="btn danger" onclick="removeAuto('+i+')">×</button></td></tr>').join(''):'<tr><td colspan="6" class="note">Пока нет позиций. Введите заказ обычным текстом выше.</td></tr>';
  const summary=document.getElementById('autoSummaryItems'),summaryTitle=document.getElementById('autoItemsTitle');
  if(summary){
-   summary.innerHTML=autoItems.length?autoItems.map(x=>'<div class="summary-item"><span class="summary-item-name">'+x.name+'</span><span class="summary-item-price">— '+money(x.price*factor)+'</span></div>').join(''):'<div class="summary-items-empty">Позиции появятся после добавления в расчёт.</div>';
+   summary.innerHTML=autoItems.length?autoItems.map(x=>'<div class="summary-item"><span class="summary-item-name">'+autoSummaryLabel(x)+'</span><span class="summary-item-price">— '+money(x.price*factor)+'</span></div>').join(''):'<div class="summary-items-empty">Позиции появятся после добавления в расчёт.</div>';
  }
  if(summaryTitle)summaryTitle.textContent=disc>0?'Состав заказа · после скидки':'Состав заказа';
  const p=autoItems.reduce((s,x)=>s+x.price,0),c=autoItems.reduce((s,x)=>s+(x.costKnown===false?0:x.cost),0),final=p*factor;
