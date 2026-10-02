@@ -1592,13 +1592,13 @@ function addDetected(i){
    if(lay.overflow>0){const wasteArea=lay.overflow*x.qty,materialCost=Number(prod.material_cost_per_m2||0),wasteCost=wasteArea*materialCost;printCost+=wasteCost;details.push('перерасход ткани: '+wasteArea.toFixed(2)+' м² × '+money(materialCost)+' — '+money(wasteCost))}
    const perimeter=2*(x.frameW+x.frameH)*x.qty,frameSale=perimeter*Number(frame.price||0),tensionSale=perimeter*Number(tension.price||0);
    price=printSale+frameSale+tensionSale;cost=printCost;name='Баннер на бруске · '+prod.name+' · '+Math.round(x.frameWmm)+'×'+Math.round(x.frameHmm)+' мм';
-   details.unshift('баннер: '+Math.round(x.bannerWmm)+'×'+Math.round(x.bannerHmm)+' мм · на 50 мм больше с каждой стороны','печать '+bannerArea.toFixed(2)+' м² × '+money(rate)+'/м² — '+money(printSale),x.frameName+': '+perimeter.toFixed(2)+' п.м. × '+money(frame.price)+' — '+money(frameSale),'натяжка баннера: '+perimeter.toFixed(2)+' п.м. × '+money(tension.price)+' — '+money(tensionSale));
+   details.unshift('баннер: '+Math.round(x.bannerWmm)+'×'+Math.round(x.bannerHmm)+' мм · на 50 мм больше с каждой стороны','печать '+bannerArea.toFixed(2)+' м² × '+money(rate)+'/м² — '+money(printSale),x.frameName+': '+perimeter.toFixed(2)+' п.м. × '+money(frame.price)+' — '+money(frameSale),'натяжка баннера: '+perimeter.toFixed(2)+' п.м. × '+money(tension.price)+' — '+money(tensionSale));addMinimumRecommendation(details,'печати баннера',wideFormatSection().minimums_rub?.banner||199,printSale);addMinimumRecommendation(details,'рамы',frame.minimum||0,frameSale);
    autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
  if(x.type==='brochure'){
    const calc=brochureDigitalCalc(x);if(calc.error){alert(calc.error);return}
    price=calc.sale;cost=calc.cost;name='Каталог / брошюра '+x.format+' · '+x.pages+' стр. · '+x.qty+' шт.';
-   details.push('готовый '+x.format+': '+brochurePagesPerA3(x.format)+' стр. = 1 лист A3','печатных листов A3: '+calc.sheets,'печать '+x.color+': '+calc.sheets+' × '+money(calc.unit)+' — '+money(calc.unit*calc.sheets),'бумага '+calc.paperKey+' г/м² — '+money(calc.printSale-calc.unit*calc.sheets),'фальцовка: '+calc.folds+' × '+money(0.33)+' — '+money(calc.foldSale),'скобы: '+calc.staples+' × '+money(2.2)+' — '+money(calc.stapleSale));
+   details.push('готовый '+x.format+': '+brochurePagesPerA3(x.format)+' стр. = 1 лист A3','печатных листов A3: '+calc.sheets,'печать '+x.color+': '+calc.sheets+' × '+money(calc.unit)+' — '+money(calc.unit*calc.sheets),'бумага '+calc.paperKey+' г/м² — '+money(calc.printSale-calc.unit*calc.sheets),'фальцовка: '+calc.folds+' × '+money(0.33)+' — '+money(calc.foldSale),'скобы: '+calc.staples+' × '+money(2.2)+' — '+money(calc.stapleSale));addMinimumRecommendation(details,'цифрового заказа',digitalSection().minimum_order_rub||100,price);
    autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
