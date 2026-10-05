@@ -1373,13 +1373,24 @@ function renderDetected(){
     return '<div class="detected-card"><div class="detected-head"><div><b>Баннер на раме из бруска</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Баннер</label><select onchange="detected['+i+'].productId=this.value;const p=wideProduct(this.value);detected['+i+'].density=Number((p?.name.match(/(\d+)/)||[])[1]||440);renderDetected()">'+bannerOpts+'</select></div><div class="field"><label>Брусок</label><select onchange="detected['+i+'].frameName=this.value;renderDetected()">'+frameOpts+'</select></div></div><div class="note">В исходном прайсе нет отдельного бруска 40×40: доступны 30×40 и 50×50. Натяжка баннера — 220 ₽/п.м.</div></div>';
   }
   if(x.type==='brochure'){
-    const calc=brochureDigitalCalc(x),papers=[80,90,130,170,300].map(p=>'<option value="'+p+'" '+(Number(x.density)===p?'selected':'')+'>'+p+' г/м²</option>').join('');
+    const calc=brochureDigitalCalc(x),paperList=[80,90,130,170,300],papers=paperList.map(p=>'<option value="'+p+'" '+(Number(x.density)===p?'selected':'')+'>'+p+' г/м²</option>').join('');
+    const coverPapers='<option value="0" '+(!x.coverDensity?'selected':'')+'>Та же бумага / без отдельной обложки</option>'+paperList.map(p=>'<option value="'+p+'" '+(Number(x.coverDensity)===p?'selected':'')+'>'+p+' г/м²</option>').join('');
+    const lamOpts=[['none','Без ламинации'],['roll_gloss','Рулонная глянцевая 32 мкр'],['roll_matte','Рулонная матовая 32 мкр'],['roll_soft','Soft Touch 32 мкр'],['roll_glitter','Глиттерная 115 мкр']]
+      .map(z=>'<option value="'+z[0]+'" '+(x.lamination===z[0]?'selected':'')+'>'+z[1]+'</option>').join('');
+    const scopeOpts='<option value="cover" '+(x.laminationScope==='cover'?'selected':'')+'>Только обложка</option><option value="all" '+(x.laminationScope==='all'?'selected':'')+'>Все листы</option>';
     const perItem=x.printSheetsPerItem||Math.ceil((x.pages||0)/brochurePagesPerA3(x.format));
-    let chips='<span class="chip">'+x.qty+' шт.</span><span class="chip">'+x.format+'</span><span class="chip">'+x.pages+' стр.</span><span class="chip">'+x.color+'</span>';
-    if(!calc.error)chips+='<span class="chip auto">'+perItem+' листа A3 / экз.</span>'+(x.qty>1?'<span class="chip auto">'+calc.sheets+' листов A3 всего</span>':'')+'<span class="chip auto">'+money(calc.sale)+'</span>';
+    let chips='<span class="chip">'+x.qty+' шт.</span><span class="chip">'+x.format+'</span><span class="chip">'+x.pages+' стр.</span><span class="chip">'+x.color+'</span><span class="chip">блок '+x.density+' гр.</span>';
+    if(x.coverDensity)chips+='<span class="chip">обложка '+x.coverDensity+' гр.</span>';
+    if(!calc.error)chips+='<span class="chip auto">'+perItem+' листа A3 / экз.</span>'+(calc.scoreSheets?'<span class="chip auto">биговка '+calc.scoreSheets+' лист.</span>':'')+(calc.lamSheets?'<span class="chip auto">ламинация '+calc.lamSheets+' лист.</span>':'')+'<span class="chip auto">'+money(calc.sale)+'</span>';
     if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
     const title=(x.productKind||'Каталог / брошюра')+' на скобах';
-    return '<div class="detected-card"><div class="detected-head"><div><b>'+title+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Страниц</label><input type="number" min="4" step="4" value="'+x.pages+'" onchange="detected['+i+'].pages=+this.value;detected['+i+'].printSheetsPerItem=Math.ceil(+this.value/brochurePagesPerA3(detected['+i+'].format));detected['+i+'].invalidReason=(detected['+i+'].format===\'A4\'&&+this.value%4!==0)?\'Количество страниц должно быть кратно 4\':\'\';renderDetected()"></div><div class="field"><label>Бумага</label><select onchange="detected['+i+'].density=+this.value;detected['+i+'].paperKey=this.value;renderDetected()">'+papers+'</select></div><div class="field"><label>Скоб / изделие</label><input type="number" min="0" value="'+x.staplesPerItem+'" onchange="detected['+i+'].staplesPerItem=+this.value;renderDetected()"></div></div></div>';
+    return '<div class="detected-card"><div class="detected-head"><div><b>'+title+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
+      '<div class="field"><label>Страниц</label><input type="number" min="4" step="4" value="'+x.pages+'" onchange="detected['+i+'].pages=+this.value;detected['+i+'].printSheetsPerItem=Math.ceil(+this.value/brochurePagesPerA3(detected['+i+'].format));detected['+i+'].invalidReason=(detected['+i+'].format===\'A4\'&&+this.value%4!==0)?\'Количество страниц должно быть кратно 4\':\'\';renderDetected()"></div>'+
+      '<div class="field"><label>Бумага внутреннего блока</label><select onchange="detected['+i+'].density=+this.value;detected['+i+'].paperKey=this.value;renderDetected()">'+papers+'</select></div>'+
+      '<div class="field"><label>Обложка</label><select onchange="detected['+i+'].coverDensity=+this.value;detected['+i+'].coverPaperKey=this.value>0?this.value:\'\';renderDetected()">'+coverPapers+'</select></div>'+
+      '<div class="field"><label>Ламинация</label><select onchange="detected['+i+'].lamination=this.value;if(this.value===\'none\')detected['+i+'].laminationScope=\'none\';else if(detected['+i+'].laminationScope===\'none\')detected['+i+'].laminationScope=\'cover\';renderDetected()">'+lamOpts+'</select></div>'+
+      (x.lamination&&x.lamination!=='none'?'<div class="field"><label>Что ламинировать</label><select onchange="detected['+i+'].laminationScope=this.value;renderDetected()">'+scopeOpts+'</select></div>':'')+
+      '<div class="field"><label>Скоб / изделие</label><input type="number" min="0" value="'+x.staplesPerItem+'" onchange="detected['+i+'].staplesPerItem=+this.value;renderDetected()"></div></div></div>';
   }
 
  if(x.type==='business_card'){
@@ -1524,11 +1535,21 @@ function renderDetected(){
     if(uv)chips+='<span class="chip auto">УФ-печать</span>';
     else if(film)chips+='<span class="chip auto">Плёнка + накатка</span>';
     if(x.material)chips+='<span class="chip">'+x.material+'</span>';
+    if(x.isStand&&x.pocketCount)chips+='<span class="chip auto">карманы '+x.pocketFormat+' · '+x.pocketCount+' шт.</span>';
+    if(x.isStand&&x.edging)chips+='<span class="chip">кантик '+x.edging+'</span>';
+    if(x.isStand&&x.notchCount)chips+='<span class="chip">выемка '+x.notchCount+' шт.</span>';
     if(uv&&x.wmm&&x.hmm){const max=uvSection().max_size_mm||[1200,2300];if(!((x.wmm<=max[0]&&x.hmm<=max[1])||(x.wmm<=max[1]&&x.hmm<=max[0])))chips+='<span class="chip warn">Максимум УФ: '+max[0]+'×'+max[1]+' мм</span>';}
     if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
     const switchMethod='detected['+i+'].technology=this.value==="uv"?"uv_standard":this.value==="film"?"film_720":"";signPlateInputChange('+i+')';
     const switchMaterial='detected['+i+'].material=this.value;detected['+i+'].millingMaterial=millingMaterialFromText(this.value,this.value);signPlateInputChange('+i+')';
-    return '<div class="detected-card"><div class="detected-head"><div><b>Табличка · единый расчёт</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
+    const standExtra=x.isStand?(
+      '<div class="field"><label>Тип карманов</label><select onchange="detected['+i+'].pocketType=this.value;renderDetected()"><option value="flat_pet" '+(x.pocketType==='flat_pet'?'selected':'')+'>ПЭТ плоские</option><option value="volume_pet" '+(x.pocketType==='volume_pet'?'selected':'')+'>ПЭТ объёмные</option><option value="volume_acrylic" '+(x.pocketType==='volume_acrylic'?'selected':'')+'>Оргстекло объёмные</option></select></div>'+
+      '<div class="field"><label>Формат кармана</label><select onchange="detected['+i+'].pocketFormat=this.value;renderDetected()">'+['A6','A5','A4','A3','A2','A1'].map(v=>'<option '+(x.pocketFormat===v?'selected':'')+'>'+v+'</option>').join('')+'</select></div>'+
+      '<div class="field"><label>Карманы, шт.</label><input type="number" min="0" step="1" value="'+(x.pocketCount||0)+'" onchange="detected['+i+'].pocketCount=Math.max(0,Math.floor(+this.value||0));renderDetected()"></div>'+
+      '<div class="field"><label>Кантик</label><input value="'+(x.edging||'')+'" onchange="detected['+i+'].edging=this.value;renderDetected()"></div>'+
+      '<div class="field"><label>Выемки, шт.</label><input type="number" min="0" step="1" value="'+(x.notchCount||0)+'" onchange="detected['+i+'].notchCount=Math.max(0,Math.floor(+this.value||0));renderDetected()"></div>'
+    ):'';
+    return '<div class="detected-card"><div class="detected-head"><div><b>'+(x.isStand?'Стенд · расчёт как табличка':'Табличка · единый расчёт')+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
       '<div class="field"><label>Способ печати</label><select onchange=\''+switchMethod+'\'>'+methods+'</select></div>'+
       (variants.length?'<div class="field"><label>Вариант печати</label><select onchange="detected['+i+'].technology=this.value;signPlateInputChange('+i+')">'+techOpts+'</select></div>':'')+
       '<div class="field"><label>Материал</label><select onchange=\''+switchMaterial+'\'>'+mats+'</select></div>'+
@@ -1537,7 +1558,8 @@ function renderDetected(){
       '<div class="field"><label>Высота, мм</label><input type="number" min="1" step="1" value="'+(x.hmm||'')+'" onchange="detected['+i+'].hmm=+this.value;signPlateInputChange('+i+')"></div>'+
       '<div class="field"><label>Фрезеровка, п.м.</label><input type="number" min="0" step="0.1" value="'+(x.millingMeters||0)+'" onchange="detected['+i+'].millingMeters=+this.value;detected['+i+'].millingRequested=detected['+i+'].millingMeters>0;signPlateInputChange('+i+')"></div>'+
       '<div class="field"><label>Материал фрезеровки</label><select onchange="detected['+i+'].millingMaterial=this.value"><option value="">Авто / выбрать</option>'+mmats+'</select></div>'+
-      '</div></div>';
+      standExtra+
+      '</div>'+(x.isStand&&(x.edging||x.notchCount)?'<div class="note">Кантик и выемка распознаны как параметры стенда. Отдельный тариф на них в текущем прайсе не найден, поэтому они пока не увеличивают цену.</div>':'')+'</div>';
   }
 
   if(x.type==='interior_flex'){
@@ -1563,8 +1585,19 @@ function renderDetected(){
 
   if(x.type==='milling'){
     const mmats=(millingSection().prices_per_m||[]).map(p=>'<option value="'+p.material.replace(/"/g,'&quot;')+'" '+(x.material===p.material?'selected':'')+'>'+p.material+' · '+money(p.price)+'/п.м.</option>').join('');
-    let chips='<span class="chip">'+(x.meters?x.meters+' п.м.':'метраж не указан')+'</span>'+(x.material?'<span class="chip">'+x.material+'</span>':'')+(x.invalidReason?'<span class="chip warn">'+x.invalidReason+'</span>':'');
-    return '<div class="detected-card"><div class="detected-head"><div><b>Фрезеровка</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post"><div class="field"><label>Погонные метры</label><input type="number" min="0" step="0.1" value="'+(x.meters||0)+'" onchange="detected['+i+'].meters=+this.value;detected['+i+'].invalidReason=(!detected['+i+'].meters?\'Укажите количество погонных метров фрезеровки\':(!detected['+i+'].material?\'Укажите материал для фрезеровки\':\'\'));renderDetected()"></div><div class="field"><label>Материал</label><select onchange="detected['+i+'].material=this.value;detected['+i+'].invalidReason=(!detected['+i+'].meters?\'Укажите количество погонных метров фрезеровки\':(!this.value?\'Укажите материал для фрезеровки\':\'\'));renderDetected()"><option value="">Выберите</option>'+mmats+'</select></div></div></div>';
+    const matInfo=x.includeMaterial?millingMaterialSaleInfo(x):null;
+    let chips='<span class="chip">'+(x.meters?Number(x.meters).toFixed(2)+' п.м.':'метраж не указан')+'</span>'+(x.material?'<span class="chip">'+x.material+'</span>':'');
+    if(x.includeMaterial&&matInfo)chips+='<span class="chip auto">материал '+matInfo.area.toFixed(3)+' м² · '+money(matInfo.sale)+'</span>';
+    if(x.bendCount)chips+='<span class="chip auto">загиб на струне '+x.bendCount+' шт.</span>';
+    if(x.bendCount&&!x.bendUnitPrice)chips+='<span class="chip warn">цена загиба не найдена в прайсе</span>';
+    if(x.invalidReason)chips+='<span class="chip warn">'+x.invalidReason+'</span>';
+    return '<div class="detected-card"><div class="detected-head"><div><b>Фрезеровка + материал</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
+      '<div class="field"><label>Погонные метры</label><input type="number" min="0" step="0.01" value="'+(x.meters||0)+'" onchange="detected['+i+'].meters=+this.value;renderDetected()"></div>'+
+      '<div class="field"><label>Материал фрезеровки</label><select onchange="detected['+i+'].material=this.value;renderDetected()"><option value="">Выберите</option>'+mmats+'</select></div>'+
+      '<label class="check"><input type="checkbox" '+(x.includeMaterial?'checked':'')+' onchange="detected['+i+'].includeMaterial=this.checked;renderDetected()"> Добавить стоимость материала</label>'+
+      '<div class="field"><label>Загиб на струне, шт.</label><input type="number" min="0" step="1" value="'+(x.bendCount||0)+'" onchange="detected['+i+'].bendCount=Math.max(0,Math.floor(+this.value||0));renderDetected()"></div>'+
+      '<div class="field"><label>Цена за загиб, ₽</label><input type="number" min="0" step="1" value="'+(x.bendUnitPrice||0)+'" onchange="detected['+i+'].bendUnitPrice=Math.max(0,+this.value||0);renderDetected()"></div>'+
+      '</div>'+(x.bendCount&&!x.bendUnitPrice?'<div class="note">Отдельного тарифа «загиб на струне» в подключённом прайсе не найдено. Количество учитывается, цену за загиб можно ввести вручную.</div>':'')+'</div>';
   }
 
   if(x.type==='quarter_calendar'){
