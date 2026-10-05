@@ -1029,9 +1029,14 @@ function parseLine(line){
    const format=fm?'A'+fm[1]:'A4',color=cm?'4+'+cm[1]:'4+4',perA3=brochurePagesPerA3(format);
    const staplesPerItem=/без\s+скоб/.test(t)?0:Number((t.match(/(\d+)\s*скоб/i)||[])[1]||2);
    const productKind=/журнал/.test(t)?'Журнал':(/каталог/.test(t)?'Каталог':'Брошюра');
+   const coverM=t.match(/обложк[а-яё]*[^0-9]{0,24}(80|90|130|170|300)\s*(?:гр|г)/i);
+   const bodyM=t.match(/(?:листы?|внутренн[а-яё]*\s+блок|блок)[^0-9]{0,24}(80|90|130|170|300)\s*(?:гр|г)/i);
+   const coverDensity=Number(coverM?.[1]||0),bodyDensity=Number(bodyM?.[1]||(coverDensity?80:(density||80)));
+   const lamination=parseDigitalLamination(t);
+   const laminationScope=lamination==='none'?'none':(/вс[её]х?\s+лист|все\s+листы/.test(t)?'all':'cover');
    const pageInvalid=(format==='A4'&&pages&&pages%4!==0)?'Для журнала/брошюры A4 количество страниц должно быть кратно 4':'';
-   return {source:line,type:'brochure',productKind,qty:qty||1,pages,format,color,density:density||80,paperKey:digitalPaperKeyFromText(t,density||80),staplesPerItem,
-     pagesPerA3:perA3,printSheetsPerItem:pages?Math.ceil(pages/perA3):0,pageWarning:'',
+   return {source:line,type:'brochure',productKind,qty:qty||1,pages,format,color,density:bodyDensity,paperKey:String(bodyDensity),coverDensity,coverPaperKey:coverDensity?String(coverDensity):'',
+     lamination,laminationScope,staplesPerItem,pagesPerA3:perA3,printSheetsPerItem:pages?Math.ceil(pages/perA3):0,pageWarning:'',
      invalidReason:!pages?'Укажите количество страниц журнала/брошюры':pageInvalid};
  }
 
@@ -1137,7 +1142,8 @@ function parseLine(line){
    return {source:line,type:'frame_mount',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,area,invalidReason:!sz?'Укажите размер рамной конструкции':''};
  }
  const directUv=hasUv(t),directUvMaterial=directUv?signMaterialFromText(t):'';
- const isSignMention=/таблич|табл\.?(?:\s|$)|шильд/.test(t);
+ const isStand=/стенд/.test(t);
+ const isSignMention=/таблич|табл\.?(?:\s|$)|шильд|стенд/.test(t);
  if(directUv&&!isSignMention&&!/пл[её]н|накле|этикет/.test(t)&&(directUvMaterial||/печать|печат/.test(t))){
    const sz=parseSize(t);
    return {source:line,type:'sign_plate',qty:qty||1,material:directUvMaterial,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,technology:'uv_standard',millingRequested:false,millingMeters:0,millingMaterial:'',invalidReason:!sz?'Укажите размер УФ-печати':(!directUvMaterial?'Укажите материал таблички':'')};
@@ -1156,9 +1162,17 @@ function parseLine(line){
  const cutMaterialMention=/акрил|пвх|пластик|пэт|pet|вивак|композит|акп|мдф|фанер/.test(t);
  const hasMilling=/фрезеров|фрезерн|раскрой/.test(t)||(/(?:^|\s)резк[а-яё]*\s+/.test(t)&&cutMaterialMention&&!hasLaser);
  if(isSign){
-   const signSize=parseSize(t),material=signMaterialFromText(t),millingMeters=hasMilling?(parseLinearMeters(t)||rectPerimeterM(signSize,qty||1)):0;
-   const technology=signTechnologyFromText(t);
-   return {source:line,type:'sign_plate',qty:qty||1,material,w:signSize?.w||0,h:signSize?.h||0,wmm:signSize?.wmm||0,hmm:signSize?.hmm||0,technology,millingRequested:hasMilling,millingMeters,millingMaterial:millingMaterialFromText(t,material),invalidReason:!signSize?'Укажите размер таблички':(!technology?'Выберите способ печати':(!material?'Укажите материал таблички':(String(technology).startsWith('uv_')&&!uvProductForSign(material)?'Для этого материала нет УФ-тарифа — выберите доступный':(hasMilling&&!millingMeters?'Укажите погонные метры фрезеровки':''))))};
+   const signSize=parseSize(t),material=signMaterialFromText(t);
+   const standQtyM=isStand?t.match(/(?:[-—–]\s*)?(\d+)\s*шт\.?\s*$/i):null,signQty=isStand?Number(standQtyM?.[1]||1):(qty||1);
+   const millingMeters=hasMilling?(parseLinearMeters(t)||rectPerimeterM(signSize,signQty)):0;
+   const technology=signTechnologyFromText(t)||(isStand?'film_720':'');
+   const pocket=isStand?parseStandPocket(t):{count:0,type:'flat_pet',format:'A4'};
+   const edging=(t.match(/кантик[а-яё]*\s+([а-яё]+)/i)||[])[1]||'';
+   const notchM=t.match(/выемк[а-яё]*[^0-9]{0,20}(\d+)\s*шт/i),notchCount=/выемк/.test(t)?Number(notchM?.[1]||1):0;
+   return {source:line,type:'sign_plate',qty:signQty,material,w:signSize?.w||0,h:signSize?.h||0,wmm:signSize?.wmm||0,hmm:signSize?.hmm||0,technology,
+     isStand,pocketCount:pocket.count,pocketType:pocket.type,pocketFormat:pocket.format,edging,notchCount,
+     millingRequested:hasMilling,millingMeters,millingMaterial:millingMaterialFromText(t,material),
+     invalidReason:!signSize?'Укажите размер таблички/стенда':(!technology?'Выберите способ печати':(!material?'Укажите материал таблички/стенда':(String(technology).startsWith('uv_')&&!uvProductForSign(material)?'Для этого материала нет УФ-тарифа — выберите доступный':(hasMilling&&!millingMeters?'Укажите погонные метры фрезеровки':''))))};
  }
  if(hasLaser){
    const sz=parseSize(t),material=laserMaterialFromText(t),meters=parseLinearMeters(t)||rectPerimeterM(sz,qty||1);
@@ -1166,8 +1180,11 @@ function parseLine(line){
    return {source:line,type:'laser_cut',qty:qty||1,meters,material,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,invalidReason:needsThickness?'Укажите толщину акрила':(!meters?'Укажите размер или погонные метры лазерной резки':(!material?'Укажите материал для лазерной резки':''))};
  }
  if(hasMilling){
-   const sz=parseSize(t),meters=parseLinearMeters(t)||rectPerimeterM(sz,qty||1),material=millingMaterialFromText(t,'');
-   return {source:line,type:'milling',qty:qty||1,meters,material,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,invalidReason:!meters?'Укажите размер или количество погонных метров фрезеровки':(!material?'Укажите материал для фрезеровки':'')};
+   const sz=parseSize(t),meters=parseLinearMeters(t)||rectPerimeterM(sz,qty||1),material=millingMaterialFromText(t,''),materialProduct=signMaterialFromText(t);
+   const bendM=t.match(/(\d+)\s*(?:загиб|сгиб)|(?:загиб|сгиб)[^0-9]{0,20}(\d+)/i),bendCount=Number(bendM?.[1]||bendM?.[2]||0);
+   return {source:line,type:'milling',qty:qty||1,meters,material,materialProduct,includeMaterial:!/только\s+фрезеров|без\s+материал/.test(t),
+     bendCount,bendUnitPrice:0,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,
+     invalidReason:!meters?'Укажите размер или количество погонных метров фрезеровки':(!material?'Укажите материал для фрезеровки':'')};
  }
 
   if(/(?:дизайн|макет|разработк[а-яё]*)[^\n]*баннер|баннер[^\n]*(?:дизайн|макет)/i.test(t)){
