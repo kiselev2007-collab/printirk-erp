@@ -177,7 +177,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='summary-simple-total-2026-10-02.35';
+const CALC_VERSION='journal-errors-2026-10-05.36';
 document.getElementById('calcVersion').textContent='Версия '+CALC_VERSION;
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
@@ -583,6 +583,7 @@ function quarterCalendarSection(){return catalogData?.sections?.three_block_cale
 function paperStickerSection(){return catalogData?.sections?.paper_stickers||{}}
 function designSection(){return catalogData?.sections?.design||{}}
 function signSection(){return catalogData?.sections?.sign_plates||{}}
+function standPocketsSection(){return catalogData?.sections?.stand_pockets||{}}
 function uvSection(){return catalogData?.sections?.uv_print||{}}
 function millingSection(){return catalogData?.sections?.milling_laser?.milling||{}}
 function laserSection(){return catalogData?.sections?.milling_laser?.laser||{}}
@@ -665,17 +666,67 @@ function bannerTensionTariff(){return (installationSection().mounting||[]).find(
 function brochurePagesPerA3(format){return ({A3:2,A4:4,A5:8})[format]||4}
 function brochurePrintSheets(x){return Math.ceil((x.pages||0)/brochurePagesPerA3(x.format))*Math.max(1,x.qty||1)}
 function brochureDigitalCalc(x){
- const sec=digitalSection(),sheets=brochurePrintSheets(x),base=sec.base_80gsm||sec.base_90gsm||{};
+ const sec=digitalSection(),sheets=brochurePrintSheets(x),base=sec.base_80gsm||sec.base_90gsm||{},qty=Math.max(1,Number(x.qty)||1);
  const unit=tierPrice(base?.A3?.[x.color],sheets);
  if(unit==null)return {error:'Нет цифрового тарифа A3 для '+sheets+' печатных листов'};
- const paperKey=x.paperKey||String(x.density||80),paper=sec.paper_addons_irku?.SRA3?.[paperKey];
- if(!paper&&!['80','90'].includes(paperKey))return {error:'Материал «'+paperKey+'» не заведён для SRA3'};
- const paperSale=Number(paper?.sale||0)*sheets,paperCost=((paper?.cost!=null)?Number(paper.cost):Number(paper?.sale||0)/1.1)*sheets;
+ const paperData=key=>{
+   key=String(key||80);const p=sec.paper_addons_irku?.SRA3?.[key];
+   if(!p&&!['80','90'].includes(key))return null;
+   return {key,sale:Number(p?.sale||0),cost:(p?.cost!=null)?Number(p.cost):Number(p?.sale||0)/1.1};
+ };
+ const bodyKey=x.paperKey||String(x.density||80),body=paperData(bodyKey);
+ if(!body)return {error:'Материал «'+bodyKey+'» не заведён для SRA3'};
+ const coverKey=x.coverPaperKey||String(x.coverDensity||0),cover=x.coverDensity?paperData(coverKey):null;
+ if(x.coverDensity&&!cover)return {error:'Материал обложки «'+coverKey+'» не заведён для SRA3'};
+ const coverSheets=x.coverDensity?Math.min(sheets,qty):0,bodySheets=Math.max(0,sheets-coverSheets);
+ const paperSale=body.sale*bodySheets+(cover?cover.sale*coverSheets:0);
+ const paperCost=body.cost*bodySheets+(cover?cover.cost*coverSheets:0);
  const printSale=unit*sheets+paperSale,printCost=unit*sheets/1.1+paperCost;
- const folds=sheets,foldSale=folds*0.33,foldCost=folds*0.3;
- const staples=(x.staplesPerItem||0)*Math.max(1,x.qty||1),stapleSale=staples*2.2,stapleCost=staples*2;
- return {sheets,unit,paperKey,printSale,printCost,folds,foldSale,foldCost,staples,stapleSale,stapleCost,sale:printSale+foldSale+stapleSale,cost:printCost+foldCost+stapleCost};
+ const bodyScore=Number(x.density||80)>130?bodySheets:0,coverScore=x.coverDensity&&Number(x.coverDensity)>130?coverSheets:0;
+ const scoreSheets=bodyScore+coverScore,folds=Math.max(0,sheets-scoreSheets);
+ const foldSale=folds*0.33,foldCost=folds*0.3,scoreSale=scoreSheets*2.2,scoreCost=scoreSheets*2;
+ const staples=(x.staplesPerItem||0)*qty,stapleSale=staples*2.2,stapleCost=staples*2;
+ let lamSale=0,lamCost=0,lamSheets=0,lamName='';
+ if(x.lamination&&x.lamination!=='none'&&isRollLam(x.lamination)){
+   const key={roll_gloss:'gloss',roll_matte:'matte',roll_glitter:'glitter',roll_soft:'soft_touch'}[x.lamination];
+   const lam=sec.lamination?.roll_A3_two_sides?.[key];
+   lamSheets=x.laminationScope==='all'?sheets:(x.laminationScope==='cover'?qty:0);
+   if(lam&&lamSheets>0){lamSale=Number(lam.price||0)*lamSheets;lamCost=Number(lam.cost||0)*lamSheets;lamName=lam.name||''}
+ }
+ return {sheets,unit,bodyKey,coverKey,bodySheets,coverSheets,paperSale,paperCost,printSale,printCost,folds,foldSale,foldCost,scoreSheets,scoreSale,scoreCost,
+   staples,stapleSale,stapleCost,lamSheets,lamSale,lamCost,lamName,
+   sale:printSale+foldSale+scoreSale+stapleSale+lamSale,cost:printCost+foldCost+scoreCost+stapleCost+lamCost};
 }
+function standPocketTariff(type,format){
+ const sec=standPocketsSection(),grp=sec?.[type||'flat_pet'];if(!grp)return null;
+ const price=Number(grp.prices?.[format]||0);
+ return price?{price,name:grp.name||'Карман'}:null;
+}
+function parseStandPocket(t){
+ if(!/карман/.test(t))return {count:0,type:'flat_pet',format:'A4'};
+ const m=t.match(/карман[а-яё]*[^\n]{0,45}?(?:а|a)\s*([1-6])[^\n]{0,30}?(\d+)\s*шт|(?:\d+)\s*карман[а-яё]*[^\n]{0,30}?(?:а|a)\s*([1-6])/i);
+ const q=t.match(/карман[а-яё]*[^\n]{0,70}?(\d+)\s*шт/i)||t.match(/(\d+)\s*карман/i);
+ const f=(t.match(/карман[а-яё]*[^\n]{0,35}?(?:а|a)\s*([1-6])/i)||[])[1]||m?.[1]||m?.[3]||'4';
+ const type=/оргстекл|акрил/.test(t)&&/объем/.test(t)?'volume_acrylic':(/объем/.test(t)?'volume_pet':'flat_pet');
+ return {count:Number((q||[])[1]||0),type,format:'A'+f};
+}
+function millingMaterialSaleInfo(x){
+ if(!x?.w||!x?.h||!x?.qty)return null;
+ const area=Number(x.w)*Number(x.h)*Math.max(1,Number(x.qty)||1),name=x.materialProduct||signMaterialFromText(norm(x.source||''));
+ if(!name)return null;
+ const sign=signProduct(name);
+ if(sign?.material_cost_per_m2){
+   const rate=Number(sign.material_cost_per_m2)*Number(signSection()?.raw_material_sale_rule?.multiplier||2.2);
+   return {name,area,rate,sale:area*rate,source:'сырьё × '+(signSection()?.raw_material_sale_rule?.multiplier||2.2)};
+ }
+ const uv=uvProductForSign(name),printOnly=Number((uvSection().print_only||[]).find(z=>/CMYK без материала/i.test(z.name||''))?.price_per_m2||1999);
+ if(uv){
+   const full=Number(uv.prices?.[area<=1?'<=1m2':'>1m2']||0),rate=Math.max(0,full-printOnly);
+   if(rate)return {name,area,rate,sale:area*rate,source:'материал из базовой цены УФ без стоимости печати'};
+ }
+ return null;
+}
+
 function businessCardDigitalTotal(color,qty){
  const rows=businessCardsSection()?.digital?.[color]||[];
  let best=null;for(const r of rows){if(qty>=Number(r[0]))best=r;else break}
@@ -1205,11 +1256,10 @@ function parseLine(line){
 }
 function bannerLayout(w,h){
  const roll=3;
- // Если одна сторона помещается в рулон, печатаем без шва по этой стороне и считаем незапечатанную ширину рулона перерасходом ткани.
- if(Math.min(w,h)<=roll){
-   const width=Math.min(w,h),height=Math.max(w,h);
-   return {overflow:Math.max(0,(roll-width)*height),seams:0,seamLength:0,orientation:'без склейки'};
- }
+ const noSeam=[];
+ if(w<=roll)noSeam.push({overflow:Math.max(0,(roll-w)*h),seams:0,seamLength:0,orientation:'ширина '+w+' м по рулону'});
+ if(h<=roll)noSeam.push({overflow:Math.max(0,(roll-h)*w),seams:0,seamLength:0,orientation:'ширина '+h+' м по рулону'});
+ if(noSeam.length)return noSeam.sort((a,b)=>a.overflow-b.overflow)[0];
  function one(width,height){
    const parts=Math.ceil(width/roll),last=width-(parts-1)*roll,overflow=Math.max(0,(roll-last)*height);
    return {overflow,seams:parts-1,seamLength:height};
