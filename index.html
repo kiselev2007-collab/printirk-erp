@@ -1387,7 +1387,7 @@ function renderDetected(){
     return '<div class="detected-card"><div class="detected-head"><div><b>'+title+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div><div class="post">'+
       '<div class="field"><label>Страниц</label><input type="number" min="4" step="4" value="'+x.pages+'" onchange="detected['+i+'].pages=+this.value;detected['+i+'].printSheetsPerItem=Math.ceil(+this.value/brochurePagesPerA3(detected['+i+'].format));detected['+i+'].invalidReason=(detected['+i+'].format===\'A4\'&&+this.value%4!==0)?\'Количество страниц должно быть кратно 4\':\'\';renderDetected()"></div>'+
       '<div class="field"><label>Бумага внутреннего блока</label><select onchange="detected['+i+'].density=+this.value;detected['+i+'].paperKey=this.value;renderDetected()">'+papers+'</select></div>'+
-      '<div class="field"><label>Обложка</label><select onchange="detected['+i+'].coverDensity=+this.value;detected['+i+'].coverPaperKey=this.value>0?this.value:\'\';renderDetected()">'+coverPapers+'</select></div>'+
+      '<div class="field"><label>Обложка</label><select onchange="detected['+i+'].coverDensity=+this.value;detected['+i+'].coverPaperKey=this.value;renderDetected()">'+coverPapers+'</select></div>'+
       '<div class="field"><label>Ламинация</label><select onchange="detected['+i+'].lamination=this.value;if(this.value===\'none\')detected['+i+'].laminationScope=\'none\';else if(detected['+i+'].laminationScope===\'none\')detected['+i+'].laminationScope=\'cover\';renderDetected()">'+lamOpts+'</select></div>'+
       (x.lamination&&x.lamination!=='none'?'<div class="field"><label>Что ламинировать</label><select onchange="detected['+i+'].laminationScope=this.value;renderDetected()">'+scopeOpts+'</select></div>':'')+
       '<div class="field"><label>Скоб / изделие</label><input type="number" min="0" value="'+x.staplesPerItem+'" onchange="detected['+i+'].staplesPerItem=+this.value;renderDetected()"></div></div></div>';
@@ -2167,15 +2167,27 @@ function autoSummaryLabel(item){
  }
  if(x.type==='brochure'){
    let label=(x.productKind||'Брошюра')+' '+(x.format||'')+(x.density?' '+x.density+' гр.':'')+(x.pages?' · '+x.pages+' стр.':'');
+   if(x.coverDensity)label+=' · обложка '+x.coverDensity+' гр.';
    if(Number(x.qty||1)>1)label+=' · '+x.qty+' шт.';
    if(Number(x.staplesPerItem||0)>0)label+=' · '+x.staplesPerItem+' скоб'+(x.staplesPerItem===1?'а':'ы');
+   if(x.lamination&&x.lamination!=='none')label+=' · '+(x.lamination==='roll_matte'?'матовая':x.lamination==='roll_soft'?'Soft Touch':x.lamination==='roll_glitter'?'глиттерная':'глянцевая')+' ламинация '+(x.laminationScope==='all'?'всех листов':'обложки');
+   return label;
+ }
+ if(x.type==='milling'){
+   let label='Фрезеровка '+(x.materialProduct||x.material||'')+(summarySize(x)?' '+summarySize(x):'');
+   if(Number(x.qty||1)>1)label+=' · '+x.qty+' шт.';
+   if(x.includeMaterial)label+=' · с материалом';
+   if(x.bendCount)label+=' · загиб на струне '+x.bendCount+' шт.';
    return label;
  }
  if(x.type==='sign_plate'){
-   let label='Табличка'+(x.material?' '+x.material:'')+(summarySize(x)?' '+summarySize(x):'');
+   let label=(x.isStand?'Стенд':'Табличка')+(x.material?' '+x.material:'')+(summarySize(x)?' '+summarySize(x):'');
    if(Number(x.qty||1)>1)label+=' · '+x.qty+' шт.';
    if(String(x.technology||'').startsWith('uv_'))label+=' · УФ-печать';
    else if(String(x.technology||'').startsWith('film_'))label+=' · плёнка + накатка';
+   if(x.pocketCount)label+=' · карманы '+x.pocketFormat+' '+x.pocketCount+' шт.';
+   if(x.edging)label+=' · кантик '+x.edging;
+   if(x.notchCount)label+=' · выемка '+x.notchCount+' шт.';
    if(x.millingMeters)label+=' · фрезеровка '+summaryNumber(x.millingMeters)+' п.м.';
    return label;
  }
