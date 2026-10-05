@@ -1703,7 +1703,17 @@ function addDetected(i){
    const calc=brochureDigitalCalc(x);if(calc.error){alert(calc.error);return}
    price=calc.sale;cost=calc.cost;name=(x.productKind||'Каталог / брошюра')+' '+x.format+' · '+x.pages+' стр. · '+x.qty+' шт.';
    const perItem=x.printSheetsPerItem||Math.ceil(x.pages/brochurePagesPerA3(x.format));
-   details.push('готовый '+x.format+': '+brochurePagesPerA3(x.format)+' стр. = 1 лист A3','на 1 экземпляр: '+x.pages+' стр. → '+perItem+' листа A3','печатных листов A3 всего: '+calc.sheets,'печать '+x.color+': '+calc.sheets+' × '+money(calc.unit)+' — '+money(calc.unit*calc.sheets),'бумага '+calc.paperKey+' г/м² — '+money(calc.printSale-calc.unit*calc.sheets),'фальцовка: '+calc.folds+' × '+money(0.33)+' — '+money(calc.foldSale),'скобы: '+calc.staples+' × '+money(2.2)+' — '+money(calc.stapleSale));addMinimumRecommendation(details,'цифрового заказа',digitalSection().minimum_order_rub||100,price);
+   details.push('готовый '+x.format+': '+brochurePagesPerA3(x.format)+' стр. = 1 лист A3','на 1 экземпляр: '+x.pages+' стр. → '+perItem+' листа A3','печатных листов A3 всего: '+calc.sheets,
+     'печать '+x.color+': '+calc.sheets+' × '+money(calc.unit)+' — '+money(calc.unit*calc.sheets));
+   if(x.coverDensity){
+     details.push('внутренний блок '+x.density+' г/м²: '+calc.bodySheets+' лист. — '+money((digitalSection().paper_addons_irku?.SRA3?.[String(x.density)]?.sale||0)*calc.bodySheets),
+       'обложка '+x.coverDensity+' г/м²: '+calc.coverSheets+' лист. — '+money((digitalSection().paper_addons_irku?.SRA3?.[String(x.coverDensity)]?.sale||0)*calc.coverSheets));
+   }else details.push('бумага '+x.density+' г/м² — '+money(calc.paperSale));
+   if(calc.scoreSheets){details.push('биговка: '+calc.scoreSheets+' лист. × '+money(2.2)+' — '+money(calc.scoreSale));addMinimumRecommendation(details,'биговки',200,calc.scoreSale)}
+   if(calc.folds)details.push('фальцовка: '+calc.folds+' лист. × '+money(0.33)+' — '+money(calc.foldSale));
+   if(calc.lamSheets){details.push((calc.lamName||'Рулонная ламинация')+': '+calc.lamSheets+' лист. × '+money(calc.lamSale/calc.lamSheets)+' — '+money(calc.lamSale));addMinimumRecommendation(details,'рулонной ламинации',digitalSection().lamination?.roll_A3_two_sides?.minimum_order_rub||300,calc.lamSale)}
+   details.push('скобы: '+calc.staples+' × '+money(2.2)+' — '+money(calc.stapleSale));
+   addMinimumRecommendation(details,'цифрового заказа',digitalSection().minimum_order_rub||100,price);
    autoItems.push({name,cost,price,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
@@ -1884,11 +1894,20 @@ function addDetected(i){
    if(!x.meters||!x.material){alert('Для фрезеровки укажите материал и количество погонных метров.');return}
    if(x.meters>100){alert('В прайсе ставка фрезеровки указана до 100 п.м. Для объёма свыше 100 п.м. требуется ручное согласование.');return}
    const r=millingRate(x.material);if(!r){alert('Не найдена ставка фрезеровки для выбранного материала.');return}
-   const raw=x.meters*Number(r.price),sale=raw;
-   name='Фрезеровка · '+x.material;price=sale;cost=0;
-   details.push(x.meters+' п.м. × '+money(r.price)+'/п.м. — '+money(raw));
+   const raw=x.meters*Number(r.price);price=raw;cost=0;name='Фрезеровка · '+(x.materialProduct||x.material);
+   details.push('фрезеровка: '+Number(x.meters).toFixed(2)+' п.м. × '+money(r.price)+'/п.м. — '+money(raw));
    addMinimumRecommendation(details,'фрезеровки',millingSection().minimum_order_rub||500,raw);
-   details.push('себестоимость фрезеровки: не задана в прайсе');
+   if(x.includeMaterial){
+     const mi=millingMaterialSaleInfo(x);
+     if(mi){price+=mi.sale;details.push('материал '+mi.name+': '+mi.area.toFixed(3)+' м² × '+money(mi.rate)+'/м² — '+money(mi.sale))}
+     else details.push('⚠ стоимость самого материала не найдена автоматически — проверьте материал/размер');
+   }
+   if(x.bendCount){
+     const bendSale=Number(x.bendUnitPrice||0)*Number(x.bendCount||0);
+     if(bendSale){price+=bendSale;details.push('загиб на струне: '+x.bendCount+' шт. × '+money(x.bendUnitPrice)+' — '+money(bendSale))}
+     else details.push('⚠ загиб на струне: '+x.bendCount+' шт. · тариф в подключённом прайсе не найден, цена за загиб не включена');
+   }
+   details.push('себестоимость фрезеровки/материала: не задана отдельной итоговой строкой в прайсе');
    autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
@@ -1924,7 +1943,7 @@ function addDetected(i){
      baseSale=totalArea*rate;addMinimumRecommendation(details,'УФ-печати',uvSection().minimum_order_rub||1999,baseSale);
      baseLabel='УФ-печать: '+totalArea.toFixed(3)+' м² × '+money(rate)+'/м² — '+money(baseSale);
    }else{alert('Выберите способ печати таблички.');return}
-   price=baseSale;cost=0;name='Табличка · '+x.material;
+   price=baseSale;cost=0;name=(x.isStand?'Стенд · ':'Табличка · ')+x.material;
    details.push(baseLabel);
    if(x.millingMeters){
      if(x.millingMeters>100){alert('Фрезеровка свыше 100 п.м. требует ручного согласования.');return}
@@ -1934,7 +1953,14 @@ function addDetected(i){
      price+=millSale;details.push('фрезеровка '+x.millingMeters+' п.м. × '+money(r.price)+'/п.м. — '+money(raw));
      addMinimumRecommendation(details,'фрезеровки',millingSection().minimum_order_rub||500,raw);
    }
-   details.push('себестоимость таблички: не задана отдельной итоговой строкой в прайсе');
+   if(x.isStand&&x.pocketCount){
+     const pocket=standPocketTariff(x.pocketType,x.pocketFormat);
+     if(pocket){const ps=Number(x.pocketCount)*pocket.price;price+=ps;details.push(pocket.name+' '+x.pocketFormat+': '+x.pocketCount+' шт. × '+money(pocket.price)+' — '+money(ps))}
+     else details.push('⚠ для выбранного типа/формата кармана нет готовой цены в прайсе');
+   }
+   if(x.isStand&&x.edging)details.push('кантик '+x.edging+' — параметр распознан, отдельный тариф в прайсе не найден');
+   if(x.isStand&&x.notchCount)details.push('выемка по центру: '+x.notchCount+' шт. — параметр распознан, отдельный тариф в прайсе не найден');
+   details.push('себестоимость таблички/стенда: не задана отдельной итоговой строкой в прайсе');
    autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
