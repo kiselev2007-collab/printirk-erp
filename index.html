@@ -177,7 +177,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='journal-errors-2026-10-08.38';
+const CALC_VERSION='journal-errors-2026-10-08.39';
 document.getElementById('calcVersion').textContent='Версия '+CALC_VERSION;
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
@@ -531,29 +531,44 @@ function splitSizeList(line){
   const prefix=line.slice(0,groups[0].start).trim(),suffix=line.slice(groups.at(-1).end).trim();
   return groups.map(g=>[prefix,g.text,suffix].filter(Boolean).join(' '));
 }
-function splitPositions(raw){
+function splitPositions(raw,assignments=false){
   let s=String(raw||'').replace(/\r/g,'\n');
   s=s.replace(/(?:^|\n|\s)(\d{1,2})[.)]\s+/g,'\n$1. ');
   const parts=s.split(/\n+|;\s*|\s+\+\s+/).map(x=>x.replace(/^\s*(?:[-•]|\d{1,2}[.)])\s*/,'').trim()).filter(Boolean);
   const hasSize=x=>/\d+(?:[.,]\d+)?\s*(?:мм|см|м)?\s*[xх×*]\s*\d+(?:[.,]\d+)?/i.test(x)||/(?:^|[^0-9a-zа-яё])(?:а|a)\s*[3-7](?=$|[^0-9a-zа-яё])/i.test(x);
   const materialHeader=x=>/банн?ер|пл[её]н|перф|ораджет|orajet|оракал|oracal|самокле|постер|плакат|беклит|бэклит|backlit/i.test(x);
   const ownMaterial=x=>materialHeader(x);
-  const out=[];let context='';
+  const out=[];let context='',assignment=null;
   for(let i=0;i<parts.length;i++){
     const line=parts[i];
     const next=parts[i+1]||'';
     if(!hasSize(line)&&materialHeader(line)&&hasSize(next)){
       context=line;
+      assignment={source:line,lines:[]};
       continue;
     }
     if(context&&hasSize(line)&&!ownMaterial(line)){
-      out.push(context+' '+line);
+      if(!assignment.lines.length)out.push(assignment);
+      assignment.lines.push(context+' '+line);assignment.source+='\n'+line;
       continue;
     }
     context='';
-    out.push(line);
+    assignment=null;out.push({source:line,lines:[line]});
   }
-  return out.flatMap(splitSizeList);
+  return assignments?out:out.flatMap(x=>x.lines.flatMap(splitSizeList));
+}
+function parseAssignments(raw){
+ return splitPositions(raw,true).flatMap(assignment=>{
+   const items=assignment.lines.flatMap(splitSizeList).map(parseLine);
+   const settings=x=>JSON.stringify(Object.fromEntries(Object.entries(x).filter(([key])=>!['source','qty','w','h','wmm','hmm'].includes(key))));
+   if(items.length<2||!['film','film_work','banner'].includes(items[0].type)||items.some(x=>x.error||x.invalidReason||settings(x)!==settings(items[0])))return items;
+   const sizes=items.map(x=>({w:x.w,h:x.h,wmm:x.w*1000,hmm:x.h*1000,qty:x.qty}));
+   return [{...items[0],source:assignment.source,sizes,qty:sizes.reduce((sum,x)=>sum+x.qty,0)}];
+ });
+}
+function detectedArea(x){return x.sizes?x.sizes.reduce((sum,s)=>sum+s.w*s.h*s.qty,0):x.w*x.h*x.qty}
+function detectedSizesUI(x){
+ return '<table><thead><tr><th>Размер</th><th>Количество</th><th class="right">Площадь</th></tr></thead><tbody>'+x.sizes.map(s=>'<tr><td>'+summarySize(s)+'</td><td>'+s.qty+' шт.</td><td class="right">'+(s.w*s.h*s.qty).toFixed(4)+' м²</td></tr>').join('')+'</tbody></table><div class="chips"><span class="chip">Всего '+x.qty+' шт.</span><span class="chip">'+detectedArea(x).toFixed(4)+' м²</span></div>';
 }
 function upOnSheet(sw,sh,w,h,format=''){
   const standard={
@@ -1053,7 +1068,7 @@ function filmWorkTariff(remove){
  return (installationSection().mounting||[]).find(z=>new RegExp('^'+(remove?'демонтаж':'монтаж')+' пл[её]н','i').test(z.name||''))||null;
 }
 function filmWorkCalculation(x){
- const area=x.w*x.h*x.qty,parts=[];let sale=0,cost=0,costKnown=true;
+ const area=detectedArea(x),parts=[];let sale=0,cost=0,costKnown=true;
  for(const [requested,remove] of [[x.filmRemove,true],[x.filmMount,false]]){
    if(!requested)continue;
    const tariff=filmWorkTariff(remove);if(!tariff||!Number(tariff.price))return null;
@@ -1401,8 +1416,8 @@ function quarterCalendarTier(qty){
  const lastMax=parsed[parsed.length-1]?.max||0,label=qty>lastMax?'свыше '+lastMax+' · ставка последней ступени':found.label;
  return {unit:found.unit,costUnit:found.unit/1.1,label};
 }
-let detected=[],autoItems=[];
-async function recognize(){await Promise.all([synonymReady,catalogReady]);const raw=document.getElementById('orderText').value;detected=splitPositions(raw).map(parseLine);renderDetected()}
+let detected=[],autoItems=[],calculatingGroup=false;
+async function recognize(){await Promise.all([synonymReady,catalogReady]);const raw=document.getElementById('orderText').value;detected=parseAssignments(raw);renderDetected()}
 function digitalPostUI(i,x){
  const p=x.post||(x.post=postFromText('',x.qty));
  const lam=[
@@ -1447,7 +1462,8 @@ function renderDetected(){
   if(x.type==='film_work'){
     const work=filmWorkCalculation(x),title=[x.filmRemove?'Демонтаж плёнки':'',x.filmMount?'Монтаж плёнки':''].filter(Boolean).join(' + ')||'Работы с плёнкой';
     const warning=x.invalidReason||(!work?'Не найден тариф работ с плёнкой':'');
-    return '<div class="detected-card"><div class="detected-head"><div><b>'+title+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips"><span class="chip">'+summarySize(x)+'</span><span class="chip">'+x.qty+' шт.</span><span class="chip">'+(x.w*x.h*x.qty).toFixed(4)+' м²</span>'+(warning?'<span class="chip warn">'+warning+'</span>':'<span class="chip auto">'+money(work.sale)+'</span>')+'</div><div class="post">'+filmWorkUI(i,x)+'</div></div>';
+    const sizes=x.sizes?detectedSizesUI(x):'<div class="chips"><span class="chip">'+summarySize(x)+'</span><span class="chip">'+x.qty+' шт.</span><span class="chip">'+detectedArea(x).toFixed(4)+' м²</span></div>';
+    return '<div class="detected-card"><div class="detected-head"><div><b>'+title+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div>'+sizes+'<div class="chips">'+(warning?'<span class="chip warn">'+warning+'</span>':'<span class="chip auto">'+money(work.sale)+'</span>')+'</div><div class="post">'+filmWorkUI(i,x)+'</div></div>';
   }
 
   if(x.type==='frame_make'){
@@ -1781,8 +1797,8 @@ function renderDetected(){
   const prodLabel=x.type==='film'?(wideProduct(x.productId)?.name||'Плёнка'):'';
   const name=x.type==='banner'?'Баннер '+(x.density||'')+' гр.':prodLabel+' · '+(x.uv?'УФ CMYK':(x.dpi||'')+' dpi');
   if(x.invalidReason)return '<div class="detected-card"><div class="detected-head"><div><b>'+name+'</b><small style="display:block">Распознано из: '+x.source+'</small><div class="chips"><span class="chip warn">'+x.invalidReason+'</span></div></div><button class="flagbtn" onclick="openDetectedError('+i+')">⚑ Сообщить об ошибке</button></div></div>';
-  const layout=x.type==='banner'?bannerLayout(x.w,x.h):null;
-  let chips='<span class="chip">'+x.w.toFixed(3)+' × '+x.h.toFixed(3)+' м</span><span class="chip">'+x.qty+' шт.</span>';
+  const layout=x.type==='banner'&&!x.sizes?bannerLayout(x.w,x.h):null;
+  let chips=x.sizes?'<span class="chip">Общие параметры для всех размеров</span>':'<span class="chip">'+x.w.toFixed(3)+' × '+x.h.toFixed(3)+' м</span><span class="chip">'+x.qty+' шт.</span>';
   if(x.density)chips+='<span class="chip">'+x.density+' гр.</span>';if(x.uv)chips+='<span class="chip auto">УФ CMYK</span>';else if(x.dpi)chips+='<span class="chip">'+x.dpi+' dpi</span>';
   if(layout&&layout.seams)chips+='<span class="chip auto">Склейка автоматически: '+layout.seams+' шв.</span>';
   if(x.grommetCount)chips+='<span class="chip auto">Люверсы: '+x.grommetCount+' шт./изд.</span>';
@@ -1794,11 +1810,25 @@ function renderDetected(){
    post='<div class="post"><div class="field"><label>Ламинация</label><select onchange="detected['+i+'].lamination=this.value"><option value="none">Нет</option><option value="gloss" '+(lam==='gloss'?'selected':'')+'>Глянец</option><option value="matte" '+(lam==='matte'?'selected':'')+'>Матовая</option></select></div><label class="check"><input type="checkbox" '+(x.edgeCut?'checked':'')+' onchange="detected['+i+'].edgeCut=this.checked"> Резка в край</label><label class="check"><input type="checkbox" '+(x.contour?'checked':'')+' onchange="detected['+i+'].contour=this.checked"> Контурная резка</label></div>';
   }
   if(x.type==='film')post+='<div class="post">'+filmWorkUI(i,x)+'</div>';
-  return '<div class="detected-card"><div class="detected-head"><div><b>'+name+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips">'+chips+'</div>'+post+'</div>';
+  return '<div class="detected-card"><div class="detected-head"><div><b>'+name+'</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div>'+(x.sizes?detectedSizesUI(x):'')+'<div class="chips">'+chips+'</div>'+post+'</div>';
  }).join('');
 }
 function addDetected(i){
  const x=detected[i];if(!x||x.error||x.type==='unknown'||x.invalidReason)return;
+ if(!x.sizes)return addDetectedItem(x);
+ const previous=autoItems;autoItems=[];calculatingGroup=true;
+ try{
+   for(const size of x.sizes){
+     const before=autoItems.length;addDetectedItem({...x,...size,sizes:undefined});
+     if(autoItems.length!==before+1)return;
+   }
+   const parts=autoItems;
+   previous.push({name:parts[0].name,cost:parts.reduce((sum,p)=>sum+p.cost,0),price:parts.reduce((sum,p)=>sum+p.price,0),
+     costKnown:parts.every(p=>p.costKnown!==false),source:x.source,parsed:JSON.stringify(x),
+     details:parts.flatMap((p,j)=>[summarySize(x.sizes[j])+' · '+x.sizes[j].qty+' шт. — '+money(p.price),...p.details])});
+ }finally{autoItems=previous;calculatingGroup=false;renderAuto()}
+}
+function addDetectedItem(x){
  const details=[];let cost=0,price=0,name='';
  const hasFilmWork=(x.type==='film'||x.type==='film_work')&&(x.filmMount||x.filmRemove);
  const work=hasFilmWork?filmWorkCalculation(x):null;
@@ -2309,6 +2339,10 @@ function summarySize(x){
 function autoSummaryLabel(item){
  let x=null;try{x=JSON.parse(item.parsed||'null')}catch(e){}
  if(!x)return item.source||item.name||'Позиция';
+ if(x.sizes){
+   const base={...x,sizes:undefined,qty:1,w:0,h:0,wmm:0,hmm:0};
+   return autoSummaryLabel({...item,parsed:JSON.stringify(base)}).trim()+' · '+x.sizes.map(s=>summarySize(s)+' · '+s.qty+' шт.').join('; ');
+ }
  if(x.type==='banner'){
    const density=Number(x.density||0)||Number((wideProduct(x.productId)?.name?.match(/(\d+)/)||[])[1]||0);
    let label='Баннер'+(density?' '+density+' гр.':'')+(summarySize(x)?' '+summarySize(x):'');
@@ -2382,6 +2416,7 @@ function autoSummaryLabel(item){
  return String(item.source||item.name||'Позиция').replace(/\s+/g,' ').trim();
 }
 function renderAuto(){
+ if(calculatingGroup)return;
  document.getElementById('autoRows').innerHTML=autoItems.length?autoItems.map((x,i)=>'<tr><td><b>'+x.name+'</b><br><button class="flagbtn" onclick="openError('+i+')">⚑ Ошибка</button></td><td>'+x.details.join('<br>')+'</td><td class="right">'+(x.costKnown===false?'—':money(x.cost))+'</td><td class="right">'+money(x.price)+'</td><td><button class="btn danger" onclick="removeAuto('+i+')">×</button></td></tr>').join(''):'<tr><td colspan="5" class="note">Пока нет позиций. Введите заказ обычным текстом выше.</td></tr>';
  const summary=document.getElementById('autoSummaryItems');
  if(summary){

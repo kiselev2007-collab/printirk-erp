@@ -26,7 +26,7 @@ async function calculator(){
   await vm.runInContext('Promise.all([catalogReady,synonymReady])',context);
   const run=code=>vm.runInContext(code,context);
   return {run,alerts,elements,
-    async recognize(text){element('orderText').value=text;await run('recognize()');return JSON.parse(run('JSON.stringify(detected)'));},
+    async recognize(text){element('orderText').value=text;await run('recognize()');const items=JSON.parse(run('JSON.stringify(detected)'));return items.flatMap(x=>x.sizes?x.sizes.map(s=>({...x,...s,sizes:undefined})):x);},
     addAll(){run('detected.forEach((_,i)=>addDetected(i))');return JSON.parse(run('JSON.stringify(autoItems)'));}
   };
 }
@@ -34,24 +34,61 @@ const print='Пленка 720 дпи, ламинация глянец. Резк�
 const works='930*955мм 12шт, 1420*955мм 6 шт  Демонтаж старой пленки и монтаж новой пленки';
 const close=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-7,`${actual} != ${expected}`);
 
+test('one assignment from the screenshot: one card, one Add button and one complete order item',async()=>{
+  const c=await calculator(),source='Пленка 720 дпи, ламинация глянец. Резка в край. Демонтаж старой пленки и монтаж новой пленки\n930*955мм 12шт, 1420*955мм 6шт';
+  await c.recognize(source);
+  assert.equal(c.run('detected.length'),1);assert.equal(c.run('detected[0].source'),source);
+  const card=c.elements.get('detected').innerHTML;
+  assert.equal((card.match(/class="detected-card"/g)||[]).length,1);
+  assert.equal((card.match(/>Добавить<\/button>/g)||[]).length,1);
+  assert.match(card,/930×955 мм/);assert.match(card,/1420×955 мм/);assert.match(card,/Всего 18 шт/);assert.match(card,/18\.7944 м²/);
+  const [item]=c.addAll();assert.equal(c.run('autoItems.length'),1);close(item.price,47067.1392);
+  assert.equal(item.source,source);assert.equal(item.costKnown,false);
+  assert.equal((c.elements.get('autoSummaryItems').innerHTML.match(/class="summary-item"/g)||[]).length,1);
+  c.run('removeAuto(0)');assert.equal(c.run('autoItems.length'),0);
+});
+test('common controls update every size and preserve choices on redraw',async()=>{
+  const c=await calculator();await c.recognize(print+' Демонтаж и монтаж пленки');
+  c.run("detected[0].lamination='none';detected[0].filmRemove=false;renderDetected()");
+  const [item]=c.addAll();close(item.price,18.7944*(604+660)+73.74*22);
+  assert.ok(!item.details.some(d=>/^ламинация |^Демонтаж плёнки/.test(d)));
+  assert.equal(item.details.filter(d=>/^Монтаж плёнки/.test(d)).length,2);
+});
+test('a shared header groups sizes on separate lines; explicitly separate products stay separate',async()=>{
+  const c=await calculator();await c.recognize('Пленка 720 dpi\n930х955мм 12шт\n1420х955мм 6шт');
+  assert.equal(c.run('detected.length'),1);assert.equal(c.run('detected[0].sizes.length'),2);
+  await c.recognize('Пленка 720 dpi 930х955мм 12шт\nБаннер 440г 1420х955мм 6шт');
+  assert.equal(c.run('detected.length'),2);assert.equal(c.run('detected.some(x=>x.sizes)'),false);
+});
+test('different finishing under a shared header stays independently editable',async()=>{
+  const c=await calculator();await c.recognize('Пленка 720 dpi\n930х955мм 12шт ламинация глянец\n1420х955мм 6шт без ламинации');
+  assert.equal(c.run('detected.length'),2);
+});
+test('failed grouped calculation preserves existing order items and adds no partial order',async()=>{
+  const c=await calculator();await c.recognize('Баннер 440г 1х2м');const [existing]=c.addAll();
+  await c.recognize(works);c.run('catalogData.sections.constructions_installation.mounting=[]');
+  const items=c.addAll();assert.equal(items.length,1);close(items[0].price,existing.price);
+  assert.match(c.alerts.at(-1),/Не найден тариф/);assert.equal(c.run('calculatingGroup'),false);
+});
+
 test('row 43: both sizes retain quantities, resolution, lamination and cutting; full totals',async()=>{
   const c=await calculator(),items=await c.recognize(print);
   assert.deepEqual(items.map(x=>[x.type,x.w,x.h,x.qty,x.dpi,x.laminate,x.lamGloss,x.edgeCut]),
     [['film',.93,.955,12,720,true,true,true],['film',1.42,.955,6,720,true,true,true]]);
-  const added=c.addAll();assert.equal(added.length,2);assert.deepEqual(c.alerts,[]);
+  const added=c.addAll();assert.equal(added.length,1);assert.deepEqual(c.alerts,[]);
   const area=.93*.955*12+1.42*.955*6,perimeter=2*(.93+.955)*12+2*(1.42+.955)*6;
   close(area,18.7944);close(perimeter,73.74);
   close(added.reduce((s,x)=>s+x.price,0),area*(604+274)+perimeter*22);
   close(added.reduce((s,x)=>s+x.cost,0),area*(315+54.78)+perimeter*20);
-  for(const x of added){assert.equal(x.details.filter(d=>/^печать /.test(d)).length,1);assert.ok(x.details.some(d=>/^ламинация /.test(d)));assert.ok(x.details.some(d=>/^резка в край /.test(d)));}
+  for(const x of added){assert.equal(x.details.filter(d=>/^печать /.test(d)).length,2);assert.ok(x.details.some(d=>/^ламинация /.test(d)));assert.ok(x.details.some(d=>/^резка в край /.test(d)));}
 });
 test('rows 44–45: both work operations for both sizes, no unrequested printing',async()=>{
   const c=await calculator(),items=await c.recognize(works);
   assert.deepEqual(items.map(x=>[x.type,x.w,x.h,x.qty,x.filmMount,x.filmRemove]),
     [['film_work',.93,.955,12,true,true],['film_work',1.42,.955,6,true,true]]);
-  const added=c.addAll();assert.equal(added.length,2);assert.deepEqual(c.alerts,[]);
+  const added=c.addAll();assert.equal(added.length,1);assert.deepEqual(c.alerts,[]);
   close(added.reduce((s,x)=>s+x.price,0),18.7944*(660+880));
-  for(const x of added){assert.equal(x.costKnown,false);assert.equal(x.details.filter(d=>/^Монтаж плёнки/.test(d)).length,1);assert.equal(x.details.filter(d=>/^Демонтаж плёнки/.test(d)).length,1);assert.ok(!x.details.some(d=>/^печать /.test(d)));}
+  for(const x of added){assert.equal(x.costKnown,false);assert.equal(x.details.filter(d=>/^Монтаж плёнки/.test(d)).length,2);assert.equal(x.details.filter(d=>/^Демонтаж плёнки/.test(d)).length,2);assert.ok(!x.details.some(d=>/^печать /.test(d)));}
   assert.match(c.elements.get('autoSummaryItems').innerHTML,/1420×955 мм · 6 шт/);
   assert.match(c.elements.get('detected').innerHTML,/Демонтаж плёнки и зачистка клея/);
 });
