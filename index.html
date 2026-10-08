@@ -177,7 +177,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='journal-errors-2026-10-05.36';
+const CALC_VERSION='journal-errors-2026-10-08.37';
 document.getElementById('calcVersion').textContent='Версия '+CALC_VERSION;
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
@@ -589,6 +589,8 @@ function millingSection(){return catalogData?.sections?.milling_laser?.milling||
 function laserSection(){return catalogData?.sections?.milling_laser?.laser||{}}
 function interiorSection(){return catalogData?.sections?.interior_print||{}}
 function apparelSection(){return catalogData?.sections?.apparel||{}}
+function uvDtfSection(){return catalogData?.sections?.uv_dtf||{}}
+function canvasSection(){return catalogData?.sections?.canvas_frames||{}}
 function duplicationSection(){return catalogData?.sections?.black_white_duplication||{}}
 function businessCardsSection(){return catalogData?.sections?.business_cards||{}}
 function mugsSection(){return catalogData?.sections?.mugs||{}}
@@ -732,9 +734,30 @@ function businessCardDigitalTotal(color,qty){
  let best=null;for(const r of rows){if(qty>=Number(r[0]))best=r;else break}
  return best?{unit:Number(best[1]),total:Number(best[2]),tier:Number(best[0])}:null;
 }
-function apparelFormatForSize(wmm,hmm){
+function apparelFormatForSize(wmm,hmm,method=''){
  const fits=(w,h)=>((wmm<=w&&hmm<=h)||(wmm<=h&&hmm<=w));
- if(fits(148,210))return 'A5';if(fits(210,297))return 'A4';if(fits(297,420))return 'A3';return '';
+ if(fits(148,210))return 'A5';if(fits(210,297))return 'A4';if(fits(297,420))return 'A3';
+ if(method==='flex'&&fits(Number(apparelSection()?.flex?.useful_cut_width_mm||400),420))return 'A3';
+ return '';
+}
+function uvDtfLayout(wmm,hmm,qty=1){
+ const maxW=280,q=Math.max(1,Number(qty)||1),variants=[[wmm,hmm],[hmm,wmm]].filter(v=>v[0]>0&&v[1]>0&&v[0]<=maxW);
+ if(!variants.length)return null;
+ return variants.map(([across,along])=>{
+   const up=Math.max(1,Math.floor(maxW/across)),rows=Math.ceil(q/up),length=rows*along/1000;
+   return {across,along,up,rows,length};
+ }).sort((a,b)=>a.length-b.length||b.up-a.up)[0];
+}
+function uvDtfRate(length){
+ const tiers=uvDtfSection()?.print?.tiers||[];let rate=0;
+ for(const r of tiers){if(length>=Number(r.from||0))rate=Number(r.price||0)}
+ return rate||Number(tiers[0]?.price||0);
+}
+function canvasNearestSize(wmm,hmm){
+ const rows=canvasSection()?.sizes||[];
+ const parseDims=name=>{const m=String(name||'').match(/(\d+)\s*[xх×]\s*(\d+)/i);return m?[Number(m[1]),Number(m[2])]:null};
+ const fits=(d)=>d&&(((wmm<=d[0]&&hmm<=d[1])||(wmm<=d[1]&&hmm<=d[0])));
+ return rows.map(r=>({row:r,dims:parseDims(r.name)})).filter(x=>fits(x.dims)).sort((a,b)=>(a.dims[0]*a.dims[1])-(b.dims[0]*b.dims[1]))[0]?.row||null;
 }
 function bindingJournalTier(format,type,leaves){
  const table=bindingSection()?.journal_binding?.[format]?.[type]||{};
@@ -1021,6 +1044,7 @@ function parseLine(line){
 
  const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
  const cm=t.match(/4\s*\+\s*(0|4)/);
+ const colorText=cm?'4+'+cm[1]:(/(?:двухсторон|2\s*сторон)[а-яё\s-]*цвет|цветн[а-яё\s-]*(?:двухсторон|2\s*сторон)/.test(t)?'4+4':(/(?:односторон|1\s*сторон)[а-яё\s-]*цвет|цветн[а-яё\s-]*(?:односторон|1\s*сторон)/.test(t)?'4+0':''));
 
  const stapledJournal=/журнал/.test(t)&&/(?:стр\.?|страниц|скоб)/.test(t)&&!/(?:тв[её]рд|тверд|мягк|перепл[её]т|прошив)/.test(t);
  const isBrochure=/каталог|брошюр/.test(t)||stapledJournal;
@@ -1096,25 +1120,42 @@ function parseLine(line){
    return {source:line,type:'self_copy_form',format:fmt?'A'+fmt:'',qty:qty||0,layers,glue,blockSize:Number(blockM?.[1]||50),numbering,mixedSides,invalidReason:!fmt?'Укажите формат БСО':(!qty?'Укажите тираж БСО':(layers!==2?'Автоматический расчёт сейчас подтверждён только для 2 слоёв':(mixedSides?'Разная печать по слоям требует отдельного расчёта':'')))};
  }
 
+ const uvDtf=/уф\s*[-–—]?\s*дтф|uv\s*[-–—]?\s*dtf/.test(t);
+ if(uvDtf){
+   const sz=parseSize(t),layout=sz?uvDtfLayout(sz.wmm,sz.hmm,qty||1):null;
+   return {source:line,type:'uv_dtf',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,
+     printLength:layout?.length||0,cutMode:/поштучн/.test(t)?'piece':(/(?:формат|а\s*5)/.test(t)?'A5':(/а\s*4/.test(t)?'A4':'none')),
+     invalidReason:!sz?'Укажите размер УФ-ДТФ':(!layout?'Размер не помещается в печатное поле УФ-ДТФ 280 мм':'')};
+ }
+ const canvasMention=/холст/.test(t);
+ if(canvasMention){
+   const sz=parseSize(t),withFrame=/подрам|рам[а-яё]*\s+(?:из\s+)?бруск|на\s+рам/.test(t);
+   return {source:line,type:'canvas',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,withFrame,
+     invalidReason:!sz?'Укажите размер холста':''};
+ }
  const interiorFlex=/печать\s+на\s+флекс|флекс\s*[- ]?печать/.test(t);
  if(interiorFlex){
    const sz=parseSize(t);
    return {source:line,type:'interior_flex',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,invalidReason:!sz?'Укажите размер печати на флексе':''};
  }
 
- const apparelApply=/нанесен[а-яё]*\s+на\s+футбол(?:к|ок)|печать\s+на\s+футбол(?:к|ок)/.test(t);
+ const flexMention=/(?:^|[^а-яё])(?:термо)?флекс(?:$|[^а-яё])/.test(t);
+ const apparelApply=/нанесен[а-яё]*\s+на\s+футбол(?:к|ок)|печать\s+на\s+футбол(?:к|ок)/.test(t)||flexMention;
  if(apparelApply){
    const sz=parseSize(t);
-   const method=/сублим/.test(t)?'sublimation':(/флекс|термофлекс/.test(t)?'flex':'');
-   return {source:line,type:'apparel_application',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,method,invalidReason:!sz?'Укажите размер нанесения':''};
+   const method=/сублим/.test(t)?'sublimation':(flexMention?'flex':'');
+   return {source:line,type:'apparel_application',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,method,
+     flexCutMention:/нарезк[а-яё]*\s+(?:термо)?флекс/.test(t),invalidReason:!sz?'Укажите размер нанесения':''};
  }
 
  const isBusinessCard=/визит|визикт/.test(t);
  if(isBusinessCard){
    const sz=parseSize(t),cardSize=/85\s*[xх×]\s*55|55\s*[xх×]\s*85/.test(t)?'85×55':'90×50';
-   const color=cm?'4+'+cm[1]:'4+4';
+   const color=colorText||'4+4';
    const mode=(qty===1000&&!/цифр/.test(t))?'offset':'digital';
-   return {source:line,type:'business_card',qty:qty||1000,color,cardSize,mode,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0};
+   const lamination=/софт\s*[- ]?тач|soft\s*[- ]?touch|силк\s*[- ]?тач/.test(t)?'soft_touch':(/матов[а-яё]*\s+ламинац/.test(t)?'matte':(/глянц[а-яё]*\s+ламинац/.test(t)?'gloss':'none'));
+   const roundCorners=/скругл[а-яё]*\s+(?:угл|углов)|кругл[а-яё]*\s+угл/.test(t);
+   return {source:line,type:'business_card',qty:qty||1000,color,cardSize,mode,lamination,roundCorners,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0};
  }
  if(/круж(?:к|ек|ечк)/.test(t))return {source:line,type:'mug',qty:qty||1};
  if(/знач(?:к|ок|ков)/.test(t))return {source:line,type:'badge_round',qty:qty||1};
@@ -1164,15 +1205,16 @@ function parseLine(line){
  if(isSign){
    const signSize=parseSize(t),material=signMaterialFromText(t);
    const standQtyM=isStand?t.match(/(?:[-—–]\s*)?(\d+)\s*шт\.?\s*$/i):null,signQty=isStand?Number(standQtyM?.[1]||1):(qty||1);
-   const millingMeters=hasMilling?(parseLinearMeters(t)||rectPerimeterM(signSize,signQty)):0;
+   const compositeMilling=/композит|акп|алюкобонд/.test(t)||material==='Композит белый',millingRequested=hasMilling||compositeMilling;
+   const millingMeters=millingRequested?(parseLinearMeters(t)||rectPerimeterM(signSize,signQty)):0;
    const technology=signTechnologyFromText(t)||(isStand?'film_720':'');
    const pocket=isStand?parseStandPocket(t):{count:0,type:'flat_pet',format:'A4'};
    const edging=(t.match(/кантик[а-яё]*\s+([а-яё]+)/i)||[])[1]||'';
    const notchM=t.match(/выемк[а-яё]*[^0-9]{0,20}(\d+)\s*шт/i),notchCount=/выемк/.test(t)?Number(notchM?.[1]||1):0;
    return {source:line,type:'sign_plate',qty:signQty,material,w:signSize?.w||0,h:signSize?.h||0,wmm:signSize?.wmm||0,hmm:signSize?.hmm||0,technology,
      isStand,pocketCount:pocket.count,pocketType:pocket.type,pocketFormat:pocket.format,edging,notchCount,
-     millingRequested:hasMilling,millingMeters,millingMaterial:millingMaterialFromText(t,material),
-     invalidReason:!signSize?'Укажите размер таблички/стенда':(!technology?'Выберите способ печати':(!material?'Укажите материал таблички/стенда':(String(technology).startsWith('uv_')&&!uvProductForSign(material)?'Для этого материала нет УФ-тарифа — выберите доступный':(hasMilling&&!millingMeters?'Укажите погонные метры фрезеровки':''))))};
+     millingRequested,millingMeters,millingMaterial:millingMaterialFromText(t,material),millingAutoPerimeter:compositeMilling&&!parseLinearMeters(t),
+     invalidReason:!signSize?'Укажите размер таблички/стенда':(!technology?'Выберите способ печати':(!material?'Укажите материал таблички/стенда':(String(technology).startsWith('uv_')&&!uvProductForSign(material)?'Для этого материала нет УФ-тарифа — выберите доступный':(millingRequested&&!millingMeters?'Укажите погонные метры фрезеровки':''))))};
  }
  if(hasLaser){
    const sz=parseSize(t),material=laserMaterialFromText(t),meters=parseLinearMeters(t)||rectPerimeterM(sz,qty||1);
@@ -1203,7 +1245,7 @@ function parseLine(line){
  }
  const paperSticker=/накле(?:йк|ек)|этикет/.test(t) && (/цифр/.test(t)||/офсет/.test(t)||/бумажн[а-яё]*\s+самокле|самокле[а-яё]*\s+бумаж/.test(t));
  const namedPoly=/листов(?:к|ок)|буклет|флаер|винн[а-яё]*\s+карт|барн[а-яё]*\s+карт|меню|визит|визикт|открыт(?:к|ок)|приглаш|сертификат|серт|бланк|благодар|грамот|купон|абонем|абоним|билет|вкладыш/.test(t) || synonymMatch(t,'digital_product');
- const genericPoly=!!(cm&&density&&qty&&(fm||parseSize(t)));
+ const genericPoly=!!((cm||colorText)&&density&&qty&&(fm||parseSize(t)));
  const poly=namedPoly||genericPoly||paperSticker;
  const lamSoft=/софт|soft\s*touch|силк/.test(t);
  if(paperSticker && /офсет/.test(t)){
@@ -1211,7 +1253,7 @@ function parseLine(line){
    return {source:line,type:'offset_sticker',qty:qty||0,w:ps?.w||0,h:ps?.h||0,wmm:ps?.wmm||0,hmm:ps?.hmm||0,color:'4+0'};
  }
  if(poly && /офсет/.test(t) && !lamSoft){
-   return {source:line,type:'offset',format:fm?'A'+fm[1]:'',color:cm?'4+'+cm[1]:'4+0',density:density||130,qty};
+   return {source:line,type:'offset',format:fm?'A'+fm[1]:'',color:colorText||'4+0',density:density||130,qty};
  }
 
  let size=parseSize(t);
@@ -1227,7 +1269,7 @@ function parseLine(line){
    const paperKey=paperSticker?'Самоклеющаяся':digitalPaperKeyFromText(t,density||130);
    const productKind=paperSticker?'Наклейка':digitalProductKind(t);
    if(paperSticker&&/цифр/.test(t))tech='digital';
-   return {source:line,type:'poly',productKind,format,color:cm?'4+'+cm[1]:'4+0',density:density||80,paperKey,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,technologyReason:paperSticker&&tech==='digital'?'бумажная самоклейка · цифровая печать':reason,lamination:parseDigitalLamination(t),post:postFromText(t,qty||1)};
+   return {source:line,type:'poly',productKind,format,color:colorText||'4+0',density:density||80,paperKey,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,technologyReason:paperSticker&&tech==='digital'?'бумажная самоклейка · цифровая печать':reason,lamination:parseDigitalLamination(t),post:postFromText(t,qty||1)};
  }
  if(!size)return {source:line,type:'unknown',error:'Не найден размер'};
  if(/постер|плакат/.test(t)){
