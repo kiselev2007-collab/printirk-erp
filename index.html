@@ -1787,6 +1787,37 @@ function addDetected(i){
  }
 
 
+
+ if(x.type==='uv_dtf'){
+   if(x.invalidReason){alert(x.invalidReason);return}
+   const lay=uvDtfLayout(x.wmm,x.hmm,x.qty);if(!lay){alert('Размер не помещается в печатное поле УФ-ДТФ 280 мм.');return}
+   const sec=uvDtfSection(),minLen=Number(sec?.print?.minimum_length_m||0.5),bill=Math.max(minLen,lay.length),rate=uvDtfRate(bill);
+   if(!rate){alert('Не найден тариф УФ-ДТФ.');return}
+   const rawPrint=bill*rate,minOrder=Number(sec?.print?.minimum_order_rub||850),printSale=Math.max(minOrder,rawPrint);
+   let cutPercent=0,cutLabel='';
+   if(x.cutMode==='piece'){cutPercent=30;cutLabel='поштучная резка'}
+   if(x.cutMode==='A5'){cutPercent=20;cutLabel='резка на формат A5'}
+   if(x.cutMode==='A4'){cutPercent=15;cutLabel='резка на формат A4'}
+   const cutSale=printSale*cutPercent/100;
+   price=printSale+cutSale;cost=0;name='УФ-ДТФ '+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм';
+   details.push('раскладка: '+lay.up+' шт. по ширине 280 мм · фактический метраж '+lay.length.toFixed(2)+' пог. м');
+   if(lay.length<minLen)details.push('минимальная длина печати: '+minLen.toFixed(2)+' пог. м');
+   details.push('печать: '+bill.toFixed(2)+' пог. м × '+money(rate)+'/пог. м — '+money(rawPrint));
+   if(printSale>rawPrint)details.push('минимальная стоимость заказа УФ-ДТФ — '+money(printSale));
+   if(cutSale)details.push(cutLabel+': +'+cutPercent+'% — '+money(cutSale));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
+ if(x.type==='canvas'){
+   if(x.invalidReason){alert(x.invalidReason);return}
+   const row=canvasNearestSize(x.wmm,x.hmm);if(!row){alert('В прайсе нет большего стандартного размера холста для этого заказа.');return}
+   const unit=x.withFrame?Number(row.total||0):Number(row.canvas||0);
+   price=unit*x.qty;cost=0;name=(x.withFrame?'Холст на подрамнике ':'Холст ')+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм';
+   details.push('нестандартный размер '+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм → ближайший больший прайсовый '+row.name);
+   details.push('печать холста — '+money(Number(row.canvas||0))+' / шт.');
+   if(x.withFrame)details.push('подрамник 16×40 мм — '+money(Number(row.frame||0))+' / шт.','прайсовая цена комплекта — '+money(Number(row.total||0))+' / шт.');
+   if(x.qty>1)details.push(x.qty+' шт. × '+money(unit)+' — '+money(price));
+   autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
  if(x.type==='business_card'){
    if(x.mode==='offset'){
      const row=(businessCardsSection().offset_collective||[]).find(z=>Number(z.qty)===x.qty&&String(z.name||'').includes(x.cardSize));
@@ -1794,8 +1825,12 @@ function addDetected(i){
      price=Number(row.price);cost=0;name='Визитки '+x.cardSize+' · сборный спуск · '+x.qty+' шт.';details.push('готовая цена сборного спуска — '+money(price));
    }else{
      const d=businessCardDigitalTotal(x.color,x.qty);if(!d){alert('Для этого тиража нет цифровой цены визиток.');return}
-     price=d.total;cost=0;name='Визитки '+x.cardSize+' · '+x.color+' · цифра · '+x.qty+' шт.';details.push(x.qty+' шт. × '+money(d.unit)+'/шт. — '+money(price));
+     price=d.total;cost=0;name='Визитки '+x.cardSize+' · '+x.color+' · цифра · '+x.qty+' шт.';details.push('печать: '+x.qty+' шт. × '+money(d.unit)+'/шт. — '+money(price));
    }
+   const post=businessCardsSection()?.postprocessing_per_item||{};
+   const lamRate=x.lamination==='soft_touch'?Number(post.lamination_soft_touch||0):x.lamination==='matte'?Number(post.lamination_matte||0):x.lamination==='gloss'?Number(post.lamination_gloss||0):0;
+   if(lamRate){const ls=lamRate*x.qty;price+=ls;details.push((x.lamination==='soft_touch'?'Soft Touch':x.lamination==='matte'?'матовая ламинация':'глянцевая ламинация')+': '+x.qty+' × '+money(lamRate)+' — '+money(ls))}
+   if(x.roundCorners){const rr=Number(post.round_corners||1),rs=rr*x.qty;price+=rs;details.push('скругление углов: '+x.qty+' × '+money(rr)+' — '+money(rs))}
    autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
  if(x.type==='mug'){
@@ -1933,17 +1968,21 @@ function addDetected(i){
  if(x.type==='apparel_application'){
    if(x.invalidReason){alert(x.invalidReason);return}
    if(!x.method){alert('Выберите технологию нанесения на футболку.');return}
-   const fmt=apparelFormatForSize(x.wmm,x.hmm);if(!fmt){alert('Размер нанесения больше A3 — требуется ручной расчёт.');return}
-   let unit=null;
-   if(x.method==='flex')unit=apparelTierPrice(apparelSection()?.flex?.prices?.[fmt],x.qty);
-   else unit=apparelTierPrice(apparelSection()?.sublimation?.application?.[fmt],x.qty);
+   const fmt=apparelFormatForSize(x.wmm,x.hmm,x.method);if(!fmt){alert('Размер нанесения больше доступного формата — требуется ручной расчёт.');return}
+   let unit=null,rateNote='';
+   if(x.method==='flex'){
+     const tiers=apparelSection()?.flex?.prices?.[fmt]||[];
+     unit=apparelTierPrice(tiers,x.qty);
+     if(unit==null&&tiers.length){unit=Number(tiers[0][1]);rateNote='ставка ближайшей доступной ступени '+tiers[0][0]+' шт.'}
+   }else unit=apparelTierPrice(apparelSection()?.sublimation?.application?.[fmt],x.qty);
    if(unit==null){alert('Для выбранного формата/тиража нет цены нанесения.');return}
    const raw=unit*x.qty,min=Number(apparelSection()?.minimum_order_rub||0);
    price=raw;cost=0;addMinimumRecommendation(details,'нанесения',min,raw);
-   name='Нанесение на футболку · '+(x.method==='flex'?'флекс 1 цвет':'сублимация')+' · '+fmt;
+   name=(x.method==='flex'?'Флекс 1 цвет · резка + термоперенос':'Сублимация')+' · '+fmt;
    details.push('размер '+Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм → тариф '+fmt);
+   if(rateNote)details.push(rateNote);
    details.push(x.qty+' шт. × '+money(unit)+' — '+money(raw));
-   // Рекомендуемый минимум не повышает цену.
+   if(x.method==='flex')details.push('тариф флекс включает плоттерную резку плёнки и термоперенос на изделие');
    autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
 
@@ -2019,7 +2058,7 @@ function addDetected(i){
      const mat=x.millingMaterial||millingMaterialFromText(x.material,x.material),r=millingRate(mat);
      if(!r){alert('Для таблички не удалось подобрать ставку фрезеровки. Выберите материал фрезеровки вручную.');return}
      const raw=x.millingMeters*Number(r.price),millSale=raw;
-     price+=millSale;details.push('фрезеровка '+x.millingMeters+' п.м. × '+money(r.price)+'/п.м. — '+money(raw));
+     price+=millSale;details.push('фрезеровка '+x.millingMeters+' п.м. × '+money(r.price)+'/п.м. — '+money(raw)+(x.millingAutoPerimeter?' · автоматически по периметру':''));
      addMinimumRecommendation(details,'фрезеровки',millingSection().minimum_order_rub||500,raw);
    }
    if(x.isStand&&x.pocketCount){
@@ -2027,8 +2066,6 @@ function addDetected(i){
      if(pocket){const ps=Number(x.pocketCount)*pocket.price;price+=ps;details.push(pocket.name+' '+x.pocketFormat+': '+x.pocketCount+' шт. × '+money(pocket.price)+' — '+money(ps))}
      else details.push('⚠ для выбранного типа/формата кармана нет готовой цены в прайсе');
    }
-   if(x.isStand&&x.edging)details.push('кантик '+x.edging+' — параметр распознан, отдельный тариф в прайсе не найден');
-   if(x.isStand&&x.notchCount)details.push('выемка по центру: '+x.notchCount+' шт. — параметр распознан, отдельный тариф в прайсе не найден');
    details.push('себестоимость таблички/стенда: не задана отдельной итоговой строкой в прайсе');
    autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
@@ -2172,9 +2209,14 @@ function addDetected(i){
   const lam=x.lamination||(x.laminate?(x.lamMatte?'matte':'gloss'):'none'),combo=wideFormatSection().standard_combos||{};
   if((x.productId||'film_white')==='film_white'&&x.dpi===720&&x.contour){
     const cfg=lam!=='none'?combo.white_film_720_contour_lamination:combo.white_film_720_contour;
-    price=area*Number(cfg?.price_per_m2||rate);addMinimumRecommendation(details,'печати + контурной резки',cfg?.minimum_order_rub||0,price);
+    const contourRate=Number((catalogData?.sections?.plotter_cut?.work||[]).find(z=>/Контурная резка после печати/i.test(z.name||''))?.price||990);
+    const lamRate=lam!=='none'?Number(widePost('wide_lamination_standard')?.price||274):0;
+    const printSale=area*rate,lamSale=area*lamRate,contourSale=area*contourRate;
+    price=printSale+lamSale+contourSale;addMinimumRecommendation(details,'печати + контурной резки',cfg?.minimum_order_rub||0,price);
     cost=area*Number(cfg?.cost_per_m2||costRate);
-    details.push('печать'+(lam!=='none'?' + ламинация':'')+' + контурная резка '+area.toFixed(4)+' м² × '+money(cfg?.price_per_m2||rate)+'/м² — '+money(price));
+    details.push('печать '+area.toFixed(4)+' м² × '+money(rate)+'/м² — '+money(printSale));
+    if(lamSale)details.push('ламинация '+area.toFixed(4)+' м² × '+money(lamRate)+'/м² — '+money(lamSale));
+    details.push('контурная резка '+area.toFixed(4)+' м² × '+money(contourRate)+'/м² — '+money(contourSale));
   }else{
     const printSale=area*rate;
     price=printSale;cost=area*costRate;
