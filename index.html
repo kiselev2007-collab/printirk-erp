@@ -177,7 +177,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1
 </div>
 
 <script>
-const CALC_VERSION='journal-errors-2026-10-08.39';
+const CALC_VERSION='journal-errors-2026-10-29.40';
 document.getElementById('calcVersion').textContent='Версия '+CALC_VERSION;
 const money=v=>Math.ceil(Number(v)||0).toLocaleString('ru-RU')+' ₽';
 const n=v=>Number(String(v??0).replace(',','.'))||0;
@@ -515,14 +515,14 @@ function parseSize(t){
  if(!u1&&u2)u1=u2;if(!u2&&u1)u2=u1;
  return {w:meters(m[1],u1),h:meters(m[3],u2),wmm:meters(m[1],u1)*1000,hmm:meters(m[3],u2)*1000}
 }
-const formatsMM={A3:[297,420],A4:[210,297],A5:[148,210],A6:[105,148],A7:[74,105]};
+const formatsMM={A0:[841,1189],A1:[594,841],A2:[420,594],A3:[297,420],A4:[210,297],A5:[148,210],A6:[105,148],A7:[74,105]};
 function splitSizeList(line){
   const sizes=[...line.matchAll(/\d+(?:[.,]\d+)?\s*(?:мм|см|м)?\s*[xх×*]\s*\d+(?:[.,]\d+)?\s*(?:мм|см|м)?/gi)];
   if(sizes.length<2||!/банн?ер|пл[её]н|самокле|наклей|постер|плакат/i.test(line))return [line];
   const groups=[];
   for(const size of sizes){
     const end=size.index+size[0].length;
-    const quantity=line.slice(end).match(/^\s*[-—:]?\s*\d+\s*(?:шт\.?|штук(?:и|а)?|экз\.?)(?=$|[^а-яёa-z0-9])/i);
+    const quantity=line.slice(end).match(/^[\s.]*[-—:]?\s*\d+\s*(?:шт\.?|штук(?:и|а)?|экз\.?)(?=$|[^а-яёa-z0-9])/i);
     if(!quantity)return [line];
     groups.push({start:size.index,end:end+quantity[0].length,text:size[0]+quantity[0]});
   }
@@ -667,7 +667,7 @@ function duplicationLayout(x){
  const printSheets=Math.ceil((Number(x.qty)||0)/best.up);
  const cutBatches=Math.ceil(printSheets/250);
  const cutRate=Number(duplicationSection()?.postprocessing_rules?.cut_up_to_250_print_sheets_rub||60);
- return {...best,printFmt,sheetW:sheet[0],sheetH:sheet[1],printSheets,cutBatches,cutSale:best.up>1?best.cutPasses*cutBatches*cutRate:0,size};
+ return {...best,printFmt,sheetW:sheet[0],sheetH:sheet[1],printSheets,cutBatches,cutRate,cutSale:best.up>1?cutBatches*cutRate:0,size};
 }
 function laserMaterialFromText(t){
  const th=parseThicknessMm(t);
@@ -699,7 +699,7 @@ function brochurePagesPerA3(format){return ({A3:2,A4:4,A5:8})[format]||4}
 function brochurePrintSheets(x){return Math.ceil((x.pages||0)/brochurePagesPerA3(x.format))*Math.max(1,x.qty||1)}
 function brochureDigitalCalc(x){
  const sec=digitalSection(),sheets=brochurePrintSheets(x),base=sec.base_80gsm||sec.base_90gsm||{},qty=Math.max(1,Number(x.qty)||1);
- const unit=tierPrice(base?.A3?.[x.color],sheets);
+ const unit=x.color?.startsWith('1+')?digitalBwRate('A3',x.color==='1+1'?2:1):tierPrice(base?.A3?.[x.color],sheets,true);
  if(unit==null)return {error:'Нет цифрового тарифа A3 для '+sheets+' печатных листов'};
  const paperData=key=>{
    key=String(key||80);const p=sec.paper_addons_irku?.SRA3?.[key];
@@ -830,8 +830,9 @@ function nearestOffsetStickerSize(wmm,hmm,qty){
  }
  return {row:candidates[0]||null,price:null,tirages:(candidates[0]?.prices?.length===detail.length?detail:tir)};
 }
-function tierPrice(tiers,count){
+function tierPrice(tiers,count,extendLast=false){
  for(const r of (tiers||[])) if(count>=+r[0]&&count<=+r[1]) return +r[2];
+ if(extendLast&&tiers?.length&&count>+tiers.at(-1)[1])return +tiers.at(-1)[2];
  return null;
 }
 function isRollLam(v){return ['roll_gloss','roll_matte','roll_glitter','roll_soft'].includes(v)}
@@ -841,7 +842,7 @@ function digitalOptions(x){
    const up=upOnSheet(s.w,s.h,x.wmm,x.hmm,x.format);if(!up)return null;
    const sheets=Math.ceil(x.qty/up);
    const baseTable=sec.base_80gsm||sec.base_90gsm||{};
-   const unit=tierPrice(baseTable?.[s.fmt]?.[x.color],sheets);if(unit==null)return null;
+   const unit=x.color?.startsWith('1+')?digitalBwRate(s.fmt,x.color==='1+1'?2:1):tierPrice(baseTable?.[s.fmt]?.[x.color],sheets,true);if(unit==null||unit<=0)return null;
    const paper=sec.paper_addons_irku?.[s.name]?.[paperKey];
    if(!paper && !['80','90'].includes(paperKey))return {...s,up,sheets,invalid:'Материал «'+paperKey+'» пока не заведен для '+s.name};
    const paperSale=(paper?.sale||0)*sheets;
@@ -869,8 +870,14 @@ function packetFormat(w,h){
 }
 function packetLamFormat(x,opt){
  if(x.packetLamFormat&&x.packetLamFormat!=='auto')return x.packetLamFormat;
- if(x.format==='A5')return 'A5';
  return opt.fmt;
+}
+function packetLamSheets(x,opt,fmt){
+ if(fmt===opt.fmt)return opt.sheets;
+ const sheet=formatsMM[fmt],print=formatsMM[opt.fmt];if(!sheet||!print)return 0;
+ if(sheet[0]*sheet[1]>=print[0]*print[1])return opt.sheets;
+ const up=Math.max(Math.floor(sheet[0]/x.wmm)*Math.floor(sheet[1]/x.hmm),Math.floor(sheet[0]/x.hmm)*Math.floor(sheet[1]/x.wmm));
+ return up?Math.ceil(x.qty/up):0;
 }
 function digitalPaperKeyFromText(t,density){
  if(/самокле|самоклей|наклей/.test(t)&&/прозрач/.test(t))return 'Самоклеющаяся прозрачная';
@@ -965,7 +972,8 @@ function digitalPostCalc(x,opt){
    }else{
      const fmt=packetLamFormat(x,opt),lam=sec.lamination?.packet?.[x.lamination];
      const lp=lam?.prices?.[fmt];
-     if(lp!=null)add(lam.name+' '+fmt,lp*x.qty,(lam.costs?.[fmt]??lp/1.1)*x.qty);
+     const sheets=packetLamSheets(x,opt,fmt);
+     if(lp!=null&&sheets)add(lam.name+' '+fmt+': '+sheets+' лист. × '+money(lp),lp*sheets,(lam.costs?.[fmt]??lp/1.1)*sheets);
      else parts.push('⚠ выбранная пакетная ламинация недоступна для этого формата');
    }
  }
@@ -991,8 +999,12 @@ function parseThicknessMm(t){
  return m?n(m[1]):0;
 }
 function parseProductQuantity(t){
+ t=t.replace(/карман[а-яё]*[^,;]*?\d+\s*шт\.?|\d+\s*карман[а-яё]*/gi,' ')
+    .replace(/(?:люверс(?:ы|ов)?|люв\.)\s*[-:=]?\s*\d+\s*шт\.?|\d+\s*(?:шт\.?\s*)?люверс[а-яё]*/gi,' ');
  const explicit=t.match(/(?:тираж|кол-?во|количество)\s*[:=—–-]?\s*(\d+)(?!\d)/i);
  if(explicit)return Number(explicit[1]);
+ const named=t.match(/(?:^|[^0-9])(\d+)\s*(?:банн?ер[а-яё]*|стенд[а-яё]*|таблич[а-яё]*|сертификат[а-яё]*|призм[а-яё]*)(?=$|[^а-яёa-z0-9])/i);
+ if(named)return Number(named[1]);
  const unit=t.match(/(?:^|[^0-9])(\d+)\s*(?:шт\.?|штук(?:и|а)?|экз\.?|экземпляр(?:а|ов)?|компл(?:ект(?:ы|а|ов)?)?\.?|издели(?:й|я|е)|ед\.?)(?=$|[^а-яёa-z0-9])/i);
  if(unit)return Number(unit[1]);
  const leading=t.match(/^\s*(\d+)(?!\d)\s*[-–—:]?\s*(?!(?:мм|см|м|гр|г|мкр|dpi|дпи)(?=$|[^а-яёa-z]))(?=[а-яёa-z])/i);
@@ -1081,9 +1093,60 @@ function filmWorkCalculation(x){
 function filmWorkUI(i,x){
  return '<label class="check"><input type="checkbox" '+(x.filmRemove?'checked':'')+' onchange="detected['+i+'].filmRemove=this.checked;renderDetected()"> Демонтаж плёнки и зачистка клея</label><label class="check"><input type="checkbox" '+(x.filmMount?'checked':'')+' onchange="detected['+i+'].filmMount=this.checked;renderDetected()"> Монтаж плёнки</label>';
 }
+function installationServices(){
+ return ['mounting','lighting'].flatMap(section=>(installationSection()[section]||[]).map((service,index)=>({...service,key:section+':'+index})))
+   .filter(s=>/^(?:монтаж|демонтаж|натяжка|минимальный|выезд на замер)/i.test(s.name)&&((s.price!=null)||/20\s*%/.test(s.pricing||'')));
+}
+function installationService(key){return installationServices().find(s=>s.key===key)||null}
+function installationMeasure(x,service){
+ if(/20\s*%/.test(service?.pricing||''))return Number(x.baseValue||0);
+ if(service?.unit==='м2')return x.w&&x.h?x.w*x.h*x.qty:Number(x.area||0);
+ if(service?.unit==='п.м.')return (x.meters||(x.w&&x.h?2*(x.w+x.h):0))*x.qty;
+ return x.qty||1;
+}
+function installationCalc(x){
+ const service=installationService(x.serviceKey);if(!service)return {error:'Выберите монтажную работу из прайса'};
+ const percent=/20\s*%/.test(service.pricing||''),measure=Number(percent?x.baseValue:x.measure),rate=percent?0.2:Number(service.price);
+ if(!Number.isFinite(rate)||!(measure>0))return {error:percent?'Укажите стоимость изделий для расчёта 20%':'Укажите объём монтажных работ'};
+ const raw=measure*rate,night=x.night?2:1,special=x.specialEquipment?1.1:1;
+ return {service,measure,rate,raw,sale:raw*night*special,percent};
+}
+function installationServiceChange(i,key){
+ const x=detected[i];x.serviceKey=key;x.measure=installationMeasure(x,installationService(key));renderDetected();
+}
+function parseInstallation(t,line,qty){
+ if(!/монтаж|натяжк|выезд\s+на\s+замер/.test(t)||/изготов|печать|печат|производ/.test(t)&&!/натяжк/.test(t))return null;
+ const remove=/(?:^|[^а-яё])демонтаж/.test(t),sz=parseSize(t),is3x6=sz&&Math.abs(Math.min(sz.w,sz.h)-3)<.01&&Math.abs(Math.max(sz.w,sz.h)-6)<.01;
+ let match=null;
+ if(/пл[её]н/.test(t)){
+   if(!/ночн|спецтехник/.test(t))return null;
+   match=remove?/^Демонтаж пл[её]н/:/^Монтаж пл[её]н/;
+ }else if(/минимальн/.test(t))match=/ангар|усоль/.test(t)?/^Минимальный.*Ангарск/:/^Минимальный.*Иркутск/;
+ else if(/выезд.*замер/.test(t))match=/^Выезд на замер/;
+ else if(/прожектор/.test(t))match=/^Монтаж прожектора/;
+ else if(/лент/.test(t))match=/^Монтаж светодиодной ленты/;
+ else if(/банн?ер/.test(t)){
+   if(remove)match=is3x6?/^Демонтаж баннера 3×6$/:/^Демонтаж баннера с каркаса/;
+   else if(/натяжк/.test(t))match=/^Натяжка баннера/;
+   else if(/профлист/.test(t))match=/^Монтаж баннера на профлист/;
+   else if(/бетон/.test(t))match=/^Монтаж баннера в бетон/;
+   else if(/брус|фанер/.test(t))match=/^Монтаж баннера на брусок/;
+   else if(is3x6)match=/^Монтаж баннера 3×6$/;
+   else if(/металл|каркас|рам|люверс|верев/.test(t))match=/^Монтаж баннера на металлокаркас/;
+   else if(/саморез|шайб/.test(t))match=/^Монтаж баннера на саморезы/;
+ }else if(/рам|каркас/.test(t)&&!remove)match=/брус/.test(t)?/^Монтаж рамной конструкции из бруска/:/^Монтаж рамной конструкции из профтрубы/;
+ else if(/акп|пвх|оцинк|готов.*издел|таблич/.test(t)&&!remove)match=/^Монтаж готового изделия/;
+ const service=match?installationServices().find(s=>match.test(s.name)):null;
+ const baseValue=Number((t.match(/стоимост[а-яё\s]*[:=—-]?\s*(\d+(?:[.,]\d+)?)\s*(?:р\.?|руб)/)||[])[1]?.replace(',','.')||0);
+ const meters=parseLinearMeters(t)||Number((t.match(/(?:^|\s)(\d+(?:[.,]\d+)?)\s*м(?:етр[а-яё]*)?(?=$|[\s,;.])/i)||[])[1]?.replace(',','.')||0);
+ const x={source:line,type:'installation_work',serviceKey:service?.key||'',qty:qty||1,w:sz?.w||0,h:sz?.h||0,wmm:sz?.wmm||0,hmm:sz?.hmm||0,meters,
+   area:Number((t.match(/(\d+(?:[.,]\d+)?)\s*(?:м2|м²|кв\.?\s*м)/)||[])[1]?.replace(',','.')||0),baseValue,night:/ночн/.test(t),specialEquipment:/спецтехник|с\s+вышк/.test(t)};
+ x.measure=installationMeasure(x,service);return x;
+}
 function parseLine(line){
  const t=norm(line);
  const qty=parseProductQuantity(t);
+ const installation=parseInstallation(t,line,qty);if(installation)return installation;
  const filmWork=filmWorkFromText(t);
  if(/пл[её]н|самокле|наклей/.test(t)&&(filmWork.filmMount||filmWork.filmRemove)&&
     !/печать|печат|\d+\s*(?:dpi|дпи)|ламинац|ламинир|резк/.test(t)){
@@ -1092,6 +1155,7 @@ function parseLine(line){
  }
  const densMatch=t.match(/\b(65|80|90|105|115|120|128|130|157|170|180|200|250|300|340|400|440|510)\s*(?:гр|г)(?=$|[^0-9a-zа-яё])/i);
  let density=Number((densMatch||[])[1]||0);
+ let suggestedDensity=0;
  if(!density&&/баннер/.test(t)){
    if(/китай/.test(t))density=300;
    else if(/корея/.test(t))density=440;
@@ -1100,9 +1164,15 @@ function parseLine(line){
  const dpiExplicit=Number((t.match(/\b(240|360|720|1440)\s*(?:dpi|дпи)/)||[])[1]||0);
  const dpi=dpiExplicit||240;
 
- const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([3-7])(?=$|[^0-9a-zа-яё])/i);
+ const fm=t.match(/(?:^|[^0-9a-zа-яё])(?:а|a)\s*([0-7])(?=$|[^0-9a-zа-яё])/i);
  const cm=t.match(/4\s*\+\s*(0|4)/);
- const colorText=cm?'4+'+cm[1]:(/(?:двухсторон|2\s*сторон)[а-яё\s-]*цвет|цветн[а-яё\s-]*(?:двухсторон|2\s*сторон)/.test(t)?'4+4':(/(?:односторон|1\s*сторон)[а-яё\s-]*цвет|цветн[а-яё\s-]*(?:односторон|1\s*сторон)/.test(t)?'4+0':''));
+ const bw=t.match(/1\s*\+\s*([01])/),bwText=/(?:^|[^а-яёa-z])ч\s*\/?\s*б(?=$|[^а-яёa-z])|черно[\s-]*бел/.test(t);
+ const colorText=cm?'4+'+cm[1]:(bw?'1+'+bw[1]:(bwText?(/двухсторон|двусторон/.test(t)?'1+1':'1+0'):(/(?:двухсторон|2\s*сторон)[а-яё\s-]*цвет|цветн[а-яё\s-]*(?:двухсторон|2\s*сторон)/.test(t)?'4+4':(/(?:односторон|1\s*сторон)[а-яё\s-]*цвет|цветн[а-яё\s-]*(?:односторон|1\s*сторон)/.test(t)?'4+0':''))));
+ if(/призм[а-яё]*\s+треугольн|треугольн[а-яё]*\s+призм/.test(t)){
+   const format=fm?'A'+fm[1]:'A4',sz=parseSize(t),z=formatsMM[format],post=postFromText(t,qty||1);
+   post.bigs=post.bigs||2;post.tape=post.tape||qty||1;
+   return {source:line,type:'poly',productKind:'Призма треугольная',format,color:colorText||'4+0',density:density||300,paperKey:String(density||300),qty:qty||1,w:sz?.w||z[0]/1000,h:sz?.h||z[1]/1000,wmm:sz?.wmm||z[0],hmm:sz?.hmm||z[1],technology:'digital',technologyReason:'Призма: A4, 300 г/м², 2 бига и двухсторонний скотч',lamination:parseDigitalLamination(t),post};
+ }
 
  const stapledJournal=/журнал/.test(t)&&/(?:стр\.?|страниц|скоб)/.test(t)&&!/(?:тв[её]рд|тверд|мягк|перепл[её]т|прошив)/.test(t);
  const isBrochure=/каталог|брошюр/.test(t)||stapledJournal;
@@ -1262,7 +1332,7 @@ function parseLine(line){
  const hasMilling=/фрезеров|фрезерн|раскрой/.test(t)||(/(?:^|\s)резк[а-яё]*\s+/.test(t)&&cutMaterialMention&&!hasLaser);
  if(isSign){
    const signSize=parseSize(t),material=signMaterialFromText(t);
-   const standQtyM=isStand?t.match(/(?:[-—–]\s*)?(\d+)\s*шт\.?\s*$/i):null,signQty=isStand?Number(standQtyM?.[1]||1):(qty||1);
+   const signQty=qty||1;
    const compositeMilling=/композит|акп|алюкобонд/.test(t)||material==='Композит белый',millingRequested=hasMilling||compositeMilling;
    const millingMeters=millingRequested?(parseLinearMeters(t)||rectPerimeterM(signSize,signQty)):0;
    const technology=signTechnologyFromText(t)||(isStand?'film_720':'');
@@ -1303,7 +1373,7 @@ function parseLine(line){
  }
  const paperSticker=/накле(?:йк|ек)|этикет/.test(t) && (/цифр/.test(t)||/офсет/.test(t)||/бумажн[а-яё]*\s+самокле|самокле[а-яё]*\s+бумаж/.test(t));
  const namedPoly=/листов(?:к|ок)|буклет|флаер|винн[а-яё]*\s+карт|барн[а-яё]*\s+карт|меню|визит|визикт|открыт(?:к|ок)|приглаш|сертификат|серт|бланк|благодар|грамот|купон|абонем|абоним|билет|вкладыш/.test(t) || synonymMatch(t,'digital_product');
- const genericPoly=!!((cm||colorText)&&density&&qty&&(fm||parseSize(t)));
+ const genericPoly=!!(colorText&&(density||bw||bwText)&&qty&&(fm||parseSize(t)));
  const poly=namedPoly||genericPoly||paperSticker;
  const lamSoft=/софт|soft\s*touch|силк/.test(t);
  if(paperSticker && /офсет/.test(t)){
@@ -1317,17 +1387,25 @@ function parseLine(line){
  let size=parseSize(t);
  if(!size && fm && formatsMM['A'+fm[1]]){const z=formatsMM['A'+fm[1]];size={w:z[0]/1000,h:z[1]/1000,wmm:z[0],hmm:z[1]}}
  if(poly){
+   if(!density&&/плотн|картон/.test(t)){density=300;suggestedDensity=300}
    if(!size)return {source:line,type:'unknown',error:'Не найден формат или размер'};
-   const format=fm?'A'+fm[1]:'';
+   let format=fm?'A'+fm[1]:'';
+   const folded=/в\s+(?:согнут|сложенн|сгиб)[а-яё]*|в\s+сгибе/.test(t),finishedFormat=folded?format:'';
+   if(folded){
+     const larger=format&&formatsMM['A'+(Number(format.slice(1))-1)];
+     if(larger){format='A'+(Number(format.slice(1))-1);size={w:larger[0]/1000,h:larger[1]/1000,wmm:larger[0],hmm:larger[1]}}
+     else {format='';size={...size,w:size.w*2,wmm:size.wmm*2}}
+   }
    const isA3=!format&&((Math.abs(size.wmm-297)<3&&Math.abs(size.hmm-420)<3)||(Math.abs(size.wmm-420)<3&&Math.abs(size.hmm-297)<3));
    let tech=/цифр/.test(t)?'digital':'';
    if(lamSoft) tech='digital';
-   else if(!tech && qty && qty<=500 && format!=='A3' && !isA3) tech='digital';
+   else if(!tech && ((qty&&qty<=500&&format!=='A3'&&!isA3)||bw||bwText)) tech='digital';
    const reason=lamSoft?'Soft Touch доступен только в цифре':(!/цифр/.test(t)&&tech==='digital'?'тираж до 500 экз.':'явно указана цифра');
-   const paperKey=paperSticker?'Самоклеющаяся':digitalPaperKeyFromText(t,density||130);
+   const paperKey=paperSticker?'Самоклеющаяся':digitalPaperKeyFromText(t,density||80);
    const productKind=paperSticker?'Наклейка':digitalProductKind(t);
    if(paperSticker&&/цифр/.test(t))tech='digital';
-   return {source:line,type:'poly',productKind,format,color:colorText||'4+0',density:density||80,paperKey,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,technologyReason:paperSticker&&tech==='digital'?'бумажная самоклейка · цифровая печать':reason,lamination:parseDigitalLamination(t),post:postFromText(t,qty||1)};
+   const post=postFromText(t,qty||1);if(folded)post.bigs=Math.max(1,post.bigs);
+   return {source:line,type:'poly',productKind,format,finishedFormat,folded,suggestedDensity,color:colorText||'4+0',density:density||80,paperKey,qty:qty||1,w:size.w,h:size.h,wmm:size.wmm,hmm:size.hmm,technology:tech,technologyReason:paperSticker&&tech==='digital'?'бумажная самоклейка · цифровая печать':reason,lamination:parseDigitalLamination(t),post};
  }
  if(!size)return {source:line,type:'unknown',error:'Не найден размер'};
  if(/постер|плакат/.test(t)){
@@ -1362,7 +1440,7 @@ function parseLine(line){
  let grommet=noGrommets?0:(gm?Number(gm[1]||gm[2]):gcm?Number(gcm[1]||gcm[2])*10:(hasGrommets?300:0));
  let grommetCount=0;
  if(!noGrommets){
-   const gc=t.match(/(?:люверс[а-яё]*|люв\.?)\s*[-:]?\s*(\d+)\s*шт|(?:^|[^\d])(\d+)\s*шт\.?\s*(?:люверс[а-яё]*|люв\.?)/i);
+   const gc=t.match(/(?:люверс(?:ы|ов)?|люв\.)\s*[-:]?\s*(\d+)\s*шт|(?:^|[^\d])(\d+)\s*(?:шт\.?\s*)?люверс[а-яё]*/i);
    if(gc)grommetCount=Number(gc[1]||gc[2]);
    else if(/люверс[а-яё]*\s+по\s+углам|по\s+углам[^,;]*люверс/i.test(t))grommetCount=4;
  }
@@ -1458,6 +1536,12 @@ function renderDetected(){
  const box=document.getElementById('detected');if(!detected.length){box.innerHTML='';return}
  box.innerHTML=detected.map((x,i)=>{
   if(x.error||x.type==='unknown')return '<div class="detected-card"><div class="detected-head"><div><b>'+x.source+'</b><div class="chips"><span class="chip warn">Не удалось определить материал или размер</span></div></div><button class="flagbtn" onclick="openDetectedError('+i+')">⚑ Сообщить об ошибке</button></div></div>';
+
+  if(x.type==='installation_work'){
+    const calc=installationCalc(x),service=installationService(x.serviceKey),percent=/20\s*%/.test(service?.pricing||'');
+    const options='<option value="">Выберите работу</option>'+installationServices().map(s=>'<option value="'+s.key+'" '+(x.serviceKey===s.key?'selected':'')+'>'+s.name+' · '+(s.price!=null?money(s.price)+(s.unit?'/'+s.unit:''):s.pricing)+'</option>').join('');
+    return '<div class="detected-card"><div class="detected-head"><div><b>Монтажные работы</b><small style="display:block">Распознано из: '+x.source+'</small></div><button class="btn primary" onclick="addDetected('+i+')">Добавить</button></div><div class="chips"><span class="chip '+(calc.error?'warn':'auto')+'">'+(calc.error||money(calc.sale))+'</span></div><div class="post"><div class="field"><label>Работа по прайсу</label><select onchange="installationServiceChange('+i+',this.value)">'+options+'</select></div><div class="field"><label>'+(percent?'Стоимость изделий, ₽':'Объём работ, '+(service?.unit||'шт.'))+'</label><input type="number" min="0" step="0.01" value="'+(percent?x.baseValue:x.measure)+'" onchange="detected['+i+'].'+(percent?'baseValue':'measure')+'=+this.value;renderDetected()"></div><label class="check"><input type="checkbox" '+(x.night?'checked':'')+' onchange="detected['+i+'].night=this.checked;renderDetected()"> Ночной монтаж ×2</label><label class="check"><input type="checkbox" '+(x.specialEquipment?'checked':'')+' onchange="detected['+i+'].specialEquipment=this.checked;renderDetected()"> Со спецтехникой +10%</label></div></div>';
+  }
 
   if(x.type==='film_work'){
     const work=filmWorkCalculation(x),title=[x.filmRemove?'Демонтаж плёнки':'',x.filmMount?'Монтаж плёнки':''].filter(Boolean).join(' + ')||'Работы с плёнкой';
@@ -1741,9 +1825,11 @@ function renderDetected(){
   }
 
   if(x.type==='poly'){
-    const tech=x.technology||'',sides=x.color==='4+4'?'двусторонняя':'односторонняя',opt=tech==='digital'?bestDigitalOption(x):null;
+    const tech=x.technology||'',sides=/\+[14]$/.test(x.color)?'двусторонняя':'односторонняя',opt=tech==='digital'?bestDigitalOption(x):null;
     const materialChip=/^\d+$/.test(String(x.paperKey||''))?(x.density+' гр.'):(x.paperKey||x.density+' гр.');
     let chips='<span class="chip">'+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+'</span><span class="chip">'+x.color+' · '+sides+'</span><span class="chip">'+materialChip+'</span><span class="chip">'+x.qty+' шт.</span>';
+    if(x.folded)chips+='<span class="chip auto">Готовый '+(x.finishedFormat||'размер')+' в сгибе · печать '+(x.format||summarySize(x))+'</span>';
+    if(x.suggestedDensity)chips+='<span class="chip">Для «плотные» предложено 300 г/м² · можно изменить</span>';
     if(tech==='digital'&&x.technologyReason) chips+='<span class="chip auto">Автовыбор: цифра · '+x.technologyReason+'</span>';
     if(tech==='digital'){
       if(opt)chips+='<span class="chip auto">'+opt.name+': '+opt.up+' шт./лист · '+opt.sheets+' печатн. лист.</span>';
@@ -1753,7 +1839,7 @@ function renderDetected(){
       }
     }
     const paperChoices=[
-      ['90','Бумага 90 гр.'],['130','Бумага 130 гр.'],['170','Бумага 170 гр.'],['300','Бумага 300 гр.'],
+      ['80','Бумага 80 гр.'],['90','Бумага 90 гр.'],['130','Бумага 130 гр.'],['170','Бумага 170 гр.'],['300','Бумага 300 гр.'],
       ['Полилит 150 мкр','Polylit 150 мкр'],['Полилит 300 мкр','Polylit 300 мкр'],
       ['Самоклеющаяся','Самоклеющаяся'],['Самоклеющаяся прозрачная','Самоклеющаяся прозрачная'],
       ['Дизайнерский картон SHYNE WHITE','Дизайнерский картон SHYNE WHITE'],['Калька A4','Калька A4'],
@@ -1761,7 +1847,7 @@ function renderDetected(){
     ];
     if(!paperChoices.some(z=>z[0]===x.paperKey))paperChoices.unshift([x.paperKey,x.paperKey+' · требует цены']);
     const paperOpts=paperChoices.map(z=>'<option value="'+z[0]+'" '+(x.paperKey===z[0]?'selected':'')+'>'+z[1]+'</option>').join('');
-    const colorOpts='<option '+(x.color==='4+0'?'selected':'')+'>4+0</option><option '+(x.color==='4+4'?'selected':'')+'>4+4</option>';
+    const colorOpts=['4+0','4+4','1+0','1+1'].map(v=>'<option '+(x.color===v?'selected':'')+'>'+v+'</option>').join('');
     let controls='<div class="post"><div class="field"><label>Технология</label><select onchange="detected['+i+'].technology=this.value;renderDetected()"><option value="" '+(!tech?'selected':'')+'>Выбрать вручную</option><option value="digital" '+(tech==='digital'?'selected':'')+'>Цифровая печать</option><option value="offset-ready" '+(tech==='offset-ready'?'selected':'')+'>Офсет — сборный прайс</option><option value="offset-custom" '+(tech==='offset-custom'?'selected':'')+'>Офсет — свой спуск</option></select></div>'+
     '<div class="field"><label>Красочность</label><select onchange="detected['+i+'].color=this.value;renderDetected()">'+colorOpts+'</select></div>'+
     '<div class="field"><label>Бумага / материал</label><select onchange="detected['+i+'].paperKey=this.value;if(/^\\d+$/.test(this.value))detected['+i+'].density=+this.value;renderDetected()">'+paperOpts+'</select></div></div>';
@@ -1830,6 +1916,16 @@ function addDetected(i){
 }
 function addDetectedItem(x){
  const details=[];let cost=0,price=0,name='';
+ if(x.type==='installation_work'){
+   const calc=installationCalc(x);if(calc.error){alert(calc.error);return}
+   name=calc.service.name;price=calc.sale;
+   details.push(calc.percent?'20% от стоимости изделий '+money(calc.measure)+' — '+money(calc.raw):calc.measure.toLocaleString('ru-RU')+' '+(calc.service.unit||'шт.')+' × '+money(calc.rate)+' — '+money(calc.raw));
+   if(x.night)details.push('ночной монтаж ×2');if(x.specialEquipment)details.push('монтаж со спецтехникой +10% · аренда техники отдельно');
+   if(calc.service.minimum_note)details.push(calc.service.minimum_note);
+   const minimum=Number(calc.service.minimum||calc.service.minimum_mounting||(calc.percent||calc.rate===0?0:installationSection().mounting?.find(s=>/^Минимальный монтаж/.test(s.name))?.price)||0);
+   addMinimumRecommendation(details,'монтажа/демонтажа',minimum,price);
+   autoItems.push({name,price,cost:0,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
+ }
  const hasFilmWork=(x.type==='film'||x.type==='film_work')&&(x.filmMount||x.filmRemove);
  const work=hasFilmWork?filmWorkCalculation(x):null;
  if(hasFilmWork&&!work){alert('Не найден тариф работ с плёнкой.');return}
@@ -1963,7 +2059,7 @@ function addDetectedItem(x){
    details.push('раскладка на '+x.printSheet+': '+lay.up+' шт./лист → '+lay.printSheets+' печатн. лист.');
    details.push('печать: '+lay.printSheets+' лист. × '+money(rate)+' — '+money(print));
    details.push('материал: '+lay.printSheets+' лист. × '+money(paper)+' — '+money(mat));
-   if(cut)details.push('резка: '+lay.cutPasses+' рез. × '+lay.cutBatches+' пакет(а) × '+money(60)+' — '+money(cut));
+   if(cut)details.push('резка: '+lay.cutBatches+' пакет(а) до 250 печатных листов × '+money(lay.cutRate)+' — '+money(cut)+' · все проходы включены');
    details.push('итого — '+money(price));
    autoItems.push({name,cost,price,costKnown:false,details,source:x.source,parsed:JSON.stringify(x)});renderAuto();return;
  }
@@ -2212,7 +2308,8 @@ function addDetectedItem(x){
      }
      name=(x.productKind||'Полиграфия')+' '+(x.format||Math.round(x.wmm)+'×'+Math.round(x.hmm)+' мм')+' '+x.color+' '+(/^\d+$/.test(String(x.paperKey||''))?(x.density+' гр.'):(x.paperKey||x.density+' гр.'))+' · цифра';
      price=opt.sale;cost=opt.cost;
-     details.push('цифровая печать '+x.color+(x.color==='4+4'?' · 2 стороны':' · 1 сторона'),opt.name+': '+opt.up+' шт./лист','печатных листов: '+opt.sheets,'материал: '+(x.paperKey||x.density+' гр.'),'печать + материал: '+money(opt.sale));
+     details.push('цифровая печать '+x.color+(/\+[14]$/.test(x.color)?' · 2 стороны':' · 1 сторона'),opt.name+': '+opt.up+' шт./лист','печатных листов: '+opt.sheets,'материал: '+(x.paperKey||x.density+' гр.'),'печать + материал: '+money(opt.sale));
+     if(x.folded)details.push('готовый '+(x.finishedFormat||'размер')+' в сгибе · разворот '+(x.format||summarySize(x)));
      const pp=digitalPostCalc(x,opt);price+=pp.sale;cost+=pp.cost;details.push(...pp.parts);
      addMinimumRecommendation(details,'цифрового заказа',digitalSection().minimum_order_rub||100,price);if(opt.paperMinimum)addMinimumRecommendation(details,'материала',opt.paperMinimum,(opt.paper?.sale||0)*opt.sheets);
    } else if(x.technology==='offset-custom'){
@@ -2339,6 +2436,10 @@ function summarySize(x){
 function autoSummaryLabel(item){
  let x=null;try{x=JSON.parse(item.parsed||'null')}catch(e){}
  if(!x)return item.source||item.name||'Позиция';
+ if(x.type==='installation_work')return item.name+(summarySize(x)?' '+summarySize(x):'')+(x.night?' · ночной монтаж':'')+(x.specialEquipment?' · со спецтехникой':'');
+ if(x.type==='poly'&&x.folded){
+   const base={...x,folded:false};return autoSummaryLabel({...item,parsed:JSON.stringify(base)})+' · готовый '+(x.finishedFormat||'размер')+' в сгибе';
+ }
  if(x.sizes){
    const base={...x,sizes:undefined,qty:1,w:0,h:0,wmm:0,hmm:0};
    return autoSummaryLabel({...item,parsed:JSON.stringify(base)}).trim()+' · '+x.sizes.map(s=>summarySize(s)+' · '+s.qty+' шт.').join('; ');

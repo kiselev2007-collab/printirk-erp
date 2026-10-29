@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
-const root=path.resolve(__dirname,'..');
+const root=process.env.CALCULATOR_ROOT||path.resolve(__dirname,'..');
 
 async function calculator(){
   const html=fs.readFileSync(process.env.CALCULATOR_HTML||path.join(root,'index.html'),'utf8');
@@ -33,6 +33,91 @@ async function calculator(){
 const print='Пленка 720 дпи, ламинация глянец. Резка в край. 930*955мм 12шт, 1420*955мм 6 шт';
 const works='930*955мм 12шт, 1420*955мм 6 шт  Демонтаж старой пленки и монтаж новой пленки';
 const close=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-7,`${actual} != ${expected}`);
+
+test('row 46: A5 folded certificates print on A4, score once and suggest editable 300 gsm',async()=>{
+ const c=await calculator(),[x]=await c.recognize('Сертификаты 50шт - формат А5 в согнутом варианте - софт тач - плотные');
+ assert.equal(x.type,'poly');assert.equal(x.finishedFormat,'A5');assert.equal(x.format,'A4');
+ assert.deepEqual([x.wmm,x.hmm,x.qty,x.density,x.paperKey,x.post.bigs,x.lamination],[210,297,50,300,'300',1,'roll_soft']);
+ const [item]=c.addAll();close(item.price,2610);assert.match(c.elements.get('autoSummaryItems').innerHTML,/готовый A5 в сгибе/);
+ c.run("detected[0].density=170;detected[0].paperKey='170'");assert.equal(JSON.parse(c.run('JSON.stringify(detected[0])')).density,170);
+});
+for(const [row,source] of [[47,'баннер 440 гр 2000х1300 мм с люверсами 2 баннера'],[48,'баннер 440 гр 2000х1300 мм с люверсами 2 шт.']])test('row '+row+': product quantity is separate from grommets',async()=>{
+ const c=await calculator(),[x]=await c.recognize(source);assert.equal(x.qty,2);assert.equal(x.grommetCount,0);assert.equal(x.grommet,300);
+ close(c.addAll()[0].price,2398.6);
+});
+test('explicit 2 grommets on each of 2 banners; component count alone does not become product quantity',async()=>{
+ const c=await calculator();let [x]=await c.recognize('Баннер 440 гр., 2х1 м., 2 люверса 2 шт.');
+ assert.equal(x.qty,2);assert.equal(x.grommetCount,2);assert.ok(c.addAll()[0].details.some(d=>/люверсы 4 шт/.test(d)));
+ [x]=await c.recognize('Баннер 440 гр 2х1м люверсы 4 шт');assert.equal(x.qty,1);assert.equal(x.grommetCount,4);
+});
+test('row 49: 6 pockets do not become 6 stands',async()=>{
+ const c=await calculator(),[x]=await c.recognize('Стенд Информационный ПВХ 5 мм. 900х900 мм., карманы А4 плоские 6 шт');
+ assert.equal(x.qty,1);assert.equal(x.pocketCount,6);close(c.addAll()[0].price,4650.6);
+ const [two]=await c.recognize('2 стенда ПВХ 5мм 900х900мм, карманы A4 плоские 6 шт');assert.equal(two.qty,2);
+});
+test('row 50: dots, hyphens and adjacent size/quantity groups form one assignment',async()=>{
+ const c=await calculator(),items=await c.recognize('Наклейки 720 дпи, глянец с резкой в край 870х360 мм.-3 шт 300х300 мм-1 шт.');
+ assert.deepEqual(items.map(x=>[x.wmm||x.w*1000,x.hmm||x.h*1000,x.qty]),[[870,360,3],[300,300,1]]);
+ assert.equal(c.run('detected.length'),1);close(c.addAll()[0].price,810.6384);
+});
+test('row 51: installation of a banner on timber calculates work only',async()=>{
+ const c=await calculator(),[x]=await c.recognize('Монтаж баннера на брусок 1х1 м');assert.equal(x.type,'installation_work');
+ const [item]=c.addAll();close(item.price,220);assert.match(item.name,/Монтаж баннера на брусок/);assert.equal(item.costKnown,false);
+ assert.ok(!item.details.some(d=>/печать/.test(d)));assert.deepEqual(c.alerts,[]);
+});
+test('row 52: A2 poster at 1440 dpi with edge cutting',async()=>{
+ const c=await calculator(),[x]=await c.recognize('Постер А2 1440дпи с резкой в край');
+ assert.deepEqual([x.type,x.wmm,x.hmm,x.dpi,x.edgeCut],['poster',420,594,1440,true]);
+ const [item]=c.addAll();close(item.price,.42*.594*659+2*(.42+.594)*22);assert.deepEqual(c.alerts,[]);
+});
+test('row 53: packet lamination uses 24 printed A3 sheets, not 470 finished pieces',async()=>{
+ const c=await calculator();await c.recognize('Печать 83х63мм 4+0 300г с глянц лам 100мкм - 470шт');
+ c.run("detected[0].packetLamFormat='A3'");const [item]=c.addAll();close(item.price,2424);
+ assert.ok(item.details.some(d=>/Пакетная.*A3: 24 лист/.test(d)));
+});
+test('row 54: triangular prisms use A4 4+0, 300 gsm, two scores and tape per piece',async()=>{
+ const c=await calculator(),[x]=await c.recognize('Призмы треугольные 30 шт.');
+ assert.deepEqual([x.type,x.format,x.color,x.density,x.qty,x.post.bigs,x.post.tape],['poly','A4','4+0',300,30,2,30]);close(c.addAll()[0].price,1392);
+});
+test('row 55: journal with 2700 A3 sheets keeps the final digital tier',async()=>{
+ const c=await calculator();await c.recognize('Журнал 36 страниц 100 шт');c.run('detected[0].qty=300');
+ const calc=JSON.parse(c.run('JSON.stringify(brochureDigitalCalc(detected[0]))'));assert.equal(calc.sheets,2700);assert.equal(calc.unit,45);assert.ok(calc.sale>0);
+ assert.equal(c.addAll().length,1);assert.deepEqual(c.alerts,[]);
+});
+for(const text of ['печать черно-белая А5 12шт 1+0 170г','ЧБ А5 12шт 170г','печать A5 1+0 170г 12шт'])test('row 56: '+text,async()=>{
+ const c=await calculator(),[x]=await c.recognize(text);assert.deepEqual([x.type,x.color,x.technology,x.density],['poly','1+0','digital',170]);
+ close(c.addAll()[0].price,84);assert.match(c.elements.get('detected').innerHTML,/>1\+1<\/option>/);assert.deepEqual(c.alerts,[]);
+});
+test('two-sided BW digital printing and large color runs remain calculable',async()=>{
+ const c=await calculator();const [x]=await c.recognize('ЧБ A5 12шт 1+1 170г');assert.equal(x.color,'1+1');close(c.addAll()[0].price,114);
+ await c.recognize('цифровая печать А4 4+0 170г 6000шт');assert.equal(c.addAll().length,2);assert.deepEqual(c.alerts,[]);
+});
+test('row 57: 250 finished A4 prints laminate as 125 A3 sheets for 5500 rubles',async()=>{
+ const c=await calculator();await c.recognize('распечатка а4 4+0 170 гр с пакетной лам глянец 100 мкр 250 шт');
+ c.run('detected[0].post.cutPasses=4');const [item]=c.addAll();close(item.price,10713);assert.ok(item.details.some(d=>/A3: 125 лист.*5\s*500/.test(d)));
+});
+test('row 58: confirmed batch cutting rate gives 43 packages at 60, total cutting 2580',async()=>{
+ const c=await calculator();await c.recognize('листовка 148х60 мм 150000 шт 1+0 80 гр тиражирование');
+ const lay=JSON.parse(c.run('JSON.stringify(duplicationLayout(detected[0]))'));assert.equal(lay.printSheets,10715);assert.equal(lay.cutBatches,43);close(lay.cutSale,2580);
+ const [item]=c.addAll();close(item.price,43297);assert.ok(item.details.some(d=>/все проходы включены/.test(d)));
+});
+for(const [text,price] of [
+ ['Монтаж баннера на профлист 2х3м',6*495],['Монтаж баннера в бетон 2х3м',6*495],
+ ['Монтаж баннера на саморезы 1х2м',2*220],['Монтаж баннера на металлокаркас 1х2м',2*220],
+ ['Демонтаж баннера с бруска 1х2м',2*94],['Монтаж баннера 3х6м',5280],['Демонтаж баннера 3х6м',1099],
+ ['Натяжка баннера на изготовленную из бруска конструкцию 1х2м',6*220],
+ ['Монтаж рамной конструкции из бруска 1х2м',2*220],['Монтаж рамной конструкции из профтрубы 1х2м',2*220],
+ ['Монтаж прожектора 3шт',3*550],['Монтаж светодиодной ленты 10 п.м.',10*220],['Выезд на замер в черте города',0],
+ ['Монтаж баннера на брусок 1х2м ночной со спецтехникой',2*220*2*1.1]
+])test('installation catalog: '+text,async()=>{
+ const c=await calculator(),[x]=await c.recognize(text);assert.equal(x.type,'installation_work');const items=c.addAll();assert.equal(items.length,1);close(items[0].price,price);assert.deepEqual(c.alerts,[]);
+});
+test('percentage mounting asks for item value and all actionable mounting catalog rows are selectable',async()=>{
+ const c=await calculator();await c.recognize('Монтаж готового изделия из АКП');assert.equal(c.addAll().length,0);assert.match(c.alerts.at(-1),/стоимость изделий/);
+ c.run('detected[0].baseValue=10000');close(c.addAll()[0].price,2000);
+ const services=JSON.parse(c.run('JSON.stringify(installationServices())'));assert.ok(services.length>=17);
+ const card=c.elements.get('detected').innerHTML;for(const s of services)assert.ok(card.includes(s.name),s.name);
+});
 
 test('one assignment from the screenshot: one card, one Add button and one complete order item',async()=>{
   const c=await calculator(),source='Пленка 720 дпи, ламинация глянец. Резка в край. Демонтаж старой пленки и монтаж новой пленки\n930*955мм 12шт, 1420*955мм 6шт';
